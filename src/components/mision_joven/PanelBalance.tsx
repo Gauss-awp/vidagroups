@@ -4,9 +4,11 @@ import { Card } from '../ui';
 import EventosMisionJoven from './EventosMisionJoven';
 type Props = {
   tarjetas: any[];
+  redId: string;
+  puedeGeneral?: boolean;
 }
 
-export function PanelBalance({ tarjetas = [] }: Props) {
+export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Props) {
   const stats = useMemo(() => {
     const ahora = new Date();
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
@@ -45,7 +47,7 @@ export function PanelBalance({ tarjetas = [] }: Props) {
           <Text style={{ fontWeight: '700' }}>Balance Consolidación - Este mes</Text>
           <Text style={{ marginTop: 6, color: '#6B7280' }}>Aún no hay tarjetas este mes</Text>
         </Card>
-        <EventosMisionJoven />
+        <EventosMisionJoven redId={redId} puedeGeneral={puedeGeneral} />
       </View>
     );
   }
@@ -98,7 +100,7 @@ export function PanelBalance({ tarjetas = [] }: Props) {
       </Card>
 
       {/* AQUI VA - ABAJO DE TODO */}
-      <EventosMisionJoven />
+      <EventosMisionJoven redId={redId} puedeGeneral={puedeGeneral} />
 
     </View>
   );

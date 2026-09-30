@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/lib/theme';
 import { Boton, Cargando, Pantalla, Vacio } from '@/components/ui';
+import { EsperandoAprobacion } from '@/components/red/EsperandoAprobacion';
 
 export default function AppLayout() {
   const { session, perfil, cargando, errorPerfil, refrescarPerfil, cerrarSesion } = useAuth();
@@ -24,6 +25,9 @@ export default function AppLayout() {
   }
 
   if (!perfil) return <Cargando texto="Cargando tu perfil..." />;
+
+  // Cuenta nueva o dada de baja: no ve nada hasta que la aprueben
+  if (perfil.estado !== 'activo') return <EsperandoAprobacion perfil={perfil} />;
 
   return (
     <Stack

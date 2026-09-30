@@ -12,18 +12,16 @@ export default function Inicio() {
   if (!perfil) return <Cargando />;
 
   const contenido = () => {
-    if (perfil.rol === 'guia') return <InicioGuia key={perfil.rol} perfil={perfil} />;
-    
-    // AISLADO: guia_supervisor tiene su panel propio
-    if ((perfil.rol as any) === 'guia_supervisor') {
-      return <PanelGuiaSupervisor key={perfil.rol} perfil={perfil} />;
+    switch (perfil.rol) {
+      case 'guia':
+        return <InicioGuia key={perfil.rol} perfil={perfil} />;
+      case 'guia_supervisor':
+        return <PanelGuiaSupervisor key={perfil.rol} perfil={perfil} />;
+      case 'consolidacion':
+        return <InicioSupervisor key={perfil.rol} perfil={perfil} />;
+      default:
+        return <PanelGeneral key={perfil.rol} perfil={perfil} />;
     }
-
-    if (['supervisor', 'consolidacion'].includes(perfil.rol)) {
-      return <InicioSupervisor key={perfil.rol} perfil={perfil} />;
-    }
-    
-    return <PanelGeneral key={perfil.rol} perfil={perfil} />;
   };
 
   return (

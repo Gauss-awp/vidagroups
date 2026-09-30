@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { SeccionTitulo, Cargando } from '@/components/ui';
 import { colors } from '@/lib/theme';
 
-export function AsignarSupervisores() {
+export function AsignarSupervisores({ redId, redNombre }: { redId: string; redNombre: string }) {
   const [guias, setGuias] = useState<any[]>([]);
   const [sups, setSups] = useState<any[]>([]);
   const [rels, setRels] = useState<any[]>([]);
@@ -14,7 +14,7 @@ export function AsignarSupervisores() {
 
   const cargar = async () => {
     setLoading(true);
-    const { data: perfiles } = await supabase.from('profiles').select('id, nombre, rol').in('rol', ['guia', 'guia_supervisor']);
+    const { data: perfiles } = await supabase.from('profiles').select('id, nombre, rol').in('rol', ['guia', 'guia_supervisor']).eq('red_id', redId).eq('estado', 'activo');
     setGuias(perfiles?.filter((p:any) => p.rol === 'guia') || []);
     setSups(perfiles?.filter((p:any) => p.rol === 'guia_supervisor') || []);
     
@@ -23,7 +23,7 @@ export function AsignarSupervisores() {
     setLoading(false);
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); }, [redId]);
 
   const asignar = async () => {
     if (!selGuia || !selSup) return Alert.alert('Falta', 'Elegí guía y supervisor');
@@ -36,8 +36,7 @@ export function AsignarSupervisores() {
   
   return (
     <View style={{ marginTop: 24, paddingBottom: 40 }}>
-      <SeccionTitulo titulo="Red Misión Joven" />
-      <Text style={{ color: '#666', marginBottom: 12, fontSize: 13 }}>Tabla detectada OK - usando funciones</Text>
+      <SeccionTitulo titulo={`Supervisores · ${redNombre}`} />
 
       <Text style={{ fontWeight: '800', marginBottom: 8 }}>1. Guía:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>

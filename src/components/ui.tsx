@@ -140,7 +140,7 @@ export function Campo({ etiqueta, ayuda, style, ...props }: TextInputProps & { e
       <TextInput
         placeholderTextColor={colors.textTer}
         selectionColor={colors.primary}
-        keyboardAppearance="dark"
+        keyboardAppearance="light"
         style={[s.input, props.multiline && { minHeight: 80, textAlignVertical: 'top', paddingTop: 12 }, style]}
         {...props}
       />

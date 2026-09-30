@@ -22,7 +22,7 @@ import {
   s,
 } from '@/components/ui';
 
-const ROLES: Rol[] = ['apostol', 'pastor', 'supervisor', 'guia'];
+const ROLES: Rol[] = ['apostol', 'pastor', 'guia_supervisor', 'consolidacion', 'guia'];
 
 export default function AdministrarIglesia() {
   const { perfil, refrescarPerfil } = useAuth();
@@ -79,11 +79,12 @@ export default function AdministrarIglesia() {
     );
   }
 
-  const rolesPermitidos = perfil.rol === 'apostol' ? ROLES : ROLES.filter((r) => r !== 'apostol');
+  // Solo el Apóstol asigna Apóstoles y Pastores
+  const rolesPermitidos = perfil.rol === 'apostol' ? ROLES : ROLES.filter((r) => r !== 'apostol' && r !== 'pastor');
 
   const abrir = (u: Perfil) => {
-    if (perfil.rol === 'pastor' && u.rol === 'apostol') {
-      Alert.alert('Sin permiso', 'Solo el Apóstol puede modificar a otro Apóstol.');
+    if (perfil.rol === 'pastor' && (u.rol === 'apostol' || u.rol === 'pastor')) {
+      Alert.alert('Sin permiso', 'Solo el Apóstol puede modificar a Pastores y Apóstoles.');
       return;
     }
     if (perfil.rol === 'pastor' && u.id === perfil.id) {
@@ -199,9 +200,9 @@ export default function AdministrarIglesia() {
             <SeccionTitulo titulo="Superior directo" />
             <Text style={[s.textoFilaSec, { marginBottom: 10 }]}>
               {rolNuevo === 'guia'
-                ? 'Elegí el Líder Supervisor que acompaña a este Guía.'
-                : rolNuevo === 'supervisor'
-                  ? 'Elegí el Pastor a cargo de este Supervisor.'
+                ? 'Elegí el Guía Supervisor que acompaña a este Guía (de la misma red).'
+                : rolNuevo === 'guia_supervisor' || rolNuevo === 'consolidacion'
+                  ? 'Elegí el Pastor a cargo de esta persona.'
                   : 'Elegí el Apóstol a cargo de este Pastor.'}
             </Text>
 

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Card, Boton, s } from '@/components/ui';
 
-export function GestionGrupos(props: any) {
+export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: string }) {
   const [grupos, setGrupos] = useState<any[]>([]);
   const [miembros, setMiembros] = useState<any[]>([]);
   const [perfiles, setPerfiles] = useState<any[]>([]);
@@ -15,19 +15,22 @@ export function GestionGrupos(props: any) {
   const [modalMover, setModalMover] = useState<any>(null);
 
   const cargar = async () => {
-    const { data: g } = await supabase.from('groups').select('*').or('categoria.eq.mision_joven,ministerio.eq.mision_joven').order('nombre');
-    const { data: m } = await supabase.from('miembros_grupo').select('*').eq('activo', true);
+    const { data: g } = await supabase.from('groups').select('*').eq('red_id', redId).order('nombre');
+    const idsGrupos = (g ?? []).map((x: any) => x.id);
+    const { data: m } = idsGrupos.length
+      ? await supabase.from('miembros_grupo').select('*').eq('activo', true).in('grupo_id', idsGrupos)
+      : { data: [] };
     const { data: p } = await supabase.from('profiles').select('id, nombre, apellido');
-    
-    // TRAE A TODOS, sin filtrar por rol
-    const { data: gui } = await supabase.from('profiles').select('id, nombre, apellido').order('nombre');
-    
+
+    // Guías posibles: personas activas de la red
+    const { data: gui } = await supabase.from('profiles').select('id, nombre, apellido').eq('red_id', redId).eq('estado', 'activo').order('nombre');
+
     setGrupos(g || []); 
     setMiembros(m || []); 
     setPerfiles(p || []); 
     setGuias(gui || []);
 };
-  useEffect(()=>{cargar()},[]);
+  useEffect(()=>{cargar()},[redId]);
 
   const getNombre = (m:any) => `${m.nombre || ''} ${m.apellido || ''}`.trim() || 'Sin nombre';
 
@@ -56,7 +59,7 @@ export function GestionGrupos(props: any) {
 
   return (
     <View style={{ marginTop: 12, gap: 8 }}>
-      <Text style={{ fontSize: 16, fontWeight: '800' }}>Gestionar GVs - Misión Joven</Text>
+      <Text style={{ fontSize: 16, fontWeight: '800' }}>Gestionar GVs - {redNombre}</Text>
       {grupos.map(g=>{
         const miembrosDelGrupo = miembros.filter(x=>x.grupo_id===g.id);
         const isOpen = abierto===g.id;

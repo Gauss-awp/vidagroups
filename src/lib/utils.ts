@@ -3,19 +3,17 @@ import type { Perfil, Rol, TipoEvento } from './types';
 export const ROL_LABEL: Record<Rol, string> = {
   guia: 'Guía',
   guia_supervisor: 'Guía Supervisor',
-  consolidacion: 'Consolidación',
-  mision_joven: 'Misión Joven',
+  consolidacion: 'Consolidador',
   pastor: 'Pastor',
-  apostol: 'Admin',
+  apostol: 'Apóstol',
 };
 
-export const ROL_RANGO: Record<Rol, number> = { 
-  guia: 1, 
-  guia_supervisor: 2, 
-  consolidacion: 2, 
-  mision_joven: 2, 
-  pastor: 3, 
-  apostol: 4 
+export const ROL_RANGO: Record<Rol, number> = {
+  guia: 1,
+  guia_supervisor: 2,
+  consolidacion: 2,
+  pastor: 3,
+  apostol: 4,
 };
 
 export const TIPO_EVENTO_LABEL: Record<TipoEvento, string> = {

@@ -1,4 +1,10 @@
-export type Rol = 'guia' | 'guia_supervisor' | 'consolidacion' | 'mision_joven' | 'pastor' | 'apostol';
+export type Rol = 'guia' | 'guia_supervisor' | 'consolidacion' | 'pastor' | 'apostol';
+export type EstadoPerfil = 'pendiente' | 'activo' | 'inactivo';
+
+export interface Red {
+  id: string;
+  nombre: string;
+}
 export type TipoEvento = 'encuentro' | 'campamento' | 'otro';
 
 export interface Perfil {
@@ -8,6 +14,8 @@ export interface Perfil {
   apellido: string;
   rol: Rol;
   supervisor_id: string | null;
+  red_id: string | null;
+  estado: EstadoPerfil;
   creado_en: string;
 }
 

@@ -22,7 +22,8 @@ export const radius = { sm: 12, md: 20, lg: 28 };
 export const ROL_COLOR: Record<Rol, string> = {
   apostol: colors.purple,
   pastor: colors.warning,
-  supervisor: colors.teal,
+  guia_supervisor: colors.teal,
+  consolidacion: colors.primary,
   guia: colors.success,
 };
 

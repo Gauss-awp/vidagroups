@@ -117,7 +117,8 @@ export function GrupoDetalle({
                 backgroundColor: activo? '#111827' : '#E5E7EB',
               }}
             >
-              <Text style={{
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{
+                paddingHorizontal: 4,
                 fontSize: 12,
                 fontWeight: activo? '700' : '600',
                 color: activo? 'white' : '#6B7280',

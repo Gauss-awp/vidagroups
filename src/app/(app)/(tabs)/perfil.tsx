@@ -8,11 +8,20 @@ import { useAuth } from '@/context/AuthContext';
 import { Avatar, Badge, Boton, Campo, Card, Cargando, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
 
 export default function PerfilPantalla() {
-  const { perfil, refrescarPerfil, cerrarSesion } = useAuth();
+  const { perfil, redesAdmin, refrescarPerfil, cerrarSesion } = useAuth();
+  const [miRed, setMiRed] = useState<string | null>(null);
   const [nombre, setNombre] = useState(perfil?.nombre?? '');
   const [apellido, setApellido] = useState(perfil?.apellido?? '');
   const [superior, setSuperior] = useState<Perfil | null>(null);
   const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    if (!perfil?.red_id) {
+      setMiRed(null);
+    } else {
+      supabase.from('redes').select('nombre').eq('id', perfil.red_id).maybeSingle().then(({ data }) => setMiRed(data?.nombre ?? null));
+    }
+  }, [perfil?.red_id]);
 
   useEffect(() => {
     setNombre(perfil?.nombre?? '');
@@ -89,6 +98,14 @@ export default function PerfilPantalla() {
               </View>
             </View>
           </View>
+        </Card>
+
+        <Card>
+          <Text style={s.textoFilaSec}>Red</Text>
+          <Text style={[s.textoFila, { marginTop: 4 }]}>{miRed ?? 'Sin red'}</Text>
+          {redesAdmin.length > 0 ? (
+            <Text style={[s.textoFilaSec, { marginTop: 6 }]}>Administrás: {redesAdmin.map((r) => r.nombre).join(', ')}</Text>
+          ) : null}
         </Card>
 
         <Card>

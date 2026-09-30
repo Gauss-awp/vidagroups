@@ -32,7 +32,7 @@ export default function EquipoPantalla() {
   if (!lider) return <Cargando />;
 
   const tituloLista =
-    lider.rol === 'supervisor' ? 'Guías a cargo' : lider.rol === 'pastor' ? 'Supervisores a cargo' : 'Personas a cargo';
+    lider.rol === 'guia_supervisor' ? 'Guías a cargo' : lider.rol === 'pastor' ? 'Supervisores a cargo' : 'Personas a cargo';
 
   return (
     <>

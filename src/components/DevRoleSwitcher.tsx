@@ -1,11 +1,21 @@
 import { View, Text, Pressable } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
 const CORREO_DEV = 'benjamin_trece@hotmail.com'
 
+const ROLES_DEV = [
+  { rol: 'guia', texto: 'Guía', color: '#555' },
+  { rol: 'guia_supervisor', texto: 'Guía Sup', color: '#555' },
+  { rol: 'consolidacion', texto: 'Consolidador', color: '#2563eb' },
+  { rol: 'pastor', texto: 'Pastor', color: '#555' },
+  { rol: 'apostol', texto: 'Apóstol', color: 'black' },
+]
+
 export function DevRoleSwitcher({ perfil }: any) {
   const { refrescarPerfil } = useAuth()
+  const insets = useSafeAreaInsets()
 
   // Solo se muestra en tu cuenta
   if (perfil?.email?.toLowerCase() !== CORREO_DEV.toLowerCase()) return null
@@ -20,15 +30,14 @@ export function DevRoleSwitcher({ perfil }: any) {
   }
 
   return (
-    <View style={{ padding: 10, backgroundColor: '#ffdbdb', borderRadius: 10, margin: 10 }}>
+    <View style={{ padding: 10, backgroundColor: '#ffdbdb', borderRadius: 10, marginHorizontal: 10, marginBottom: 4, marginTop: insets.top + 4 }}>
       <Text style={{ fontWeight: 'bold' }}>MODO DEV - Sos: {perfil?.rol}</Text>
       <View style={{ flexDirection: 'row', gap: 5, marginTop: 8, flexWrap: 'wrap' }}>
-        <Pressable onPress={() => cambiarRol('guia')} style={{ backgroundColor: '#555', padding: 8, borderRadius: 5 }}><Text style={{ color: 'white' }}>Guía</Text></Pressable>
-        <Pressable onPress={() => cambiarRol('guia_supervisor')} style={{ backgroundColor: '#555555', padding: 8, borderRadius: 5 }}><Text style={{ color: 'white' }}>Guía Sup</Text></Pressable>
-        <Pressable onPress={() => cambiarRol('consolidacion')} style={{ backgroundColor: '#2563eb', padding: 8, borderRadius: 5 }}><Text style={{ color: 'white' }}>Consolidación</Text></Pressable>
-        <Pressable onPress={() => cambiarRol('mision_joven')} style={{ backgroundColor: '#1d68e1', padding: 8, borderRadius: 5 }}><Text style={{ color: 'white' }}>Misión Joven</Text></Pressable>
-        <Pressable onPress={() => cambiarRol('pastor')} style={{ backgroundColor: '#555', padding: 8, borderRadius: 5 }}><Text style={{ color: 'white' }}>Pastor</Text></Pressable>
-        <Pressable onPress={() => cambiarRol('apostol')} style={{ backgroundColor: 'black', padding: 8, borderRadius: 5 }}><Text style={{ color: 'white' }}>Admin</Text></Pressable>
+        {ROLES_DEV.map((r) => (
+          <Pressable key={r.rol} onPress={() => cambiarRol(r.rol)} style={{ backgroundColor: r.color, padding: 8, borderRadius: 5 }}>
+            <Text style={{ color: 'white' }}>{r.texto}</Text>
+          </Pressable>
+        ))}
       </View>
     </View>
   )

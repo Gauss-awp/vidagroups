@@ -57,7 +57,7 @@ export function ConsolidacionGuia({ miGV }: { miGV: string }) {
     await supabase.from('tarjetas_consolidacion').update({ observacion: obs }).eq('id', id);
   };
 
-  if (tarjetas.length === 0) return <Text style={{margin:20, color:'gray'}}>No tenés tarjetas para {miGV}. Pedile a Misión Joven que te asigne una con GV: {miGV}</Text>
+  if (tarjetas.length === 0) return <Text style={{margin:20, color:'gray'}}>No tenés tarjetas para {miGV}. El consolidador de tu red te las asigna cuando deriva a alguien a {miGV}.</Text>
 
   return (
     <ScrollView contentContainerStyle={{paddingBottom:20}}>

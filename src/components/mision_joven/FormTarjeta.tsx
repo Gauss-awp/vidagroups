@@ -25,9 +25,8 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
 
   const listaGVs = useMemo(() => {
     if (!grupos || grupos.length === 0) return [];
-    // AHORA FILTRA POR CATEGORIA MISION_JOVEN, NO POR NOMBRE
-    const porCategoria = grupos.filter((g: any) => g.categoria === 'mision_joven');
-    const lista = porCategoria.map((g: any) => typeof g === 'string'? g : g.nombre || '').filter(Boolean);
+    // La base ya devuelve solo los grupos de la red de quien carga la tarjeta
+    const lista = grupos.map((g: any) => typeof g === 'string'? g : g.nombre || '').filter(Boolean);
     return [...new Set(lista)].sort() as string[];
   }, [grupos]);
 
@@ -53,7 +52,7 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios'? 'padding' : 'height'} keyboardVerticalOffset={100} style={{ flex: 1 }}>
       <Card>
         <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 6 }}>Nueva Tarjeta</Text>
-        <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>{listaGVs.length} GVs de Misión Joven</Text>
+        <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>{listaGVs.length} GVs de tu red</Text>
 
         <TextInput placeholder="1. Nombre y Apellido" placeholderTextColor="#9CA3AF" value={nombre} onChangeText={setNombre} style={inputStyle} />
         <TextInput placeholder="2. Tel / Whatsapp" placeholderTextColor="#9CA3AF" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" style={inputStyle} />

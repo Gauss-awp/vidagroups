@@ -11,10 +11,6 @@ import {
 } from '@/components/ui';
 import { GraficoHabitos, GraficoRecaudacion, TarjetaGrafico } from '@/components/Graficos';
 import { FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
-import { PanelBalance } from '../mision_joven/PanelBalance';
-import { GestionGrupos } from '../mision_joven/GestionGrupos';
-import { PanelGuiaSupervisor } from '../guia_supervisor/PanelGuiaSupervisor';
-import { AsignarSupervisores } from '../mision_joven/AsignarSupervisores';
 
 interface GrupoLite { id: string; nombre: string; }
 interface MiembroLite { id: string; grupo_id: string; }
@@ -22,24 +18,10 @@ interface HabitoLite { id: string; grupo_id: string; }
 interface PagoLite { evento_id: string; monto_pagado: number; }
 
 export function PanelGeneral({ perfil }: { perfil: Perfil }) {
-  // AISLADO: guia_supervisor no entra al resto del código
-  if ((perfil.rol as any) === 'guia_supervisor') {
-    return <PanelGuiaSupervisor perfil={perfil} />;
-  }
-
   const router = useRouter()
   const esApostol = perfil.rol === 'apostol';
   const esPastor = perfil.rol === 'pastor';
-  const esMisionJoven = perfil.rol === 'mision_joven';
-  const esConsolidacion = perfil.rol === 'consolidacion' || perfil.rol === 'mision_joven';
-  const esGuiaSup = (perfil.rol as any) === 'guia_supervisor';
-
-  const titulo = esApostol? 'Panel Apostólico'
-    : esPastor? 'Panel Pastoral'
-    : esGuiaSup? 'Panel Supervisor'
-    : esMisionJoven? 'Panel Misión Joven'
-    : esConsolidacion? 'Panel Consolidación'
-    : 'Panel Guía';
+  const titulo = esApostol ? 'Panel Apostólico' : esPastor ? 'Panel Pastoral' : 'Panel';
 
   const [grupos, setGrupos] = useState<GrupoLite[]>([]);
   const [miembros, setMiembros] = useState<MiembroLite[]>([]);
@@ -48,7 +30,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [pagos, setPagos] = useState<PagoLite[]>([]);
   const [lideres, setLideres] = useState<Perfil[]>([]);
-  const [tarjetasConsol, setTarjetasConsol] = useState<any[]>([]);
   const [eventoSel, setEventoSel] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
@@ -60,11 +41,9 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
    ? supabase.from('profiles').select('*').in('rol', ['pastor', 'guia_supervisor', 'consolidacion']).order('nombre')
       : supabase.from('profiles').select('*').eq('supervisor_id', perfil.id).order('nombre');
 
-    const gruposQuery = esConsolidacion
-   ? supabase.from('groups').select('id, nombre').eq('categoria', 'mision_joven').order('nombre')
-      : supabase.from('groups').select('id, nombre').order('nombre');
+    const gruposQuery = supabase.from('groups').select('id, nombre').order('nombre');
 
-    const [g, m, h, r, e, p, l, t] = await Promise.all([
+    const [g, m, h, r, e, p, l] = await Promise.all([
       gruposQuery,
       supabase.from('miembros_grupo').select('id, grupo_id').eq('activo', true),
       supabase.from('habitos').select('id, grupo_id'),
@@ -72,7 +51,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
       supabase.from('eventos').select('*').order('fecha_evento', { ascending: false, nullsFirst: false }),
       supabase.from('pagos_evento').select('evento_id, monto_pagado'),
       consultaLideres,
-      supabase.from('tarjetas_consolidacion').select('*').order('creado_en', { ascending: false }).limit(200),
     ]);
 
     const listaEventos = (e.data?? []) as Evento[];
@@ -83,7 +61,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
     setEventos(listaEventos);
     setPagos((p.data?? []) as PagoLite[]);
     setLideres((l.data?? []) as Perfil[]);
-    setTarjetasConsol((t.data?? []) as any[]);
     setEventoSel((prev) => {
       if (prev && listaEventos.some((x) => x.id === prev)) return prev;
       const hoy = hoyISO();
@@ -92,7 +69,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
       return proximo?.id?? campamentos[0]?.id?? listaEventos[0]?.id?? null;
     });
     setCargando(false);
-  }, [esApostol, esConsolidacion, perfil.id]);
+  }, [esApostol, perfil.id]);
 
   useEffect(() => { cargar(); }, [cargar]);
   const refrescar = async () => { setRefrescando(true); await cargar(); setRefrescando(false); };
@@ -126,22 +103,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.textSec} />}>
         <TituloGrande titulo={titulo} subtitulo={`${ROL_LABEL[perfil.rol]} · ${perfil.nombre || perfil.email}`} />
 
-        {esConsolidacion && (
-          <>
-            <PanelBalance tarjetas={tarjetasConsol} />
-            <GestionGrupos perfil={perfil} />
-            {esMisionJoven && <AsignarSupervisores />}
-          </>
-        )}
-
         {/* STATS */}
-        {esMisionJoven? (
-          <View style={[s.fila, { gap: 10, marginBottom: 10, marginTop: 16 }]}>
-            <Stat etiqueta="Grupos" valor={String(grupos.length)} icono="people" color={colors.success} />
-            <Stat etiqueta="Miembros" valor={String(miembros.length)} icono="person" color={colors.primary} />
-            <Stat etiqueta="Hábitos (7 días)" valor={`${cumplimiento.global}%`} icono="checkmark-done" color={colorPorcentaje(cumplimiento.global)} />
-          </View>
-        ) : (
           <>
             <View style={[s.fila, { gap: 10, marginBottom: 10, marginTop: 16 }]}>
               <Stat etiqueta="Grupos" valor={String(grupos.length)} icono="people" color={colors.success} />
@@ -161,7 +123,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
               </>
             )}
           </>
-        )}
 
         <SeccionTitulo titulo="Hábitos por grupo" />
         <TarjetaGrafico titulo="Cumplimiento semanal" subtitulo="Últimos 7 días, por grupo"><GraficoHabitos etiquetas={cumplimiento.porGrupo.map((x) => x.grupo.nombre)} valores={cumplimiento.porGrupo.map((x) => x.pct)} /></TarjetaGrafico>

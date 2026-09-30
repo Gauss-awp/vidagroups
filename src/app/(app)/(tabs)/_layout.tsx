@@ -5,10 +5,17 @@ import { colors } from '@/lib/theme';
 import { esAdmin } from '@/lib/utils';
 
 export default function TabsLayout() {
-  const { perfil } = useAuth();
+  const { perfil, redesAdmin } = useAuth();
   const admin = esAdmin(perfil?.rol);
+  const administraRed = redesAdmin.length > 0;
   const tituloInicio =
-    perfil?.rol === 'guia' ? 'Mi Grupo' : perfil?.rol === 'supervisor' ? 'Mis Guías' : 'Panel';
+    perfil?.rol === 'guia'
+      ? 'Mi Grupo'
+      : perfil?.rol === 'guia_supervisor'
+        ? 'Mis Guías'
+        : perfil?.rol === 'consolidacion'
+          ? 'Consolidación'
+          : 'Panel';
 
   return (
     <Tabs
@@ -25,6 +32,14 @@ export default function TabsLayout() {
         options={{
           title: tituloInicio,
           tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="red"
+        options={{
+          title: redesAdmin.length > 1 ? 'Redes' : 'Mi Red',
+          href: administraRed ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="git-network" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

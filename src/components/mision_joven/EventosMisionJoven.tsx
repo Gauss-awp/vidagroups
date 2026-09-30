@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { Alert, Switch, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { formatoMoneda, formatoFecha } from '@/lib/utils';
 import { colors } from '@/lib/theme';
 import { Card, Cargando, s } from '@/components/ui';
 
-export default function EventosMisionJoven() {
+export default function EventosMisionJoven({ redId, puedeGeneral = false }: { redId: string; puedeGeneral?: boolean }) {
   const [eventos, setEventos] = useState<any[]>([]);
   const [resumen, setResumen] = useState<any[]>([]);
   const [eventoActivo, setEventoActivo] = useState<string | null>(null);
@@ -15,15 +15,16 @@ export default function EventosMisionJoven() {
   const [titulo, setTitulo] = useState('');
   const [precio, setPrecio] = useState('');
   const [fecha, setFecha] = useState('');
+  const [paraTodaLaIglesia, setParaTodaLaIglesia] = useState(false);
   const [cargando, setCargando] = useState(true);
 
   const load = async () => {
     setCargando(true);
-    const { data } = await supabase.from('eventos_globales').select('*').order('fecha', { ascending: true });
+    const { data } = await supabase.from('eventos_globales').select('*').or(`red_id.eq.${redId},red_id.is.null`).order('fecha', { ascending: true });
     setEventos(data || []);
     setCargando(false);
   };
-  useEffect(()=>{ load() },[]);
+  useEffect(()=>{ load() },[redId]);
 
   const guardar = async () => {
     if(!titulo.trim()) return Alert.alert('Falta el nombre');
@@ -31,10 +32,10 @@ export default function EventosMisionJoven() {
       const { error } = await supabase.from('eventos_globales').update({ titulo: titulo.trim(), precio: Number(precio)||0, fecha: fecha||null }).eq('id', editandoId);
       if(error) return Alert.alert('Error', error.message);
     } else {
-      const { error } = await supabase.from('eventos_globales').insert({ titulo: titulo.trim(), precio: Number(precio)||0, fecha: fecha||null });
+      const { error } = await supabase.from('eventos_globales').insert({ titulo: titulo.trim(), precio: Number(precio)||0, fecha: fecha||null, red_id: puedeGeneral && paraTodaLaIglesia ? null : redId });
       if(error) return Alert.alert('Error', error.message);
     }
-    setTitulo(''); setPrecio(''); setFecha(''); setShowForm(false); setEditandoId(null); load();
+    setTitulo(''); setPrecio(''); setFecha(''); setParaTodaLaIglesia(false); setShowForm(false); setEditandoId(null); load();
   };
 
   const editar = (ev:any) => {
@@ -55,36 +56,23 @@ export default function EventosMisionJoven() {
     if(eventoActivo === eventoId){ setEventoActivo(null); return; }
     setEventoActivo(eventoId);
 
-    // TRAE NOMBRE DIRECTO CON JOIN - ESTO ES LO QUE FALTABA
-    const { data, error } = await supabase
-    .from('evento_pagos')
-    .select('grupo_id, miembro_nombre, monto, pago, grupos_vida(nombre)')
-    .eq('evento_id', eventoId);
-
-    if(error){
-      console.log('Error join:', error);
-      // Fallback si el join falla por nombre de FK
-      const { data: data2 } = await supabase.from('evento_pagos').select('grupo_id, miembro_nombre, monto, pago').eq('evento_id', eventoId);
-      const { data: gvs } = await supabase.from('grupos_vida').select('id, nombre');
-      const map: Record<string,string> = {};
-      (gvs||[]).forEach((g:any)=> map[g.id]=g.nombre);
-      const agrupado2: any = {};
-      (data2||[]).forEach((r:any)=>{
-        const nombreReal = map[r.grupo_id] || `GV ${r.grupo_id?.slice(0,6)}`;
-        if(!agrupado2[r.grupo_id]) agrupado2[r.grupo_id] = { grupo: nombreReal, cantidad:0, total:0, lista:[] };
-        agrupado2[r.grupo_id].cantidad++; agrupado2[r.grupo_id].total+=Number(r.monto||0); agrupado2[r.grupo_id].lista.push(r);
-      });
-      setResumen(Object.values(agrupado2));
-      return;
-    }
+    const { data } = await supabase
+      .from('evento_pagos')
+      .select('grupo_id, miembro_nombre, monto, pago')
+      .eq('evento_id', eventoId);
+    const idsGrupos = [...new Set((data || []).map((r: any) => r.grupo_id).filter(Boolean))];
+    const { data: gvs } = idsGrupos.length
+      ? await supabase.from('groups').select('id, nombre').in('id', idsGrupos)
+      : { data: [] };
+    const nombres: Record<string, string> = {};
+    (gvs || []).forEach((g: any) => { nombres[g.id] = g.nombre; });
 
     const agrupado: any = {};
-    (data||[]).forEach((r:any)=>{
-      const gid = r.grupo_id;
-      const nombreReal = r.grupos_vida?.nombre || 'GV sin nombre';
-      if(!agrupado[gid]) agrupado[gid] = { grupo_id: gid, grupo: nombreReal, cantidad:0, total:0, lista:[] };
+    (data || []).forEach((r: any) => {
+      const gid = r.grupo_id || 'sin_grupo';
+      if (!agrupado[gid]) agrupado[gid] = { grupo_id: gid, grupo: nombres[r.grupo_id] || 'Grupo sin nombre', cantidad: 0, total: 0, lista: [] };
       agrupado[gid].cantidad++;
-      agrupado[gid].total+=Number(r.monto||0);
+      agrupado[gid].total += Number(r.monto || 0);
       agrupado[gid].lista.push(r);
     });
     setResumen(Object.values(agrupado));
@@ -114,6 +102,12 @@ export default function EventosMisionJoven() {
               <TextInput placeholder="Monto" placeholderTextColor="#9CA3AF" value={precio} onChangeText={setPrecio} keyboardType="numeric" style={{ flex: 1, backgroundColor: 'white', borderWidth: 1, borderColor: '#E5E7EB', padding: 12, borderRadius: 10, color: '#111827' }} />
               <TextInput placeholder="YYYY-MM-DD" placeholderTextColor="#9CA3AF" value={fecha} onChangeText={setFecha} style={{ flex: 1, backgroundColor: 'white', borderWidth: 1, borderColor: '#E5E7EB', padding: 12, borderRadius: 10, color: '#111827' }} />
             </View>
+            {puedeGeneral && !editandoId ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontSize: 13, color: '#374151', fontWeight: '600' }}>Para toda la iglesia</Text>
+                <Switch value={paraTodaLaIglesia} onValueChange={setParaTodaLaIglesia} />
+              </View>
+            ) : null}
             <TouchableOpacity onPress={guardar} style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}>
               <Ionicons name={editandoId? "save" : "megaphone"} size={18} color="white" />
               <Text style={{ color: 'white', fontWeight: '800' }}>{editandoId? 'Guardar cambios' : 'Crear y derivar'}</Text>
@@ -131,6 +125,7 @@ export default function EventosMisionJoven() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '800', fontSize: 14, color: '#111827' }}>{ev.titulo}</Text>
+                {ev.red_id === null ? <Text style={{ fontSize: 11, color: colors.purple, fontWeight: '700' }}>Toda la iglesia</Text> : null}
                 <Text style={{ fontSize: 12, color: '#6B7280' }}>{formatoFecha(ev.fecha)} · {formatoMoneda(Number(ev.precio))}</Text>
               </View>
             </View>

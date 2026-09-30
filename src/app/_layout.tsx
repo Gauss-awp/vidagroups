@@ -1,12 +1,13 @@
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/context/AuthContext';
 import { colors } from '@/lib/theme';
 
+// Tema claro, igual que la paleta de la app
 const tema = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     primary: colors.primary,
     background: colors.bg,
     card: colors.bg,
@@ -19,7 +20,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ThemeProvider value={tema}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
       </ThemeProvider>
     </AuthProvider>
