@@ -1,0 +1,95 @@
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
+import { colors } from '@/lib/theme';
+import { traducirError } from '@/lib/utils';
+import { Boton, Campo, Pantalla } from '@/components/ui';
+
+export default function Registro() {
+  const router = useRouter();
+  const [form, setForm] = useState({ nombre: '', apellido: '', email: '', password: '', repetir: '' });
+  const [cargando, setCargando] = useState(false);
+
+  const cambiar = (campo: keyof typeof form) => (valor: string) => setForm((f) => ({ ...f, [campo]: valor }));
+
+  const registrar = async () => {
+    if (!form.nombre.trim() || !form.email.trim() || !form.password) {
+      Alert.alert('Faltan datos', 'Completá nombre, correo y contraseña.');
+      return;
+    }
+    if (form.password.length < 6) {
+      Alert.alert('Contraseña corta', 'La contraseña tiene que tener al menos 6 caracteres.');
+      return;
+    }
+    if (form.password !== form.repetir) {
+      Alert.alert('Las contraseñas no coinciden', 'Escribí la misma contraseña en los dos campos.');
+      return;
+    }
+    setCargando(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+      options: { data: { nombre: form.nombre.trim(), apellido: form.apellido.trim() } },
+    });
+    setCargando(false);
+    if (error) {
+      Alert.alert('No se pudo crear la cuenta', traducirError(error.message));
+      return;
+    }
+    if (!data.session) {
+      Alert.alert('Cuenta creada', 'Te enviamos un correo para confirmar tu cuenta. Después ingresá con tu correo y contraseña.', [
+        { text: 'Entendido', onPress: () => router.replace('/login') },
+      ]);
+    }
+    // Si hay sesión, el layout redirige solo al inicio
+  };
+
+  return (
+    <Pantalla>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+          <Pressable onPress={() => router.back()} hitSlop={10} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 17 }}>Ingresar</Text>
+          </Pressable>
+
+          <Text style={{ color: colors.text, fontSize: 34, fontWeight: '700' }}>Crear cuenta</Text>
+          <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 6, marginBottom: 24, lineHeight: 21 }}>
+            Te registrás como Guía. Si tenés otro rol, el Pastor o el Apóstol te lo asigna desde la app.
+          </Text>
+
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Campo etiqueta="Nombre" value={form.nombre} onChangeText={cambiar('nombre')} textContentType="givenName" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Campo etiqueta="Apellido" value={form.apellido} onChangeText={cambiar('apellido')} textContentType="familyName" />
+            </View>
+          </View>
+          <Campo
+            etiqueta="Correo"
+            placeholder="tu@correo.com"
+            value={form.email}
+            onChangeText={cambiar('email')}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+          />
+          <Campo
+            etiqueta="Contraseña"
+            placeholder="Mínimo 6 caracteres"
+            value={form.password}
+            onChangeText={cambiar('password')}
+            secureTextEntry
+            textContentType="newPassword"
+          />
+          <Campo etiqueta="Repetir contraseña" value={form.repetir} onChangeText={cambiar('repetir')} secureTextEntry />
+
+          <Boton titulo="Crear cuenta" onPress={registrar} cargando={cargando} style={{ marginTop: 8 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Pantalla>
+  );
+}

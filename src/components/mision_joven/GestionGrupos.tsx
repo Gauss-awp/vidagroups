@@ -1,0 +1,129 @@
+import React, { useEffect, useState } from 'react';
+import { Alert, Text, View, ScrollView, Modal, Pressable } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import { colors } from '@/lib/theme';
+import { Card, Boton, s } from '@/components/ui';
+
+export function GestionGrupos(props: any) {
+  const [grupos, setGrupos] = useState<any[]>([]);
+  const [miembros, setMiembros] = useState<any[]>([]);
+  const [perfiles, setPerfiles] = useState<any[]>([]);
+  const [guias, setGuias] = useState<any[]>([]);
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const [grupoSel, setGrupoSel] = useState<any>(null);
+  const [modalGuia, setModalGuia] = useState(false);
+  const [modalMover, setModalMover] = useState<any>(null);
+
+  const cargar = async () => {
+    const { data: g } = await supabase.from('groups').select('*').or('categoria.eq.mision_joven,ministerio.eq.mision_joven').order('nombre');
+    const { data: m } = await supabase.from('miembros_grupo').select('*').eq('activo', true);
+    const { data: p } = await supabase.from('profiles').select('id, nombre, apellido');
+    
+    // TRAE A TODOS, sin filtrar por rol
+    const { data: gui } = await supabase.from('profiles').select('id, nombre, apellido').order('nombre');
+    
+    setGrupos(g || []); 
+    setMiembros(m || []); 
+    setPerfiles(p || []); 
+    setGuias(gui || []);
+};
+  useEffect(()=>{cargar()},[]);
+
+  const getNombre = (m:any) => `${m.nombre || ''} ${m.apellido || ''}`.trim() || 'Sin nombre';
+
+  const cambiarGuia = async (grupoId:string, nuevoGuiaId:string|null) => {
+    const { error } = await supabase.from('groups').update({ guia_id: nuevoGuiaId }).eq('id', grupoId);
+    if(error) return Alert.alert('Error', error.message);
+    setModalGuia(false); cargar();
+  };
+
+  const eliminarMiembro = (m:any) => {
+    Alert.alert('¿Sacar?', `¿Sacar a ${getNombre(m)} del GV?`,[
+      {text:'Cancelar', style:'cancel'},
+      {text:'Sacar', style:'destructive', onPress: async ()=>{
+        const {error} = await supabase.from('miembros_grupo').update({activo:false}).eq('id', m.id);
+        if(error) return Alert.alert('Error', error.message);
+        cargar();
+      }}
+    ]);
+  };
+
+  const moverMiembro = async (m:any, nuevoGrupoId:string) => {
+    const {error} = await supabase.from('miembros_grupo').update({grupo_id: nuevoGrupoId}).eq('id', m.id);
+    if(error) return Alert.alert('Error', error.message);
+    setModalMover(null); cargar();
+  };
+
+  return (
+    <View style={{ marginTop: 12, gap: 8 }}>
+      <Text style={{ fontSize: 16, fontWeight: '800' }}>Gestionar GVs - Misión Joven</Text>
+      {grupos.map(g=>{
+        const miembrosDelGrupo = miembros.filter(x=>x.grupo_id===g.id);
+        const isOpen = abierto===g.id;
+        const guiaActual = perfiles.find((p:any)=>p.id===g.guia_id);
+        return (
+          <Card key={g.id} style={{ padding:0, overflow:'hidden' }}>
+            <Pressable onPress={()=>setAbierto(isOpen? null : g.id)} style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, backgroundColor: isOpen? '#EEF2FF':'white' }}>
+              <View style={{flex:1}}>
+                <Text style={{fontWeight:'700', fontSize:14}}>{g.nombre}</Text>
+                <Text style={{fontSize:11, color:'#6B7280', marginTop:2}} numberOfLines={1}>
+                  {guiaActual? `Guía: ${guiaActual.nombre}` : 'Sin guía'} • {miembrosDelGrupo.length} miembros
+                </Text>
+              </View>
+              <Text style={{fontSize:14, color: colors.primary}}>{isOpen?'▲':'▼'}</Text>
+            </Pressable>
+            {isOpen && (
+              <View style={{ padding:12, gap:8 }}>
+                <Boton titulo="Cambiar Guía" variante="secundario" onPress={()=>{setGrupoSel(g); setModalGuia(true)}} />
+                <View style={{ maxHeight: 320 }}>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    {miembrosDelGrupo.map((m:any)=>(
+                      <View key={m.id} style={[s.fila, { justifyContent:'space-between', paddingVertical:10, borderTopWidth:1, borderTopColor:'#F3F4F6' }]}>
+                        <View style={{flex:1}}>
+                          <Text style={{fontSize:13, fontWeight:'500'}}>{getNombre(m)}</Text>
+                          {m.telefono? <Text style={{fontSize:11, color:'#6B7280'}}>{m.telefono}</Text> : null}
+                        </View>
+                        <Pressable onPress={()=>setModalMover(m)} style={{paddingHorizontal:8}}><Text style={{color: colors.primary, fontSize:12, fontWeight:'700'}}>Mover</Text></Pressable>
+                        <Pressable onPress={()=>eliminarMiembro(m)} style={{paddingHorizontal:4}}><Text style={{color:'#DC2626', fontSize:12}}>Sacar</Text></Pressable>
+                      </View>
+                    ))}
+                    {miembrosDelGrupo.length===0 && <Text style={{fontSize:12, color:'#9CA3AF', textAlign:'center', padding:10}}>Este GV está vacío</Text>}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
+          </Card>
+        )
+      })}
+      <Modal visible={modalGuia} transparent animationType="slide">
+        <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end' }}>
+          <View style={{ backgroundColor:'white', padding:16, borderTopLeftRadius:16, borderTopRightRadius:16, maxHeight:'70%' }}>
+            <Text style={{fontWeight:'800', fontSize:16, marginBottom:12}}>Guía para {grupoSel?.nombre}</Text>
+            <ScrollView>
+              <Pressable onPress={()=>cambiarGuia(grupoSel?.id, null)} style={{padding:14, borderBottomWidth:1, borderColor:'#eee'}}><Text style={{color:'#DC2626'}}>Sin guía</Text></Pressable>
+              {guias.map((gu:any)=>(
+                <Pressable key={gu.id} onPress={()=>cambiarGuia(grupoSel?.id, gu.id)} style={{padding:14, borderBottomWidth:1, borderColor:'#eee'}}>
+                  <Text>{gu.nombre} {gu.apellido}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <View style={{marginTop:12}}><Boton titulo="Cerrar" onPress={()=>setModalGuia(false)} variante="secundario"/></View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={!!modalMover} transparent animationType="slide">
+        <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end' }}>
+          <View style={{ backgroundColor:'white', padding:16, borderTopLeftRadius:16, borderTopRightRadius:16 }}>
+            <Text style={{fontWeight:'800', marginBottom:12}}>Mover a:</Text>
+            {grupos.map((gr:any)=>(
+              <Pressable key={gr.id} onPress={()=>moverMiembro(modalMover, gr.id)} style={{padding:14, borderBottomWidth:1, borderColor:'#eee'}}>
+                <Text>{gr.nombre}</Text>
+              </Pressable>
+            ))}
+            <View style={{marginTop:12}}><Boton titulo="Cancelar" onPress={()=>setModalMover(null)}/></View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  )
+}
