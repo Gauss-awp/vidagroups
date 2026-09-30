@@ -16,7 +16,7 @@ const TABS = [
   { id: 0, label: 'Hábitos' },
   { id: 1, label: 'Eventos' },
   { id: 2, label: 'Miembros' },
-  { id: 3, label: 'Consolidación ' },
+  { id: 3, label: 'Consolidación' },
 ];
 
 export function GrupoDetalle({

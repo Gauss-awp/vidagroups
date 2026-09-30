@@ -25,7 +25,7 @@ create table public.profiles (
 create index profiles_supervisor_idx on public.profiles(supervisor_id);
 create index profiles_rol_idx on public.profiles(rol);
 
--- Cadena Apóstol → Pastor → Supervisor → Guía.
+-- Cadena Apóstol → Pastor → Guia Supervisor → Guía.
 -- Se mantiene sola a partir de profiles.supervisor_id (ver trigger más abajo).
 create table public.relaciones_supervision (
   supervisor_id  uuid not null references public.profiles(id) on delete cascade,

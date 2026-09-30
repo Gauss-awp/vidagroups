@@ -1,14 +1,21 @@
 import { View, Text, Pressable } from 'react-native'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+
+const CORREO_DEV = 'benjamin_trece@hotmail.com'
 
 export function DevRoleSwitcher({ perfil }: any) {
-  
+  const { refrescarPerfil } = useAuth()
+
+  // Solo se muestra en tu cuenta
+  if (perfil?.email?.toLowerCase() !== CORREO_DEV.toLowerCase()) return null
+
   const cambiarRol = async (nuevoRol: string) => {
     const { error } = await supabase.rpc('dev_cambiar_mi_rol', { nuevo_rol: nuevoRol })
     if (error) {
       alert('Error RPC: ' + error.message)
     } else {
-      alert(`Listo! Ahora sos: ${nuevoRol}. Cerrá la app y abrila de nuevo`)
+      await refrescarPerfil()
     }
   }
 
