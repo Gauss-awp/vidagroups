@@ -5,7 +5,6 @@ import { colors } from '@/lib/theme';
 import { useAuth } from '@/context/AuthContext';
 import { Boton, Campo, Card, Chip, HojaModal, Pantalla, TituloGrande, Vacio, s } from '@/components/ui';
 import { Aprobaciones } from '@/components/red/Aprobaciones';
-import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { ResponsablesRed } from '@/components/red/ResponsablesRed';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
@@ -97,8 +96,6 @@ export default function PanelRed() {
           </ScrollView>
         ) : null}
 
-        <AlertasFaltas minimo={3} redId={red.id} refreshKey={refreshKey} />
-
         <Aprobaciones key={`ap-${refreshKey}`} redId={red.id} />
 
         <PanelBalance tarjetas={tarjetas} redId={red.id} puedeGeneral={esPastorOApostol} />
@@ -107,7 +104,7 @@ export default function PanelRed() {
 
         <AsignarSupervisores key={`as-${refreshKey}`} redId={red.id} redNombre={red.nombre} />
 
-        {esPastorOApostol ? <ResponsablesRed key={`rr-${refreshKey}`} redId={red.id} onCambio={refrescarPerfil} /> : null}
+        <ResponsablesRed key={`rr-${refreshKey}`} redId={red.id} onCambio={refrescarPerfil} />
 
         <View style={{ height: 24 }} />
         <Card style={{ backgroundColor: colors.cardAlt }}>

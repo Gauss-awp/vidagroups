@@ -72,6 +72,12 @@ export default function Login() {
             </Pressable>
           </View>
 
+          <Link href="/recuperar" asChild>
+            <Pressable style={{ alignSelf: 'flex-end', marginTop: -4, marginBottom: 12 }} hitSlop={8}>
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>¿Olvidaste tu contraseña?</Text>
+            </Pressable>
+          </Link>
+
           <Boton titulo="Ingresar" onPress={ingresar} cargando={cargando} style={{ marginTop: 8 }} />
 
           <Link href="/registro" asChild>

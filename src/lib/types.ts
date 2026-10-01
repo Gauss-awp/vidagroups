@@ -17,6 +17,7 @@ export interface Perfil {
   supervisor_id: string | null;
   red_id: string | null;
   estado: EstadoPerfil;
+  telefono?: string | null;
   creado_en: string;
 }
 
@@ -36,6 +37,7 @@ export interface Miembro {
   nombre: string;
   apellido: string;
   telefono: string | null;
+  cumpleanos?: string | null;
   activo: boolean;
   creado_en: string;
 }

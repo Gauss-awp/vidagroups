@@ -15,6 +15,8 @@ export default function PerfilPantalla() {
   const [miRed, setMiRed] = useState<string | null>(null);
   const [nombre, setNombre] = useState(perfil?.nombre?? '');
   const [apellido, setApellido] = useState(perfil?.apellido?? '');
+  const [telefono, setTelefono] = useState(perfil?.telefono ?? '');
+  const [eliminando, setEliminando] = useState(false);
   const [superior, setSuperior] = useState<Perfil | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -29,6 +31,7 @@ export default function PerfilPantalla() {
   useEffect(() => {
     setNombre(perfil?.nombre?? '');
     setApellido(perfil?.apellido?? '');
+    setTelefono(perfil?.telefono ?? '');
 
     const cargarSuperior = async () => {
       if (!perfil) return;
@@ -67,7 +70,7 @@ export default function PerfilPantalla() {
     setGuardando(true);
     const { error } = await supabase
      .from('profiles')
-     .update({ nombre: nombre.trim(), apellido: apellido.trim() })
+     .update({ nombre: nombre.trim(), apellido: apellido.trim(), telefono: telefono.trim() || null })
      .eq('id', perfil.id);
     setGuardando(false);
     if (error) {
@@ -76,6 +79,38 @@ export default function PerfilPantalla() {
     }
     await refrescarPerfil();
     Alert.alert('Cambios guardados');
+  };
+
+  const eliminarCuenta = () => {
+    Alert.alert(
+      'Eliminar mi cuenta',
+      'Vas a borrar tu usuario de VidaGroups. Esta acción no se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert('¿Seguro?', 'Confirmá que querés eliminar tu cuenta para siempre.', [
+              { text: 'No', style: 'cancel' },
+              {
+                text: 'Sí, eliminar',
+                style: 'destructive',
+                onPress: async () => {
+                  setEliminando(true);
+                  const { error } = await supabase.rpc('eliminar_mi_cuenta');
+                  setEliminando(false);
+                  if (error) {
+                    Alert.alert('No se pudo eliminar la cuenta', error.message);
+                    return;
+                  }
+                  await cerrarSesion();
+                },
+              },
+            ]),
+        },
+      ]
+    );
   };
 
   const salir = () => {
@@ -153,9 +188,29 @@ export default function PerfilPantalla() {
         <SeccionTitulo titulo="Mis datos" />
         <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} />
         <Campo etiqueta="Apellido" value={apellido} onChangeText={setApellido} />
+        <Campo
+          etiqueta="Teléfono (WhatsApp)"
+          value={telefono}
+          onChangeText={setTelefono}
+          keyboardType="phone-pad"
+          placeholder="3541 22-1717"
+          ayuda="Lo ve tu supervisor para escribirte por WhatsApp."
+        />
         <Boton titulo="Guardar cambios" onPress={guardar} cargando={guardando} />
 
-        <Boton titulo="Cerrar sesión" variante="peligro" icono="log-out-outline" onPress={salir} style={{ marginTop: 28 }} />
+        <Boton titulo="Cerrar sesión" variante="secundario" icono="log-out-outline" onPress={salir} style={{ marginTop: 28 }} />
+
+        <Boton
+          titulo="Eliminar mi cuenta"
+          variante="peligro"
+          icono="trash-outline"
+          cargando={eliminando}
+          onPress={eliminarCuenta}
+          style={{ marginTop: 10 }}
+        />
+        <Text style={[s.textoFilaSec, { marginTop: 8, textAlign: 'center' }]}>
+          Se borran tu usuario y tus datos personales. Los registros de tus grupos quedan para la iglesia.
+        </Text>
       </ScrollView>
     </Pantalla>
   );

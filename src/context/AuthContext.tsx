@@ -8,6 +8,8 @@ interface AuthContextValue {
   perfil: Perfil | null;
   /** Redes que esta persona administra (Encargado, Pastor asignado o Apóstol) */
   redesAdmin: Red[];
+  /** Redes en las que esta persona es Consolidador/a */
+  redesConsolida: Red[];
   cargando: boolean;
   errorPerfil: string | null;
   refrescarPerfil: () => Promise<void>;
@@ -15,6 +17,16 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+async function cargarRedesConsolida(perfil: Perfil): Promise<Red[]> {
+  if (perfil.estado !== 'activo') return [];
+  const { data } = await supabase.from('redes_consolidadores').select('red_id').eq('perfil_id', perfil.id);
+  const ids = (data ?? []).map((x: { red_id: string }) => x.red_id);
+  if (perfil.rol === 'consolidacion' && perfil.red_id && !ids.includes(perfil.red_id)) ids.push(perfil.red_id);
+  if (ids.length === 0) return [];
+  const { data: redes } = await supabase.from('redes').select('id, nombre').in('id', ids).order('nombre');
+  return (redes ?? []) as Red[];
+}
 
 async function cargarRedesAdmin(perfil: Perfil): Promise<Red[]> {
   if (perfil.estado !== 'activo') return [];
@@ -40,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [redesAdmin, setRedesAdmin] = useState<Red[]>([]);
+  const [redesConsolida, setRedesConsolida] = useState<Red[]>([]);
   const [cargando, setCargando] = useState(true);
   const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
 
@@ -56,7 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const p = data as Perfil;
-    setRedesAdmin(await cargarRedesAdmin(p));
+    const [adm, cons] = await Promise.all([cargarRedesAdmin(p), cargarRedesConsolida(p)]);
+    setRedesAdmin(adm);
+    setRedesConsolida(cons);
     setErrorPerfil(null);
     setPerfil(p);
   }, []);
@@ -81,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setPerfil(null);
         setRedesAdmin([]);
+        setRedesConsolida([]);
         setErrorPerfil(null);
       }
     });
@@ -100,8 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, perfil, redesAdmin, cargando, errorPerfil, refrescarPerfil, cerrarSesion }),
-    [session, perfil, redesAdmin, cargando, errorPerfil, refrescarPerfil, cerrarSesion]
+    () => ({ session, perfil, redesAdmin, redesConsolida, cargando, errorPerfil, refrescarPerfil, cerrarSesion }),
+    [session, perfil, redesAdmin, redesConsolida, cargando, errorPerfil, refrescarPerfil, cerrarSesion]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colorPorcentaje, colors } from '@/lib/theme';
 import type { Habito, Miembro, RegistroDiario } from '@/lib/types';
-import { MESES, nombreCompleto, porcentaje, rangoMes } from '@/lib/utils';
+import { MESES, cumpleProximo, formatoCumple, nombreCompleto, parseCumple, porcentaje, rangoMes } from '@/lib/utils';
 import { Avatar, BarraProgreso, Boton, Campo, Card, Cargando, HojaModal, SeccionTitulo, Stat, Vacio, s } from '@/components/ui';
 
 interface AnalisisHabito {
@@ -39,7 +40,8 @@ export function MiembrosTab({
   const [cargando, setCargando] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '' });
+  const router = useRouter();
+  const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '', cumple: '' });
   const [guardando, setGuardando] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -150,8 +152,14 @@ export function MiembrosTab({
       Alert.alert('Falta el nombre', 'Escribí al menos el nombre del miembro.');
       return;
     }
+    const cumple = form.cumple.trim() ? parseCumple(form.cumple) : null;
+    if (form.cumple.trim() && !cumple) {
+      Alert.alert('Cumpleaños inválido', 'Escribilo como día/mes, por ejemplo 25/12, o con el año: 25/12/1998.');
+      return;
+    }
     setGuardando(true);
     const { error } = await supabase.from('miembros_grupo').insert({
+      cumpleanos: cumple,
       grupo_id: grupoId,
       nombre: form.nombre.trim(),
       apellido: form.apellido.trim(),
@@ -162,7 +170,7 @@ export function MiembrosTab({
       Alert.alert('No se pudo agregar', error.message);
       return;
     }
-    setForm({ nombre: '', apellido: '', telefono: '' });
+    setForm({ nombre: '', apellido: '', telefono: '', cumple: '' });
     setModal(false);
     cargar();
   };
@@ -222,7 +230,7 @@ export function MiembrosTab({
             return (
               <Card
                 key={a.miembro.id}
-                onPress={() => setExpandido(abierto ? null : a.miembro.id)}
+                onPress={() => router.push({ pathname: '/miembro/[id]', params: { id: a.miembro.id } })}
                 onLongPress={() => quitar(a.miembro)}
               >
                 <View style={s.fila}>
@@ -230,6 +238,11 @@ export function MiembrosTab({
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={s.textoFila}>{nombreCompleto(a.miembro)}</Text>
                     {a.miembro.telefono ? <Text style={s.textoFilaSec}>{a.miembro.telefono}</Text> : null}
+                    {cumpleProximo(a.miembro.cumpleanos) ? (
+                      <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700', marginTop: 2 }}>
+                        Cumple el {formatoCumple(a.miembro.cumpleanos).slice(0, 5)}
+                      </Text>
+                    ) : null}
                   </View>
                   <Text style={{ color, fontSize: 20, fontWeight: '700' }}>{a.total ? `${a.pct}%` : '—'}</Text>
                 </View>
@@ -260,7 +273,7 @@ export function MiembrosTab({
             );
           })}
           <Text style={[s.textoFilaSec, { marginLeft: 4 }]}>
-            Tocá un hermano para ver el detalle. Mantenelo apretado para quitarlo del grupo.
+            Tocá un hermano para ver su historial y editar sus datos. Mantenelo apretado para quitarlo del grupo.
           </Text>
         </>
       )}
@@ -273,6 +286,13 @@ export function MiembrosTab({
           value={form.telefono}
           onChangeText={(v) => setForm({ ...form, telefono: v })}
           keyboardType="phone-pad"
+        />
+        <Campo
+          etiqueta="Cumpleaños (opcional)"
+          placeholder="25/12"
+          value={form.cumple}
+          onChangeText={(v) => setForm({ ...form, cumple: v })}
+          keyboardType="numbers-and-punctuation"
         />
         <Boton titulo="Agregar miembro" onPress={agregar} cargando={guardando} />
       </HojaModal>

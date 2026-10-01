@@ -30,8 +30,8 @@ export default function Registro() {
       Alert.alert('Falta tu red', 'Elegí la red a la que pertenecés.');
       return;
     }
-    if (form.password.length < 6) {
-      Alert.alert('Contraseña corta', 'La contraseña tiene que tener al menos 6 caracteres.');
+    if (form.password.length < 8) {
+      Alert.alert('Contraseña corta', 'La contraseña tiene que tener al menos 8 caracteres.');
       return;
     }
     if (form.password !== form.repetir) {
@@ -96,7 +96,7 @@ export default function Registro() {
           />
           <Campo
             etiqueta="Contraseña"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres"
             value={form.password}
             onChangeText={cambiar('password')}
             secureTextEntry

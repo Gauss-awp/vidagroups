@@ -148,3 +148,35 @@ export function traducirError(mensaje: string): string {
 }
 
 export type PerfilLite = Pick<Perfil, 'id' | 'nombre' | 'apellido' | 'email' | 'rol'>;
+// ---------- Cumpleaños ----------
+
+/** "25/12" o "25/12/1990" → fecha ISO. Sin año se guarda como 1904 (año bisiesto, para el 29/02). */
+export function parseCumple(texto: string): string | null {
+  const m = texto.trim().match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);
+  if (!m) return null;
+  const dia = Number(m[1]);
+  const mes = Number(m[2]);
+  const anio = m[3] ? Number(m[3]) : 1904;
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+  const d = new Date(anio, mes - 1, dia);
+  if (d.getMonth() !== mes - 1) return null;
+  return toISO(d);
+}
+
+/** Fecha ISO → "25/12" (o "25/12/1990" si tiene año real) */
+export function formatoCumple(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return y === '1904' ? `${d}/${m}` : `${d}/${m}/${y}`;
+}
+
+/** ¿Cumple dentro de los próximos `dias` días (hoy incluido)? */
+export function cumpleProximo(iso: string | null | undefined, dias = 7): boolean {
+  if (!iso) return false;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const [, m, d] = iso.slice(0, 10).split('-').map(Number);
+  let prox = new Date(hoy.getFullYear(), m - 1, d);
+  if (prox < hoy) prox = new Date(hoy.getFullYear() + 1, m - 1, d);
+  return (prox.getTime() - hoy.getTime()) / 86400000 < dias;
+}

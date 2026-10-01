@@ -45,6 +45,7 @@ export default function AppLayout() {
       <Stack.Screen name="equipo/[id]" options={{ title: 'Equipo' }} />
       <Stack.Screen name="evento/[id]" options={{ title: 'Evento' }} />
       <Stack.Screen name="reporte" options={{ title: 'Reporte mensual' }} />
+      <Stack.Screen name="miembro/[id]" options={{ title: 'Hermano' }} />
     </Stack>
   );
 }

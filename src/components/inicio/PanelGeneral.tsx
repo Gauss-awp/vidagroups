@@ -10,7 +10,6 @@ import { useAuth } from '@/context/AuthContext';
 import { BarraProgreso, Boton, Card, Cargando, Pantalla, SeccionTitulo, TituloGrande, Vacio, s } from '@/components/ui';
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
 import { FormEvento } from '@/components/eventos/FormEvento';
-import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 
 interface Semana {
@@ -72,7 +71,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
   const [datos, setDatos] = useState<DatosPanel | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [verFaltas, setVerFaltas] = useState(false);
   const [modalEvento, setModalEvento] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -105,7 +103,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
   const diferencia = actual?.pct !== null && anterior?.pct !== null && actual && anterior ? (actual.pct ?? 0) - (anterior.pct ?? 0) : null;
 
   const pendientesTotal =
-    datos.alertas_faltas + datos.sin_reunion.length + datos.en_baja.length + datos.tarjetas_sin_fonovisita + datos.pendientes;
+    datos.sin_reunion.length + datos.en_baja.length + datos.tarjetas_sin_fonovisita + datos.pendientes;
 
   const compartirResumen = async () => {
     const lineas = [
@@ -114,7 +112,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
       `Reuniones registradas: ${actual?.reuniones ?? 0} de ${datos.totales.grupos} grupos`,
       `Miembros: ${datos.totales.miembros} · Nuevos este mes: ${datos.totales.nuevos_mes}`,
       '',
-      datos.alertas_faltas ? `⚠️ ${datos.alertas_faltas} hermanos con 3 faltas seguidas o más` : '',
       ...datos.sin_reunion.map((g) => `⏸️ ${g.nombre}${g.guia ? ` (${g.guia})` : ''}: sin reunión desde ${g.ultima ? formatoFecha(g.ultima) : 'nunca'}`),
       ...datos.en_baja.map((g) => `📉 ${g.nombre}: asistencia ${g.anterior}% → ${g.actual}%`),
       datos.tarjetas_sin_fonovisita ? `📞 ${datos.tarjetas_sin_fonovisita} personas nuevas sin fonovisita hace +3 días` : '',
@@ -155,21 +152,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
           </Card>
         ) : (
           <Card style={{ paddingVertical: 4 }}>
-            {datos.alertas_faltas > 0 ? (
-              <ItemAtencion
-                icono="alert-circle"
-                color={colors.danger}
-                texto={`${datos.alertas_faltas} ${datos.alertas_faltas === 1 ? 'hermano' : 'hermanos'} con 3 faltas seguidas o más`}
-                onPress={() => setVerFaltas(!verFaltas)}
-                abierto={verFaltas}
-              />
-            ) : null}
-            {verFaltas ? (
-              <View style={{ marginBottom: 8 }}>
-                <AlertasFaltas minimo={3} refreshKey={refreshKey} />
-              </View>
-            ) : null}
-
             {datos.sin_reunion.map((g) => (
               <ItemAtencion
                 key={`sr-${g.id}`}

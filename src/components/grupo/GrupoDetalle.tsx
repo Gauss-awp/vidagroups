@@ -12,6 +12,7 @@ import { MiembrosTab } from './MiembrosTab';
 import { ConsolidacionGuia } from '../mision_joven/ConsolidacionGuia';
 import { AsistenciaTab } from '../asistencia/AsistenciaTab';
 import { AlertasFaltas } from '../asistencia/AlertasFaltas';
+import { CumplesSemana } from '../asistencia/CumplesSemana';
 
 // Acortamos el label largo para que entre bien
 const TABS = [
@@ -105,6 +106,7 @@ export function GrupoDetalle({
 
       <View style={{ marginTop: 12 }}>
         <AlertasFaltas grupoId={grupo.id} refreshKey={refreshKey} />
+        <CumplesSemana grupoId={grupo.id} refreshKey={refreshKey} />
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4, marginBottom: 12 }} contentContainerStyle={{ gap: 6 }}>

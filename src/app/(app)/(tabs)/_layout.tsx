@@ -5,7 +5,9 @@ import { colors } from '@/lib/theme';
 import { esAdmin } from '@/lib/utils';
 
 export default function TabsLayout() {
-  const { perfil, redesAdmin } = useAuth();
+  const { perfil, redesAdmin, redesConsolida } = useAuth();
+  // Si es Consolidador/a además de su rol, tiene una pestaña aparte (si su rol ya es Consolidador, es su inicio)
+  const consolidaAparte = redesConsolida.length > 0 && perfil?.rol !== 'consolidacion';
   const admin = esAdmin(perfil?.rol);
   const administraRed = redesAdmin.length > 0;
   const tituloInicio =
@@ -32,6 +34,14 @@ export default function TabsLayout() {
         options={{
           title: tituloInicio,
           tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="consolidacion"
+        options={{
+          title: 'Consolidación',
+          href: consolidaAparte ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="heart-circle" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

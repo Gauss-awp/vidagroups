@@ -8,7 +8,18 @@ import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, Badge, Boton, Campo, Card, HojaModal, SeccionTitulo, s } from '@/components/ui';
 
-type Tipo = 'encargados' | 'pastores';
+type Tipo = 'encargados' | 'pastores' | 'consolidadores';
+
+const TABLA: Record<Tipo, string> = {
+  pastores: 'redes_pastores',
+  encargados: 'redes_encargados',
+  consolidadores: 'redes_consolidadores',
+};
+const NOMBRE: Record<Tipo, string> = {
+  pastores: 'Pastor de esta red',
+  encargados: 'Encargado de esta red',
+  consolidadores: 'Consolidador/a de esta red',
+};
 
 /**
  * Pastores y Encargados de una red.
@@ -18,24 +29,29 @@ type Tipo = 'encargados' | 'pastores';
 export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?: () => void }) {
   const { perfil } = useAuth();
   const esApostol = perfil?.rol === 'apostol';
+  const esPastorOApostol = esApostol || perfil?.rol === 'pastor';
   const [pastores, setPastores] = useState<Perfil[]>([]);
   const [encargados, setEncargados] = useState<Perfil[]>([]);
+  const [consolidadores, setConsolidadores] = useState<Perfil[]>([]);
   const [candidatos, setCandidatos] = useState<Perfil[]>([]);
   const [agregando, setAgregando] = useState<Tipo | null>(null);
   const [busqueda, setBusqueda] = useState('');
 
   const cargar = useCallback(async () => {
-    const [p, e] = await Promise.all([
+    const [p, e, c] = await Promise.all([
       supabase.from('redes_pastores').select('perfil_id').eq('red_id', redId),
       supabase.from('redes_encargados').select('perfil_id').eq('red_id', redId),
+      supabase.from('redes_consolidadores').select('perfil_id').eq('red_id', redId),
     ]);
     const idsP = (p.data ?? []).map((x: { perfil_id: string }) => x.perfil_id);
     const idsE = (e.data ?? []).map((x: { perfil_id: string }) => x.perfil_id);
-    const ids = [...new Set([...idsP, ...idsE])];
+    const idsC = (c.data ?? []).map((x: { perfil_id: string }) => x.perfil_id);
+    const ids = [...new Set([...idsP, ...idsE, ...idsC])];
     const { data } = ids.length ? await supabase.from('profiles').select('*').in('id', ids) : { data: [] };
     const perfiles = (data ?? []) as Perfil[];
     setPastores(perfiles.filter((x) => idsP.includes(x.id)));
     setEncargados(perfiles.filter((x) => idsE.includes(x.id)));
+    setConsolidadores(perfiles.filter((x) => idsC.includes(x.id)));
   }, [redId]);
 
   useEffect(() => {
@@ -55,7 +71,7 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
 
   const agregar = async (persona: Perfil) => {
     if (!agregando) return;
-    const tabla = agregando === 'pastores' ? 'redes_pastores' : 'redes_encargados';
+    const tabla = TABLA[agregando];
     const { error } = await supabase.from(tabla).insert({ red_id: redId, perfil_id: persona.id });
     if (error) {
       Alert.alert('No se pudo agregar', error.message);
@@ -67,8 +83,8 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
   };
 
   const quitar = (tipo: Tipo, persona: Perfil) => {
-    const tabla = tipo === 'pastores' ? 'redes_pastores' : 'redes_encargados';
-    const que = tipo === 'pastores' ? 'Pastor de esta red' : 'Encargado de esta red';
+    const tabla = TABLA[tipo];
+    const que = NOMBRE[tipo];
     Alert.alert('Quitar', `¿Quitar a ${nombreCompleto(persona)} como ${que}? Su rol no cambia.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -101,7 +117,8 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
     </View>
   );
 
-  const yaEsta = (id: string) => (agregando === 'pastores' ? pastores : encargados).some((x) => x.id === id);
+  const yaEsta = (id: string) =>
+    (agregando === 'pastores' ? pastores : agregando === 'consolidadores' ? consolidadores : encargados).some((x) => x.id === id);
   const q = busqueda.trim().toLowerCase();
   const lista = candidatos.filter((c) => !yaEsta(c.id) && (!q || nombreCompleto(c).toLowerCase().includes(q)));
 
@@ -115,19 +132,31 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
         {pastores.length === 0 ? <Text style={s.textoFilaSec}>Sin pastores asignados.</Text> : pastores.map((p) => fila('pastores', p, esApostol))}
       </Card>
 
-      <SeccionTitulo titulo="Encargados de la red" accion={{ texto: 'Agregar', icono: 'add', onPress: () => abrirAgregar('encargados') }} />
+      <SeccionTitulo
+        titulo="Encargados de la red"
+        accion={esPastorOApostol ? { texto: 'Agregar', icono: 'add', onPress: () => abrirAgregar('encargados') } : undefined}
+      />
       <Card>
         {encargados.length === 0 ? (
           <Text style={s.textoFilaSec}>Sin encargados. Designá a alguien de la red para que apruebe cuentas y maneje los grupos.</Text>
         ) : (
-          encargados.map((p) => fila('encargados', p, true))
+          encargados.map((p) => fila('encargados', p, esPastorOApostol))
+        )}
+      </Card>
+
+      <SeccionTitulo titulo="Consolidadores de la red" accion={{ texto: 'Agregar', icono: 'add', onPress: () => abrirAgregar('consolidadores') }} />
+      <Card>
+        {consolidadores.length === 0 ? (
+          <Text style={s.textoFilaSec}>Sin consolidadores. Puede ser cualquier persona activa de la red, por ejemplo un Guía Supervisor.</Text>
+        ) : (
+          consolidadores.map((p) => fila('consolidadores', p, true))
         )}
       </Card>
 
       <HojaModal
         visible={!!agregando}
         onClose={() => setAgregando(null)}
-        titulo={agregando === 'pastores' ? 'Agregar Pastor' : 'Agregar Encargado'}
+        titulo={agregando === 'pastores' ? 'Agregar Pastor' : agregando === 'consolidadores' ? 'Agregar Consolidador/a' : 'Agregar Encargado'}
       >
         <Campo placeholder="Buscar por nombre" value={busqueda} onChangeText={setBusqueda} />
         {lista.length === 0 ? (
