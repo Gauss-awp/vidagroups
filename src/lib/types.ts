@@ -6,6 +6,7 @@ export interface Red {
   nombre: string;
 }
 export type TipoEvento = 'encuentro' | 'campamento' | 'otro';
+export type Moneda = 'ARS' | 'USD';
 
 export interface Perfil {
   id: string;
@@ -56,6 +57,9 @@ export interface RegistroDiario {
 export interface Evento {
   id: string;
   grupo_id: string | null;
+  /** Red del evento. Si grupo_id y red_id son null, es de toda la iglesia */
+  red_id: string | null;
+  moneda: Moneda;
   nombre: string;
   tipo: TipoEvento;
   costo_total: number;

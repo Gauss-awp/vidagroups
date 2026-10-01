@@ -1,4 +1,4 @@
-import type { Perfil, Rol, TipoEvento } from './types';
+import type { Moneda, Perfil, Rol, TipoEvento } from './types';
 
 export const ROL_LABEL: Record<Rol, string> = {
   guia: 'Guía',
@@ -92,11 +92,24 @@ export function rangoMes(anio: number, mes: number): { inicio: string; fin: stri
 
 // ---------- Números y dinero ----------
 
-export function formatoMoneda(valor: number): string {
+export function formatoMoneda(valor: number, moneda: Moneda = 'ARS'): string {
   const negativo = valor < 0;
   const [entero, decimales] = Math.abs(valor).toFixed(2).split('.');
   const conPuntos = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${negativo? '-' : ''}$${conPuntos}${decimales!== '00'? `,${decimales}` : ''}`;
+  const simbolo = moneda === 'USD' ? 'US$ ' : '$ ';
+  return `${negativo ? '-' : ''}${simbolo}${conPuntos}${decimales !== '00' ? `,${decimales}` : ''}`;
+}
+
+export const MONEDA_LABEL: Record<Moneda, string> = { ARS: 'Pesos', USD: 'Dólares' };
+
+/** Suma montos separados por moneda: "US$ 1.200 · $ 850.000" */
+export function totalesPorMoneda(items: { monto: number; moneda: Moneda }[]): string {
+  const ars = items.filter((i) => i.moneda === 'ARS').reduce((a, i) => a + i.monto, 0);
+  const usd = items.filter((i) => i.moneda === 'USD').reduce((a, i) => a + i.monto, 0);
+  const partes: string[] = [];
+  if (usd) partes.push(formatoMoneda(usd, 'USD'));
+  if (ars || partes.length === 0) partes.push(formatoMoneda(ars, 'ARS'));
+  return partes.join(' · ');
 }
 
 export function abreviarNumero(valor: number): string {

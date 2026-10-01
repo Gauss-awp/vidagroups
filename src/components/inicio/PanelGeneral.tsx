@@ -12,7 +12,7 @@ import {
 import { GraficoHabitos, GraficoRecaudacion, TarjetaGrafico } from '@/components/Graficos';
 import { FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
 
-interface GrupoLite { id: string; nombre: string; }
+interface GrupoLite { id: string; nombre: string; red_id: string | null; }
 interface MiembroLite { id: string; grupo_id: string; }
 interface HabitoLite { id: string; grupo_id: string; }
 interface PagoLite { evento_id: string; monto_pagado: number; }
@@ -41,7 +41,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
    ? supabase.from('profiles').select('*').in('rol', ['pastor', 'guia_supervisor', 'consolidacion']).order('nombre')
       : supabase.from('profiles').select('*').eq('supervisor_id', perfil.id).order('nombre');
 
-    const gruposQuery = supabase.from('groups').select('id, nombre').order('nombre');
+    const gruposQuery = supabase.from('groups').select('id, nombre, red_id').order('nombre');
 
     const [g, m, h, r, e, p, l] = await Promise.all([
       gruposQuery,
@@ -85,7 +85,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
     return { global: porcentaje(hechos, esperado), porGrupo };
   }, [registros, grupoDeHabito, miembrosActivos, miembrosPorGrupo, grupos]);
 
-  const recaudacion = useMemo(() => eventos.map((ev) => { const recaudado = pagos.filter((p) => p.evento_id === ev.id).reduce((a, p) => a + Number(p.monto_pagado), 0); const personas = ev.grupo_id? miembrosPorGrupo.get(ev.grupo_id)?? 0 : miembros.length; const meta = Number(ev.costo_total) * personas; return { evento: ev, recaudado, meta, falta: Math.max(0, meta - recaudado) }; }), [eventos, pagos, miembrosPorGrupo, miembros.length]);
+  const recaudacion = useMemo(() => eventos.map((ev) => { const recaudado = pagos.filter((p) => p.evento_id === ev.id).reduce((a, p) => a + Number(p.monto_pagado), 0); const personas = ev.grupo_id ? miembrosPorGrupo.get(ev.grupo_id) ?? 0 : ev.red_id ? grupos.filter((g) => g.red_id === ev.red_id).reduce((a, g) => a + (miembrosPorGrupo.get(g.id) ?? 0), 0) : miembros.length; const meta = Number(ev.costo_total) * personas; return { evento: ev, recaudado, meta, falta: Math.max(0, meta - recaudado) }; }), [eventos, pagos, miembrosPorGrupo, miembros.length, grupos]);
 
   const seleccion = recaudacion.find((x) => x.evento.id === eventoSel);
   const pastores = lideres.filter((l) => l.rol === 'pastor');
@@ -111,15 +111,23 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
             </View>
             <View style={[s.fila, { gap: 10, marginBottom: 10 }]}>
               <Stat etiqueta="Hábitos (7 días)" valor={`${cumplimiento.global}%`} icono="checkmark-done" color={colorPorcentaje(cumplimiento.global)} />
-              <Stat etiqueta={seleccion? `Recaudado · ${seleccion.evento.nombre}` : 'Recaudado'} valor={formatoMoneda(seleccion?.recaudado?? 0)} icono="cash" color={colors.warning} />
+              <Stat etiqueta={seleccion? `Recaudado · ${seleccion.evento.nombre}` : 'Recaudado'} valor={formatoMoneda(seleccion?.recaudado ?? 0, seleccion?.evento.moneda)} icono="cash" color={colors.warning} />
             </View>
 
             <SeccionTitulo titulo="Encuentros y Campamentos" accion={{ texto: 'Crear', icono: 'add', onPress: () => setModalEvento(true) }} />
-            {eventos.length === 0? (<Card><Vacio icono="bonfire-outline" titulo="No hay eventos" texto="Creá un campamento o encuentro general de la iglesia." /></Card>) : (
+            {eventos.length === 0? (<Card><Vacio icono="bonfire-outline" titulo="No hay eventos" texto="Creá un evento para toda la iglesia. Los de cada red se crean desde Mi Red." /></Card>) : (
               <>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>{eventos.map((ev) => (<Chip key={ev.id} texto={ev.nombre} icono={ICONO_EVENTO[ev.tipo]} activo={ev.id === eventoSel} color={colors.warning} onPress={() => setEventoSel(ev.id)} />))}</ScrollView>
-                {seleccion? (<Card onPress={() => router.push({ pathname: '/evento/[id]', params: { id: seleccion.evento.id } })}><View style={s.fila}><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{seleccion.evento.nombre}</Text><Text style={s.textoFilaSec}>{formatoFecha(seleccion.evento.fecha_evento)} · {seleccion.evento.grupo_id? 'De un grupo' : 'General de la iglesia'}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textTer} /></View><View style={[s.fila, { justifyContent: 'space-between', marginTop: 14 }]}><View><Text style={s.textoFilaSec}>Recaudado</Text><Text style={{ color: colors.success, fontSize: 20, fontWeight: '700' }}>{formatoMoneda(seleccion.recaudado)}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={s.textoFilaSec}>Falta Pagar</Text><Text style={{ color: colors.warning, fontSize: 20, fontWeight: '700' }}>{formatoMoneda(seleccion.falta)}</Text></View></View><View style={{ marginTop: 12 }}><BarraProgreso valor={seleccion.meta? seleccion.recaudado / seleccion.meta : 0} color={colors.success} alto={8} /></View><Text style={[s.textoFilaSec, { marginTop: 8 }]}>Meta {formatoMoneda(seleccion.meta)} ({formatoMoneda(Number(seleccion.evento.costo_total))} por persona)</Text></Card>) : null}
-                <TarjetaGrafico titulo="Recaudación por evento"><GraficoRecaudacion etiquetas={recaudacion.map((x) => x.evento.nombre)} valores={recaudacion.map((x) => x.recaudado)} /></TarjetaGrafico>
+                {seleccion? (<Card onPress={() => router.push({ pathname: '/evento/[id]', params: { id: seleccion.evento.id } })}><View style={s.fila}><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{seleccion.evento.nombre}</Text><Text style={s.textoFilaSec}>{formatoFecha(seleccion.evento.fecha_evento)} · {seleccion.evento.grupo_id ? 'De un grupo' : seleccion.evento.red_id ? 'De una red' : 'General de la iglesia'}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textTer} /></View><View style={[s.fila, { justifyContent: 'space-between', marginTop: 14 }]}><View><Text style={s.textoFilaSec}>Recaudado</Text><Text style={{ color: colors.success, fontSize: 20, fontWeight: '700' }}>{formatoMoneda(seleccion.recaudado, seleccion.evento.moneda)}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={s.textoFilaSec}>Falta Pagar</Text><Text style={{ color: colors.warning, fontSize: 20, fontWeight: '700' }}>{formatoMoneda(seleccion.falta, seleccion.evento.moneda)}</Text></View></View><View style={{ marginTop: 12 }}><BarraProgreso valor={seleccion.meta? seleccion.recaudado / seleccion.meta : 0} color={colors.success} alto={8} /></View><Text style={[s.textoFilaSec, { marginTop: 8 }]}>Meta {formatoMoneda(seleccion.meta, seleccion.evento.moneda)} ({formatoMoneda(Number(seleccion.evento.costo_total), seleccion.evento.moneda)} por persona)</Text></Card>) : null}
+                {(['ARS', 'USD'] as const).map((mon) => {
+                  const deEsta = recaudacion.filter((x) => (x.evento.moneda ?? 'ARS') === mon);
+                  if (deEsta.length === 0) return null;
+                  return (
+                    <TarjetaGrafico key={mon} titulo={`Recaudación por evento · ${mon === 'USD' ? 'Dólares' : 'Pesos'}`}>
+                      <GraficoRecaudacion etiquetas={deEsta.map((x) => x.evento.nombre)} valores={deEsta.map((x) => x.recaudado)} />
+                    </TarjetaGrafico>
+                  );
+                })}
               </>
             )}
           </>
@@ -132,7 +140,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
         {supervisores.length === 0? (<Card><Vacio icono="people-circle-outline" titulo="Sin equipo asignado" texto="Asigná roles y superiores desde la pestaña Administrar."><Boton titulo="Administrar Iglesia" variante="secundario" onPress={() => router.push('/admin')} /></Vacio></Card>) : (supervisores.map(tarjetaLider))}
       </ScrollView>
 
-      <FormEvento visible={modalEvento} onClose={() => setModalEvento(false)} grupoId={null} permitirGeneral onCreado={cargar} />
+      <FormEvento visible={modalEvento} onClose={() => setModalEvento(false)} onGuardado={cargar} alcances={['iglesia']} />
     </Pantalla>
   );
 }

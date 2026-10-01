@@ -20,7 +20,7 @@ import {
   Vacio,
   s,
 } from '@/components/ui';
-import { ICONO_EVENTO } from '@/components/eventos/FormEvento';
+import { FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
 
 type MiembroConGrupo = Miembro & { grupo: { nombre: string } | null };
 
@@ -49,6 +49,9 @@ export default function EventoPantalla() {
   const [nota, setNota] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  // Editar evento
+  const [modalEditar, setModalEditar] = useState(false);
+
   // Historial
   const [historialDe, setHistorialDe] = useState<MiembroConGrupo | null>(null);
 
@@ -68,7 +71,14 @@ export default function EventoPantalla() {
       .select('*, grupo:groups(nombre)')
       .eq('activo', true)
       .order('nombre');
-    if (grupoContexto) consultaMiembros = consultaMiembros.eq('grupo_id', grupoContexto);
+    if (grupoContexto) {
+      consultaMiembros = consultaMiembros.eq('grupo_id', grupoContexto);
+    } else if (e.red_id) {
+      // Evento de red: solo los miembros de los grupos de esa red
+      const { data: gruposRed } = await supabase.from('groups').select('id').eq('red_id', e.red_id);
+      const ids = (gruposRed ?? []).map((g: { id: string }) => g.id);
+      consultaMiembros = consultaMiembros.in('grupo_id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
+    }
 
     const [m, p] = await Promise.all([
       consultaMiembros,
@@ -90,6 +100,7 @@ export default function EventoPantalla() {
   }, [cargar]);
 
   const costo = Number(evento?.costo_total ?? 0);
+  const moneda = evento?.moneda ?? 'ARS';
 
   const filas = useMemo<Fila[]>(
     () =>
@@ -149,7 +160,7 @@ export default function EventoPantalla() {
   };
 
   const eliminarPago = (p: Pago) => {
-    Alert.alert('Eliminar pago', `¿Eliminar el pago de ${formatoMoneda(Number(p.monto_pagado))} del ${formatoFecha(p.fecha_pago)}?`, [
+    Alert.alert('Eliminar pago', `¿Eliminar el pago de ${formatoMoneda(Number(p.monto_pagado), moneda)} del ${formatoFecha(p.fecha_pago)}?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -196,13 +207,14 @@ export default function EventoPantalla() {
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{evento.nombre}</Text>
               <Text style={s.textoFilaSec}>
-                {formatoFecha(evento.fecha_evento)} · {formatoMoneda(costo)} por persona
+                {formatoFecha(evento.fecha_evento)} · {formatoMoneda(costo, moneda)} por persona
               </Text>
             </View>
           </View>
           <View style={[s.fila, { gap: 6, marginTop: 10 }]}>
             <Badge texto={TIPO_EVENTO_LABEL[evento.tipo]} color={colors.warning} />
-            {evento.grupo_id === null ? <Badge texto="General de la iglesia" color={colors.purple} /> : null}
+            <Badge texto={evento.grupo_id ? 'De un grupo' : evento.red_id ? 'De la red' : 'Toda la iglesia'} color={colors.purple} />
+            <Badge texto={moneda === 'USD' ? 'Dólares' : 'Pesos'} color={colors.success} />
           </View>
           {evento.descripcion ? (
             <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 12, lineHeight: 21 }}>{evento.descripcion}</Text>
@@ -210,20 +222,21 @@ export default function EventoPantalla() {
         </Card>
 
         <View style={[s.fila, { gap: 10, marginBottom: 10 }]}>
-          <Stat etiqueta="Recaudado" valor={formatoMoneda(recaudado)} icono="cash" color={colors.success} />
-          <Stat etiqueta="Falta Pagar" valor={formatoMoneda(faltaTotal)} icono="hourglass" color={colors.warning} />
+          <Stat etiqueta="Recaudado" valor={formatoMoneda(recaudado, moneda)} icono="cash" color={colors.success} />
+          <Stat etiqueta="Falta Pagar" valor={formatoMoneda(faltaTotal, moneda)} icono="hourglass" color={colors.warning} />
         </View>
         <Card>
           <View style={[s.fila, { justifyContent: 'space-between', marginBottom: 8 }]}>
             <Text style={s.textoFilaSec}>
               {alDia} de {filas.length} al día
             </Text>
-            <Text style={s.textoFilaSec}>Meta {formatoMoneda(costo * filas.length)}</Text>
+            <Text style={s.textoFilaSec}>Meta {formatoMoneda(costo * filas.length, moneda)}</Text>
           </View>
           <BarraProgreso valor={costo * filas.length ? recaudado / (costo * filas.length) : 0} color={colors.success} alto={8} />
         </Card>
 
         <Boton titulo="Registrar Pago" icono="add-circle" onPress={() => abrirPago(null)} style={{ marginTop: 6 }} />
+        <Boton titulo="Editar evento" icono="pencil" variante="secundario" onPress={() => setModalEditar(true)} style={{ marginTop: 8 }} />
 
         <SeccionTitulo titulo="Hermanos" />
         {filas.length === 0 ? (
@@ -253,9 +266,9 @@ export default function EventoPantalla() {
                     <Ionicons name="chevron-forward" size={16} color={colors.textTer} style={{ marginLeft: 6 }} />
                   </View>
                   <View style={[s.fila, { justifyContent: 'space-between', marginBottom: 6 }]}>
-                    <Text style={{ color: colors.success, fontSize: 14, fontWeight: '600' }}>Pagado {formatoMoneda(f.pagado)}</Text>
+                    <Text style={{ color: colors.success, fontSize: 14, fontWeight: '600' }}>Pagado {formatoMoneda(f.pagado, moneda)}</Text>
                     <Text style={{ color: f.falta > 0 ? colors.warning : colors.textSec, fontSize: 14, fontWeight: '600' }}>
-                      Falta {formatoMoneda(f.falta)}
+                      Falta {formatoMoneda(f.falta, moneda)}
                     </Text>
                   </View>
                   <BarraProgreso valor={f.pct} color={completo ? colors.success : colors.primary} />
@@ -267,6 +280,8 @@ export default function EventoPantalla() {
         <Text style={[s.textoFilaSec, { marginLeft: 4 }]}>Tocá un nombre para ver su historial de pagos.</Text>
       </ScrollView>
 
+      <FormEvento visible={modalEditar} onClose={() => setModalEditar(false)} onGuardado={cargar} alcances={['grupo']} evento={evento} />
+
       {/* ---------- Registrar pago ---------- */}
       <HojaModal visible={modalPago} onClose={() => setModalPago(false)} titulo="Registrar Pago">
         <Text style={s.etiqueta}>Miembro</Text>
@@ -277,7 +292,7 @@ export default function EventoPantalla() {
                 <Text style={s.textoFila}>{nombreCompleto(miembroElegido)}</Text>
                 {filaElegida ? (
                   <Text style={s.textoFilaSec}>
-                    Pagado {formatoMoneda(filaElegida.pagado)} · Falta {formatoMoneda(filaElegida.falta)}
+                    Pagado {formatoMoneda(filaElegida.pagado, moneda)} · Falta {formatoMoneda(filaElegida.falta, moneda)}
                   </Text>
                 ) : null}
               </View>
@@ -306,7 +321,7 @@ export default function EventoPantalla() {
           keyboardType="decimal-pad"
           value={monto}
           onChangeText={setMonto}
-          ayuda={filaElegida && filaElegida.falta > 0 ? `Le falta pagar ${formatoMoneda(filaElegida.falta)}` : undefined}
+          ayuda={filaElegida && filaElegida.falta > 0 ? `Le falta pagar ${formatoMoneda(filaElegida.falta, moneda)}` : undefined}
         />
         {filaElegida && filaElegida.falta > 0 ? (
           <Pressable onPress={() => setMonto(String(filaElegida.falta))} style={{ marginTop: -6, marginBottom: 14, marginLeft: 4 }}>
@@ -330,8 +345,8 @@ export default function EventoPantalla() {
       >
         {filaHistorial ? (
           <View style={[s.fila, { gap: 10, marginBottom: 14 }]}>
-            <Stat etiqueta="Pagado" valor={formatoMoneda(filaHistorial.pagado)} icono="checkmark-circle" color={colors.success} />
-            <Stat etiqueta="Falta Pagar" valor={formatoMoneda(filaHistorial.falta)} icono="hourglass" color={colors.warning} />
+            <Stat etiqueta="Pagado" valor={formatoMoneda(filaHistorial.pagado, moneda)} icono="checkmark-circle" color={colors.success} />
+            <Stat etiqueta="Falta Pagar" valor={formatoMoneda(filaHistorial.falta, moneda)} icono="hourglass" color={colors.warning} />
           </View>
         ) : null}
 
@@ -354,7 +369,7 @@ export default function EventoPantalla() {
           historial.map((p) => (
             <View key={p.id} style={s.filaLista}>
               <View style={{ flex: 1 }}>
-                <Text style={s.textoFila}>{formatoMoneda(Number(p.monto_pagado))}</Text>
+                <Text style={s.textoFila}>{formatoMoneda(Number(p.monto_pagado), moneda)}</Text>
                 <Text style={s.textoFilaSec}>
                   {formatoFecha(p.fecha_pago)}
                   {p.nota ? ` · ${p.nota}` : ''}
