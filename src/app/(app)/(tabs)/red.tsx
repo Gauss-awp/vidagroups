@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Boton, Campo, Card, Chip, HojaModal, Pantalla, TituloGrande, Vacio, s } from '@/components/ui';
 import { Aprobaciones } from '@/components/red/Aprobaciones';
 import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
+import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { ResponsablesRed } from '@/components/red/ResponsablesRed';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
 import { GestionGrupos } from '@/components/mision_joven/GestionGrupos';
@@ -85,6 +86,7 @@ export default function PanelRed() {
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.textSec} />}
       >
         <TituloGrande titulo={red.nombre} subtitulo={redesAdmin.length > 1 ? 'Redes que administrás' : 'Tu red'} />
+        <BotonReporte />
 
         {redesAdmin.length > 1 || esPastorOApostol ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>

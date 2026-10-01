@@ -125,11 +125,12 @@ export function EventosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
 
   return (
     <View style={{ gap: 14 }}>
-      <Boton titulo="Crear Evento" icono="add-circle" onPress={() => setModalCrear(true)} />
+      {/* Los eventos los crea quien administra la red (Encargado, Pastor o Apóstol) */}
+      {alcances.length > 1 ? <Boton titulo="Crear Evento" icono="add-circle" onPress={() => setModalCrear(true)} /> : null}
 
       {eventos.length === 0 ? (
         <Card>
-          <Vacio icono="calendar-outline" titulo="No hay eventos" texto="Cuando tu red o tu grupo creen un encuentro o campamento, aparece acá." />
+          <Vacio icono="calendar-outline" titulo="No hay eventos" texto="Cuando tu red cree un encuentro o campamento, aparece acá." />
         </Card>
       ) : null}
 

@@ -12,6 +12,7 @@ import {
 import { GraficoHabitos, GraficoRecaudacion, TarjetaGrafico } from '@/components/Graficos';
 import { FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
 import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
+import { BotonReporte } from '@/components/reporte/BotonReporte';
 
 interface GrupoLite { id: string; nombre: string; red_id: string | null; }
 interface MiembroLite { id: string; grupo_id: string; }
@@ -103,6 +104,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
     <Pantalla>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.textSec} />}>
         <TituloGrande titulo={titulo} subtitulo={`${ROL_LABEL[perfil.rol]} · ${perfil.nombre || perfil.email}`} />
+        <BotonReporte />
         <AlertasFaltas minimo={3} />
 
         {/* STATS */}

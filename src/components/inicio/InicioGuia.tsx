@@ -5,6 +5,7 @@ import type { Grupo, Perfil } from '@/lib/types';
 import { Cargando, Chip, Pantalla, TituloGrande } from '@/components/ui';
 import { GrupoDetalle } from '@/components/grupo/GrupoDetalle';
 import { CrearGrupo } from '@/components/grupo/CrearGrupo';
+import { BotonReporte } from '@/components/reporte/BotonReporte';
 
 export function InicioGuia({ perfil }: { perfil: Perfil }) {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
@@ -42,6 +43,7 @@ export function InicioGuia({ perfil }: { perfil: Perfil }) {
   const encabezado = (
     <View>
       <TituloGrande titulo={grupos.length > 1 ? 'Mis Grupos' : 'Mi Grupo'} subtitulo={saludo} />
+      <BotonReporte />
       {grupos.length > 1 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
           {grupos.map((g) => (
