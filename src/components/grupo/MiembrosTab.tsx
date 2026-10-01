@@ -35,6 +35,7 @@ export function MiembrosTab({
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [habitos, setHabitos] = useState<Habito[]>([]);
   const [registros, setRegistros] = useState<RegistroDiario[]>([]);
+  const [reuniones, setReuniones] = useState<{ id: string; fecha: string; asistencias: { miembro_id: string; presente: boolean }[] }[]>([]);
   const [cargando, setCargando] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [modal, setModal] = useState(false);
@@ -44,10 +45,17 @@ export function MiembrosTab({
   const cargar = useCallback(async () => {
     setCargando(true);
     const { inicio, fin } = rangoMes(mes.anio, mes.mes);
-    const [m, h] = await Promise.all([
+    const [m, h, re] = await Promise.all([
       supabase.from('miembros_grupo').select('*').eq('grupo_id', grupoId).eq('activo', true).order('nombre'),
       supabase.from('habitos').select('*').eq('grupo_id', grupoId).order('creado_en'),
+      supabase
+        .from('reuniones')
+        .select('id, fecha, asistencias(miembro_id, presente)')
+        .eq('grupo_id', grupoId)
+        .gte('fecha', inicio)
+        .lte('fecha', fin),
     ]);
+    setReuniones((re.data ?? []) as any);
     if (m.error || h.error) Alert.alert('Error', (m.error ?? h.error)?.message ?? '');
     const hs = (h.data ?? []) as Habito[];
     let regs: RegistroDiario[] = [];
@@ -85,11 +93,27 @@ export function MiembrosTab({
         hechos: registros.filter((r) => r.habito_id === habito.id && r.miembro_id === miembro.id && r.completado).length,
         total: diasPorHabito.get(habito.id)?.size ?? 0,
       }));
+      // La asistencia a las reuniones es el dato principal; los hábitos, el complemento
+      if (reuniones.length > 0) {
+        const vino = reuniones.filter((r) => (r.asistencias ?? []).some((a) => a.miembro_id === miembro.id && a.presente)).length;
+        const asistencia = {
+          habito: { id: 'asistencia', grupo_id: grupoId, nombre: 'Asistencia a reuniones', creado_en: '' },
+          hechos: vino,
+          total: reuniones.length,
+        };
+        return {
+          miembro,
+          porHabito: [asistencia, ...porHabito],
+          hechos: vino,
+          total: reuniones.length,
+          pct: porcentaje(vino, reuniones.length),
+        };
+      }
       const hechos = porHabito.reduce((a, x) => a + x.hechos, 0);
       const total = porHabito.reduce((a, x) => a + x.total, 0);
       return { miembro, porHabito, hechos, total, pct: porcentaje(hechos, total) };
     });
-  }, [miembros, habitos, registros]);
+  }, [miembros, habitos, registros, reuniones, grupoId]);
 
   const conDatos = analisis.filter((a) => a.total > 0);
   const promedio = conDatos.length ? Math.round(conDatos.reduce((a, x) => a + x.pct, 0) / conDatos.length) : 0;
@@ -186,7 +210,7 @@ export function MiembrosTab({
       ) : (
         <>
           <View style={[s.fila, { gap: 10, marginBottom: 10 }]}>
-            <Stat etiqueta="Promedio" valor={`${promedio}%`} icono="stats-chart" color={colorPorcentaje(promedio)} />
+            <Stat etiqueta={reuniones.length ? "Asistencia" : "Promedio"} valor={`${promedio}%`} icono="stats-chart" color={colorPorcentaje(promedio)} />
             <Stat etiqueta="Miembros" valor={String(miembros.length)} icono="people" color={colors.primary} />
             <Stat etiqueta="Bajo 50%" valor={String(enRiesgo)} icono="alert-circle" color={colors.danger} />
           </View>

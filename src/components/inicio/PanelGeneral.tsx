@@ -1,150 +1,350 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Pressable, RefreshControl, ScrollView, Share, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { ROL_COLOR, colorPorcentaje, colors } from '@/lib/theme';
-import type { Evento, Perfil, RegistroDiario } from '@/lib/types';
-import { ROL_LABEL, formatoFecha, formatoMoneda, hoyISO, nombreCompleto, porcentaje, semanaHasta } from '@/lib/utils';
-import {
-  Avatar, Badge, BarraProgreso, Boton, Card, Cargando, Chip, Pantalla, SeccionTitulo, Stat, TituloGrande, Vacio, s,
-} from '@/components/ui';
-import { GraficoHabitos, GraficoRecaudacion, TarjetaGrafico } from '@/components/Graficos';
-import { FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
+import { colorPorcentaje, colors } from '@/lib/theme';
+import type { Moneda, Perfil } from '@/lib/types';
+import { ROL_LABEL, formatoFecha, formatoMoneda } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { BarraProgreso, Boton, Card, Cargando, Pantalla, SeccionTitulo, TituloGrande, Vacio, s } from '@/components/ui';
+import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
+import { FormEvento } from '@/components/eventos/FormEvento';
 import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 
-interface GrupoLite { id: string; nombre: string; red_id: string | null; }
-interface MiembroLite { id: string; grupo_id: string; }
-interface HabitoLite { id: string; grupo_id: string; }
-interface PagoLite { evento_id: string; monto_pagado: number; }
+interface Semana {
+  semana: string;
+  presentes: number;
+  esperados: number;
+  reuniones: number;
+  pct: number | null;
+}
+interface GrupoSinReunion {
+  id: string;
+  nombre: string;
+  guia: string | null;
+  ultima: string | null;
+}
+interface GrupoEnBaja {
+  id: string;
+  nombre: string;
+  actual: number;
+  anterior: number;
+}
+interface RedResumen {
+  id: string;
+  nombre: string;
+  grupos: number;
+  miembros: number;
+  nuevos: number;
+  asistencia: number | null;
+  completadas: number;
+}
+interface Proximo {
+  id: string;
+  nombre: string;
+  fecha_evento: string;
+  moneda: Moneda;
+  costo_total: number;
+  recaudado: number;
+  personas: number;
+}
+interface DatosPanel {
+  semanas: Semana[];
+  sin_reunion: GrupoSinReunion[];
+  en_baja: GrupoEnBaja[];
+  tarjetas_sin_fonovisita: number;
+  pendientes: number;
+  alertas_faltas: number;
+  redes: RedResumen[];
+  proximo_evento: Proximo | null;
+  totales: { grupos: number; miembros: number; nuevos_mes: number };
+}
 
+const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+/** Panel del Pastor y del Apóstol: qué atender, cómo viene la iglesia y qué viene. */
 export function PanelGeneral({ perfil }: { perfil: Perfil }) {
-  const router = useRouter()
+  const router = useRouter();
+  const { redesAdmin } = useAuth();
   const esApostol = perfil.rol === 'apostol';
-  const esPastor = perfil.rol === 'pastor';
-  const titulo = esApostol ? 'Panel Apostólico' : esPastor ? 'Panel Pastoral' : 'Panel';
-
-  const [grupos, setGrupos] = useState<GrupoLite[]>([]);
-  const [miembros, setMiembros] = useState<MiembroLite[]>([]);
-  const [habitos, setHabitos] = useState<HabitoLite[]>([]);
-  const [registros, setRegistros] = useState<RegistroDiario[]>([]);
-  const [eventos, setEventos] = useState<Evento[]>([]);
-  const [pagos, setPagos] = useState<PagoLite[]>([]);
-  const [lideres, setLideres] = useState<Perfil[]>([]);
-  const [eventoSel, setEventoSel] = useState<string | null>(null);
-  const [cargando, setCargando] = useState(true);
+  const [datos, setDatos] = useState<DatosPanel | null>(null);
   const [refrescando, setRefrescando] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [verFaltas, setVerFaltas] = useState(false);
   const [modalEvento, setModalEvento] = useState(false);
 
   const cargar = useCallback(async () => {
-    const dias = semanaHasta(hoyISO());
-    const consultaLideres = esApostol
-   ? supabase.from('profiles').select('*').in('rol', ['pastor', 'guia_supervisor', 'consolidacion']).order('nombre')
-      : supabase.from('profiles').select('*').eq('supervisor_id', perfil.id).order('nombre');
+    const { data, error } = await supabase.rpc('panel_pastoral');
+    if (error) {
+      Alert.alert('No se pudo cargar el panel', error.message);
+      return;
+    }
+    setDatos(data as DatosPanel);
+  }, []);
 
-    const gruposQuery = supabase.from('groups').select('id, nombre, red_id').order('nombre');
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
-    const [g, m, h, r, e, p, l] = await Promise.all([
-      gruposQuery,
-      supabase.from('miembros_grupo').select('id, grupo_id').eq('activo', true),
-      supabase.from('habitos').select('id, grupo_id'),
-      supabase.from('registros_diarios').select('habito_id, miembro_id, fecha, completado').gte('fecha', dias[0]).lte('fecha', dias[6]),
-      supabase.from('eventos').select('*').order('fecha_evento', { ascending: false, nullsFirst: false }),
-      supabase.from('pagos_evento').select('evento_id, monto_pagado'),
-      consultaLideres,
-    ]);
+  const refrescar = async () => {
+    setRefrescando(true);
+    await cargar();
+    setRefreshKey((k) => k + 1);
+    setRefrescando(false);
+  };
 
-    const listaEventos = (e.data?? []) as Evento[];
-    setGrupos((g.data?? []) as GrupoLite[]);
-    setMiembros((m.data?? []) as MiembroLite[]);
-    setHabitos((h.data?? []) as HabitoLite[]);
-    setRegistros((r.data?? []) as RegistroDiario[]);
-    setEventos(listaEventos);
-    setPagos((p.data?? []) as PagoLite[]);
-    setLideres((l.data?? []) as Perfil[]);
-    setEventoSel((prev) => {
-      if (prev && listaEventos.some((x) => x.id === prev)) return prev;
-      const hoy = hoyISO();
-      const campamentos = listaEventos.filter((x) => x.tipo === 'campamento');
-      const proximo = [...campamentos].filter((x) => x.fecha_evento && x.fecha_evento >= hoy).sort((a, b) => (a.fecha_evento?? '').localeCompare(b.fecha_evento?? ''))[0];
-      return proximo?.id?? campamentos[0]?.id?? listaEventos[0]?.id?? null;
-    });
-    setCargando(false);
-  }, [esApostol, perfil.id]);
+  if (!datos) return <Cargando texto="Preparando tu panel..." />;
 
-  useEffect(() => { cargar(); }, [cargar]);
-  const refrescar = async () => { setRefrescando(true); await cargar(); setRefrescando(false); };
+  const titulo = esApostol ? 'Panel Apostólico' : 'Panel Pastoral';
+  const sinRedes = !esApostol && redesAdmin.length === 0;
+  const semanas = datos.semanas ?? [];
+  const actual = semanas[semanas.length - 1];
+  const anterior = semanas[semanas.length - 2];
+  const diferencia = actual?.pct !== null && anterior?.pct !== null && actual && anterior ? (actual.pct ?? 0) - (anterior.pct ?? 0) : null;
 
-  const miembrosPorGrupo = useMemo(() => { const mapa = new Map<string, number>(); miembros.forEach((m) => mapa.set(m.grupo_id, (mapa.get(m.grupo_id)?? 0) + 1)); return mapa; }, [miembros]);
-  const grupoDeHabito = useMemo(() => new Map(habitos.map((h) => [h.id, h.grupo_id])), [habitos]);
-  const miembrosActivos = useMemo(() => new Set(miembros.map((m) => m.id)), [miembros]);
-  const cumplimiento = useMemo(() => {
-    const esperadoPorGrupo = new Map<string, number>(); const hechosPorGrupo = new Map<string, number>(); const vistos = new Set<string>();
-    registros.forEach((r) => { const grupo = grupoDeHabito.get(r.habito_id); if (!grupo ||!miembrosActivos.has(r.miembro_id)) return; const clave = `${r.habito_id}|${r.fecha}`; if (!vistos.has(clave)) { vistos.add(clave); esperadoPorGrupo.set(grupo, (esperadoPorGrupo.get(grupo)?? 0) + (miembrosPorGrupo.get(grupo)?? 0)); } if (r.completado) hechosPorGrupo.set(grupo, (hechosPorGrupo.get(grupo)?? 0) + 1); });
-    let esperado = 0; let hechos = 0; esperadoPorGrupo.forEach((v) => (esperado += v)); hechosPorGrupo.forEach((v) => (hechos += v));
-    const porGrupo = grupos.map((g) => ({ grupo: g, pct: porcentaje(hechosPorGrupo.get(g.id)?? 0, esperadoPorGrupo.get(g.id)?? 0), }));
-    return { global: porcentaje(hechos, esperado), porGrupo };
-  }, [registros, grupoDeHabito, miembrosActivos, miembrosPorGrupo, grupos]);
+  const pendientesTotal =
+    datos.alertas_faltas + datos.sin_reunion.length + datos.en_baja.length + datos.tarjetas_sin_fonovisita + datos.pendientes;
 
-  const recaudacion = useMemo(() => eventos.map((ev) => { const recaudado = pagos.filter((p) => p.evento_id === ev.id).reduce((a, p) => a + Number(p.monto_pagado), 0); const personas = ev.grupo_id ? miembrosPorGrupo.get(ev.grupo_id) ?? 0 : ev.red_id ? grupos.filter((g) => g.red_id === ev.red_id).reduce((a, g) => a + (miembrosPorGrupo.get(g.id) ?? 0), 0) : miembros.length; const meta = Number(ev.costo_total) * personas; return { evento: ev, recaudado, meta, falta: Math.max(0, meta - recaudado) }; }), [eventos, pagos, miembrosPorGrupo, miembros.length, grupos]);
-
-  const seleccion = recaudacion.find((x) => x.evento.id === eventoSel);
-  const pastores = lideres.filter((l) => l.rol === 'pastor');
-  const supervisores = esApostol? lideres.filter((l) => l.rol!== 'pastor') : lideres;
-  if (cargando) return <Cargando texto="Cargando panel..." />;
-
-  const tarjetaLider = (l: Perfil) => (
-    <Card key={l.id} onPress={() => router.push({ pathname: '/equipo/[id]', params: { id: l.id } })}>
-      <View style={s.fila}><Avatar nombre={nombreCompleto(l)} color={ROL_COLOR[l.rol]} /><View style={{ flex: 1, marginLeft: 12 }}><Text style={s.textoFila}>{nombreCompleto(l)}</Text><Text style={s.textoFilaSec}>{l.email}</Text></View><Badge texto={ROL_LABEL[l.rol]} color={ROL_COLOR[l.rol]} /><Ionicons name="chevron-forward" size={18} color={colors.textTer} style={{ marginLeft: 6 }} /></View>
-    </Card>
-  );
+  const compartirResumen = async () => {
+    const lineas = [
+      `📋 Resumen de la semana · ${perfil.nombre || ROL_LABEL[perfil.rol]}`,
+      `Asistencia: ${actual?.pct ?? '—'}%${diferencia !== null ? ` (${diferencia >= 0 ? '+' : ''}${diferencia} vs semana anterior)` : ''}`,
+      `Reuniones registradas: ${actual?.reuniones ?? 0} de ${datos.totales.grupos} grupos`,
+      `Miembros: ${datos.totales.miembros} · Nuevos este mes: ${datos.totales.nuevos_mes}`,
+      '',
+      datos.alertas_faltas ? `⚠️ ${datos.alertas_faltas} hermanos con 3 faltas seguidas o más` : '',
+      ...datos.sin_reunion.map((g) => `⏸️ ${g.nombre}${g.guia ? ` (${g.guia})` : ''}: sin reunión desde ${g.ultima ? formatoFecha(g.ultima) : 'nunca'}`),
+      ...datos.en_baja.map((g) => `📉 ${g.nombre}: asistencia ${g.anterior}% → ${g.actual}%`),
+      datos.tarjetas_sin_fonovisita ? `📞 ${datos.tarjetas_sin_fonovisita} personas nuevas sin fonovisita hace +3 días` : '',
+    ].filter((l, i, arr) => l !== '' || (i > 0 && arr[i - 1] !== ''));
+    try {
+      await Share.share({ message: lineas.join('\n') });
+    } catch {
+      // cancelado
+    }
+  };
 
   return (
     <Pantalla>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.textSec} />}>
-        <TituloGrande titulo={titulo} subtitulo={`${ROL_LABEL[perfil.rol]} · ${perfil.nombre || perfil.email}`} />
-        <BotonReporte />
-        <AlertasFaltas minimo={3} />
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.textSec} />}
+      >
+        <TituloGrande titulo={titulo} subtitulo={`Hola, ${perfil.nombre || ROL_LABEL[perfil.rol]}`} />
 
-        {/* STATS */}
+        {sinRedes ? (
+          <Card>
+            <Vacio
+              icono="git-network-outline"
+              titulo="Todavía no tenés redes asignadas"
+              texto="Cuando el Apóstol te asigne una o más redes, acá vas a ver todo lo que pasa en ellas."
+            />
+          </Card>
+        ) : null}
+
+        {/* ---------- 1. Qué necesita tu atención ---------- */}
+        <SeccionTitulo titulo="Requiere tu atención" />
+        {pendientesTotal === 0 ? (
+          <Card style={{ backgroundColor: '#ECFDF5' }}>
+            <View style={s.fila}>
+              <Ionicons name="checkmark-circle" size={26} color={colors.success} style={{ marginRight: 10 }} />
+              <Text style={{ color: '#065F46', fontSize: 16, fontWeight: '700', flex: 1 }}>Todo en orden esta semana</Text>
+            </View>
+          </Card>
+        ) : (
+          <Card style={{ paddingVertical: 4 }}>
+            {datos.alertas_faltas > 0 ? (
+              <ItemAtencion
+                icono="alert-circle"
+                color={colors.danger}
+                texto={`${datos.alertas_faltas} ${datos.alertas_faltas === 1 ? 'hermano' : 'hermanos'} con 3 faltas seguidas o más`}
+                onPress={() => setVerFaltas(!verFaltas)}
+                abierto={verFaltas}
+              />
+            ) : null}
+            {verFaltas ? (
+              <View style={{ marginBottom: 8 }}>
+                <AlertasFaltas minimo={3} refreshKey={refreshKey} />
+              </View>
+            ) : null}
+
+            {datos.sin_reunion.map((g) => (
+              <ItemAtencion
+                key={`sr-${g.id}`}
+                icono="pause-circle"
+                color={colors.warning}
+                texto={`${g.nombre} no registra reunión ${g.ultima ? `desde el ${formatoFecha(g.ultima)}` : 'nunca'}`}
+                detalle={g.guia ? `Guía: ${g.guia}` : undefined}
+                onPress={() => router.push({ pathname: '/grupo/[id]', params: { id: g.id } })}
+              />
+            ))}
+
+            {datos.en_baja.map((g) => (
+              <ItemAtencion
+                key={`eb-${g.id}`}
+                icono="trending-down"
+                color={colors.danger}
+                texto={`${g.nombre}: la asistencia bajó de ${g.anterior}% a ${g.actual}%`}
+                detalle="Últimos 30 días contra los 30 anteriores"
+                onPress={() => router.push({ pathname: '/grupo/[id]', params: { id: g.id } })}
+              />
+            ))}
+
+            {datos.tarjetas_sin_fonovisita > 0 ? (
+              <ItemAtencion
+                icono="call"
+                color={colors.warning}
+                texto={`${datos.tarjetas_sin_fonovisita} ${datos.tarjetas_sin_fonovisita === 1 ? 'persona nueva' : 'personas nuevas'} sin fonovisita hace más de 3 días`}
+                onPress={() => router.push('/red')}
+              />
+            ) : null}
+
+            {datos.pendientes > 0 ? (
+              <ItemAtencion
+                icono="person-add"
+                color={colors.primary}
+                texto={`${datos.pendientes} ${datos.pendientes === 1 ? 'cuenta espera' : 'cuentas esperan'} aprobación`}
+                onPress={() => router.push('/red')}
+              />
+            ) : null}
+          </Card>
+        )}
+
+        {/* ---------- 2. Cómo viene la iglesia ---------- */}
+        <SeccionTitulo titulo="Cómo viene" />
+        <Card>
+          <Text style={s.textoFilaSec}>Asistencia de esta semana</Text>
+          <View style={[s.fila, { marginTop: 4 }]}>
+            <Text
+              style={{
+                fontSize: 34,
+                fontWeight: '800',
+                color: actual?.pct == null ? colors.textSec : colorPorcentaje(actual.pct),
+                marginRight: 12,
+              }}
+            >
+              {actual?.pct == null ? '—' : `${actual.pct}%`}
+            </Text>
+            {diferencia !== null ? (
+              <View style={s.fila}>
+                <Ionicons
+                  name={diferencia >= 0 ? 'arrow-up' : 'arrow-down'}
+                  size={18}
+                  color={diferencia >= 0 ? colors.success : colors.danger}
+                />
+                <Text style={{ color: diferencia >= 0 ? colors.success : colors.danger, fontWeight: '700' }}>
+                  {Math.abs(diferencia)} puntos vs semana anterior
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={[s.textoFilaSec, { marginTop: 6 }]}>
+            {actual?.reuniones ?? 0} de {datos.totales.grupos} grupos registraron reunión · {datos.totales.miembros} miembros ·{' '}
+            {datos.totales.nuevos_mes} nuevos este mes
+          </Text>
+        </Card>
+
+        <TarjetaGrafico titulo="Asistencia por semana" subtitulo="Últimas 8 semanas">
+          <GraficoHabitos etiquetas={semanas.map((x) => ddmm(x.semana))} valores={semanas.map((x) => x.pct ?? 0)} />
+        </TarjetaGrafico>
+
+        {datos.redes.length > 0 ? (
           <>
-            <View style={[s.fila, { gap: 10, marginBottom: 10, marginTop: 16 }]}>
-              <Stat etiqueta="Grupos" valor={String(grupos.length)} icono="people" color={colors.success} />
-              <Stat etiqueta="Miembros" valor={String(miembros.length)} icono="person" color={colors.primary} />
-            </View>
-            <View style={[s.fila, { gap: 10, marginBottom: 10 }]}>
-              <Stat etiqueta="Hábitos (7 días)" valor={`${cumplimiento.global}%`} icono="checkmark-done" color={colorPorcentaje(cumplimiento.global)} />
-              <Stat etiqueta={seleccion? `Recaudado · ${seleccion.evento.nombre}` : 'Recaudado'} valor={formatoMoneda(seleccion?.recaudado ?? 0, seleccion?.evento.moneda)} icono="cash" color={colors.warning} />
-            </View>
-
-            <SeccionTitulo titulo="Encuentros y Campamentos" accion={{ texto: 'Crear', icono: 'add', onPress: () => setModalEvento(true) }} />
-            {eventos.length === 0? (<Card><Vacio icono="bonfire-outline" titulo="No hay eventos" texto="Creá un evento para toda la iglesia. Los de cada red se crean desde Mi Red." /></Card>) : (
-              <>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>{eventos.map((ev) => (<Chip key={ev.id} texto={ev.nombre} icono={ICONO_EVENTO[ev.tipo]} activo={ev.id === eventoSel} color={colors.warning} onPress={() => setEventoSel(ev.id)} />))}</ScrollView>
-                {seleccion? (<Card onPress={() => router.push({ pathname: '/evento/[id]', params: { id: seleccion.evento.id } })}><View style={s.fila}><View style={{ flex: 1 }}><Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{seleccion.evento.nombre}</Text><Text style={s.textoFilaSec}>{formatoFecha(seleccion.evento.fecha_evento)} · {seleccion.evento.grupo_id ? 'De un grupo' : seleccion.evento.red_id ? 'De una red' : 'General de la iglesia'}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.textTer} /></View><View style={[s.fila, { justifyContent: 'space-between', marginTop: 14 }]}><View><Text style={s.textoFilaSec}>Recaudado</Text><Text style={{ color: colors.success, fontSize: 20, fontWeight: '700' }}>{formatoMoneda(seleccion.recaudado, seleccion.evento.moneda)}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={s.textoFilaSec}>Falta Pagar</Text><Text style={{ color: colors.warning, fontSize: 20, fontWeight: '700' }}>{formatoMoneda(seleccion.falta, seleccion.evento.moneda)}</Text></View></View><View style={{ marginTop: 12 }}><BarraProgreso valor={seleccion.meta? seleccion.recaudado / seleccion.meta : 0} color={colors.success} alto={8} /></View><Text style={[s.textoFilaSec, { marginTop: 8 }]}>Meta {formatoMoneda(seleccion.meta, seleccion.evento.moneda)} ({formatoMoneda(Number(seleccion.evento.costo_total), seleccion.evento.moneda)} por persona)</Text></Card>) : null}
-                {(['ARS', 'USD'] as const).map((mon) => {
-                  const deEsta = recaudacion.filter((x) => (x.evento.moneda ?? 'ARS') === mon);
-                  if (deEsta.length === 0) return null;
-                  return (
-                    <TarjetaGrafico key={mon} titulo={`Recaudación por evento · ${mon === 'USD' ? 'Dólares' : 'Pesos'}`}>
-                      <GraficoRecaudacion etiquetas={deEsta.map((x) => x.evento.nombre)} valores={deEsta.map((x) => x.recaudado)} />
-                    </TarjetaGrafico>
-                  );
-                })}
-              </>
-            )}
+            <SeccionTitulo titulo={datos.redes.length > 1 ? 'Redes' : 'Tu red'} />
+            {datos.redes.map((r) => (
+              <Card key={r.id} onPress={() => router.push('/red')}>
+                <View style={[s.fila, { justifyContent: 'space-between' }]}>
+                  <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', flex: 1 }}>{r.nombre}</Text>
+                  <Text
+                    style={{
+                      fontSize: 20,
+                      fontWeight: '800',
+                      color: r.asistencia == null ? colors.textSec : colorPorcentaje(r.asistencia),
+                    }}
+                  >
+                    {r.asistencia == null ? '—' : `${r.asistencia}%`}
+                  </Text>
+                </View>
+                <Text style={s.textoFilaSec}>
+                  {r.grupos} grupos · {r.miembros} miembros · {r.nuevos} nuevos · {r.completadas} consolidados este mes
+                </Text>
+              </Card>
+            ))}
           </>
+        ) : null}
 
-        <SeccionTitulo titulo="Hábitos por grupo" />
-        <TarjetaGrafico titulo="Cumplimiento semanal" subtitulo="Últimos 7 días, por grupo"><GraficoHabitos etiquetas={cumplimiento.porGrupo.map((x) => x.grupo.nombre)} valores={cumplimiento.porGrupo.map((x) => x.pct)} /></TarjetaGrafico>
+        {/* ---------- 3. Qué viene ---------- */}
+        {datos.proximo_evento ? (
+          <>
+            <SeccionTitulo titulo="Próximo evento" />
+            <Card onPress={() => router.push({ pathname: '/evento/[id]', params: { id: datos.proximo_evento!.id } })}>
+              {(() => {
+                const ev = datos.proximo_evento!;
+                const meta = Number(ev.costo_total) * ev.personas;
+                const f = (v: number) => formatoMoneda(v, ev.moneda);
+                return (
+                  <>
+                    <View style={s.fila}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700' }}>{ev.nombre}</Text>
+                        <Text style={s.textoFilaSec}>{formatoFecha(ev.fecha_evento)}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textTer} />
+                    </View>
+                    <View style={[s.fila, { justifyContent: 'space-between', marginTop: 12, marginBottom: 6 }]}>
+                      <Text style={{ color: colors.success, fontWeight: '700' }}>Recaudado {f(Number(ev.recaudado))}</Text>
+                      <Text style={{ color: colors.warning, fontWeight: '700' }}>Falta {f(Math.max(0, meta - Number(ev.recaudado)))}</Text>
+                    </View>
+                    <BarraProgreso valor={meta ? Number(ev.recaudado) / meta : 0} color={colors.success} alto={8} />
+                  </>
+                );
+              })()}
+            </Card>
+          </>
+        ) : null}
 
-        {esApostol && pastores.length > 0? (<><SeccionTitulo titulo="Pastores" />{pastores.map(tarjetaLider)}</>) : null}
-        <SeccionTitulo titulo={esApostol? 'Supervisores / Consolidación' : 'Mi equipo'} />
-        {supervisores.length === 0? (<Card><Vacio icono="people-circle-outline" titulo="Sin equipo asignado" texto="Asigná roles y superiores desde la pestaña Administrar."><Boton titulo="Administrar Iglesia" variante="secundario" onPress={() => router.push('/admin')} /></Vacio></Card>) : (supervisores.map(tarjetaLider))}
+        <View style={{ marginTop: 16 }}>
+          <Boton titulo="Compartir resumen de la semana" icono="logo-whatsapp" onPress={compartirResumen} style={{ marginBottom: 10 }} />
+          <BotonReporte />
+          <Boton
+            titulo="Crear evento para toda la iglesia"
+            icono="add-circle-outline"
+            variante="secundario"
+            onPress={() => setModalEvento(true)}
+          />
+        </View>
       </ScrollView>
 
       <FormEvento visible={modalEvento} onClose={() => setModalEvento(false)} onGuardado={cargar} alcances={['iglesia']} />
     </Pantalla>
+  );
+}
+
+function ItemAtencion({
+  icono,
+  color,
+  texto,
+  detalle,
+  onPress,
+  abierto,
+}: {
+  icono: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  texto: string;
+  detalle?: string;
+  onPress: () => void;
+  abierto?: boolean;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [s.filaLista, pressed && { opacity: 0.6 }]}>
+      <Ionicons name={icono} size={22} color={color} style={{ marginRight: 10 }} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{texto}</Text>
+        {detalle ? <Text style={s.textoFilaSec}>{detalle}</Text> : null}
+      </View>
+      <Ionicons name={abierto ? 'chevron-up' : 'chevron-forward'} size={18} color={colors.textTer} />
+    </Pressable>
   );
 }
