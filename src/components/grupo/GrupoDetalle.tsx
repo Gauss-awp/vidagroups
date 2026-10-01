@@ -140,7 +140,7 @@ export function GrupoDetalle({
       {tab === 0? <HabitosTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 1? <EventosTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 2? <MiembrosTab grupoId={grupo.id} grupoNombre={grupo.nombre} refreshKey={refreshKey} /> : null}
-      {tab === 3? <ConsolidacionGuia miGV={grupo.nombre} /> : null}
+      {tab === 3? <ConsolidacionGuia miGV={grupo.nombre} grupoId={grupo.id} /> : null}
     </ScrollView>
   );
 }

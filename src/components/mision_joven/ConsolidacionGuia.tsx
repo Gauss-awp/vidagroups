@@ -3,25 +3,20 @@ import { View, Text, ScrollView, Switch, TextInput, Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui';
 
-export function ConsolidacionGuia({ miGV }: { miGV: string }) {
+export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: string }) {
   const [tarjetas, setTarjetas] = useState<any[]>([]);
-  const [grupoId, setGrupoId] = useState<string | null>(null);
 
   const cargar = async () => {
     const { data, error } = await supabase
      .from('tarjetas_consolidacion')
      .select('*')
-     .eq('gv_asignado', miGV)
+     .eq('grupo_id', grupoId)
      .order('creado_en', { ascending: false });
     if(error) console.log("ERROR:", error);
     setTarjetas(data || []);
-
-    // Buscamos el ID real del grupo por su nombre (04, 04.1, etc)
-    const { data: g } = await supabase.from('groups').select('id').eq('nombre', miGV).single();
-    if(g) setGrupoId(g.id);
   };
 
-  useEffect(() => { cargar(); }, [miGV]);
+  useEffect(() => { cargar(); }, [grupoId]);
 
   const toggle = async (t: any, campo: string, valorActual: boolean) => {
     const nuevoValor =!valorActual;

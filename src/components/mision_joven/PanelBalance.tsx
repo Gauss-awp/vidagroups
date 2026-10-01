@@ -21,6 +21,7 @@ export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Pro
     const pilares = base.filter((t: any) => t.pilares === true).length;
     const comenzoGV = base.filter((t: any) => t.comenzo_gv === true || t.comenzó_gv === true || t.comenzoGV === true).length;
     const encuentro = base.filter((t: any) => t.encuentro === true).length;
+    const completadasMes = tarjetas.filter((t: any) => t.completada_en && new Date(t.completada_en) >= inicioMes).length;
     const vaIglesia = base.filter((t: any) => t.va_a_la_iglesia === true || t.va_iglesia === true).length;
 
     const sinFonovisita3d = tarjetas.filter((t: any) => {
@@ -37,7 +38,7 @@ export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Pro
       porGV[gv] = (porGV[gv] || 0) + 1;
     });
 
-    return { nuevas, fonovisita, visita, pilares, comenzoGV, encuentro, vaIglesia, sinFonovisita3d, porGV, total: base.length };
+    return { nuevas, completadasMes, fonovisita, visita, pilares, comenzoGV, encuentro, vaIglesia, sinFonovisita3d, porGV, total: base.length };
   }, [tarjetas]);
 
   if (tarjetas.length === 0) {
@@ -57,7 +58,7 @@ export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Pro
   return (
     <View style={{ gap: 10, marginTop: 16 }}>
       <Text style={{ fontSize: 16, fontWeight: '800' }}>Balance Consolidación - Este mes</Text>
-      <Text style={{ fontSize: 12, color: '#6B7280' }}>{stats.nuevas} nuevas este mes · {stats.total} en seguimiento</Text>
+      <Text style={{ fontSize: 12, color: '#6B7280' }}>{stats.nuevas} nuevas este mes · {stats.total} en seguimiento · <Text style={{ color: '#16A34A', fontWeight: '800' }}>{stats.completadasMes} completadas este mes</Text></Text>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Card style={{ flex: 1, alignItems: 'center' }}>

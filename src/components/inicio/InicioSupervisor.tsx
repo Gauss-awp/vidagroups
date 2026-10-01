@@ -14,7 +14,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
   const [misGrupos, setMisGrupos] = useState<Grupo[]>([]);
   const [todosLosGrupos, setTodosLosGrupos] = useState<Grupo[]>([]);
   const [tarjetas, setTarjetas] = useState<any[]>([]);
-  const [filtro, setFiltro] = useState<'sin_asignar' | 'asignadas' | 'en_gv' | 'todas'>('todas');
+  const [filtro, setFiltro] = useState<'sin_asignar' | 'asignadas' | 'en_gv' | 'completadas' | 'todas'>('todas');
   const [showForm, setShowForm] = useState(false);
   const [seleccionada, setSeleccionada] = useState<any>(null);
   const [modal, setModal] = useState(false);
@@ -41,8 +41,17 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
     return () => { supabase.removeChannel(channel); };
   }, [cargarTodo]);
 
-  const asignarGV = async (tarjetaId: string, gvNombre: string) => {
-    await supabase.from('tarjetas_consolidacion').update({ gv_asignado: gvNombre }).eq('id', tarjetaId);
+  const asignarGV = async (tarjetaId: string, grupoId: string) => {
+    const { error } = await supabase.from('tarjetas_consolidacion').update({ grupo_id: grupoId }).eq('id', tarjetaId);
+    if (error) Alert.alert('Error', error.message);
+    else cargarTodo();
+  };
+
+  const cambiarEstado = async (completada: boolean) => {
+    const { error } = await supabase.from('tarjetas_consolidacion')
+      .update({ estado: completada ? 'completada' : 'nueva' }).eq('id', seleccionada.id);
+    if (error) Alert.alert('Error', error.message);
+    else { setModal(false); cargarTodo(); }
   };
 
   const abrirEdicion = (t: any) => { setSeleccionada(t); setModal(true); };
@@ -78,14 +87,16 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
   const filtradas = tarjetas.filter(t => {
     if (filtro === 'sin_asignar') return!t.gv_asignado;
     if (filtro === 'asignadas') return t.gv_asignado &&!t.comenzo_gv;
-    if (filtro === 'en_gv') return!!t.comenzo_gv;
+    if (filtro === 'en_gv') return!!t.comenzo_gv && t.estado !== 'completada';
+    if (filtro === 'completadas') return t.estado === 'completada';
     return true;
   });
 
   const counts = {
     sin: tarjetas.filter(t =>!t.gv_asignado).length,
     asig: tarjetas.filter(t => t.gv_asignado &&!t.comenzo_gv).length,
-    en_gv: tarjetas.filter(t =>!!t.comenzo_gv).length,
+    en_gv: tarjetas.filter(t =>!!t.comenzo_gv && t.estado !== 'completada').length,
+    completadas: tarjetas.filter(t => t.estado === 'completada').length,
   };
 
   const Badge = ({ activo, texto }: { activo: boolean, texto: string }) => (
@@ -121,6 +132,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
                 { k: 'sin_asignar', label: `Sin Asignar (${counts.sin})` },
                 { k: 'asignadas', label: `Asignadas (${counts.asig})` },
                 { k: 'en_gv', label: `En GV (${counts.en_gv})` },
+                { k: 'completadas', label: `Completadas (${counts.completadas})` },
                 { k: 'todas', label: `Todas (${tarjetas.length})` },
               ].map(f => (
                 <TouchableOpacity key={f.k} onPress={() => setFiltro(f.k as any)}
@@ -136,6 +148,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
             <Pressable key={t.id} onPress={() => abrirEdicion(t)}>
               <Card style={{ borderLeftWidth: 4, borderLeftColor: t.encuentro? '#22c55e' : t.visita? '#f59e0b' : '#e5e7eb' }}>
                 <Text style={{ fontSize: 16, fontWeight: '800' }}>{t.nombre} {t.edad? `- ${t.edad} años` : ''}</Text>
+                {t.estado === 'completada' ? <Text style={{ color: '#16A34A', fontWeight: '800', fontSize: 12, marginTop: 2 }}>✅ Consolidación completada</Text> : null}
                 <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{t.zona} | {t.telefono} | GV: {t.gv_asignado || 'Sin asignar'}</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 }}>
                   <Badge activo={!!t.fonovisita} texto="Fonovisita" />
@@ -149,7 +162,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
                 {!t.gv_asignado && todosLosGrupos.length > 0 && (
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
                     {todosLosGrupos.slice(0,4).map(g => (
-                      <TouchableOpacity key={g.id} onPress={() => asignarGV(t.id, g.nombre)} style={{ backgroundColor: colors.success, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
+                      <TouchableOpacity key={g.id} onPress={() => asignarGV(t.id, g.id)} style={{ backgroundColor: colors.success, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
                         <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>→ {g.nombre}</Text>
                       </TouchableOpacity>
                     ))}
@@ -187,7 +200,19 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
                 </View>
               ))}
 
-              <Pressable onPress={guardarEdicion} style={{backgroundColor: '#111', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 20}}>
+              {seleccionada?.estado === 'completada' ? (
+                <Pressable onPress={() => cambiarEstado(false)} style={{backgroundColor: '#FEF3C7', padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 20}}>
+                  <Text style={{color: '#92400E', fontWeight: '800'}}>Reabrir seguimiento</Text>
+                </Pressable>
+              ) : seleccionada?.encuentro && seleccionada?.comenzo_gv ? (
+                <Pressable onPress={() => cambiarEstado(true)} style={{backgroundColor: '#16A34A', padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 20}}>
+                  <Text style={{color: 'white', fontWeight: '800'}}>✅ Marcar como completada</Text>
+                </Pressable>
+              ) : (
+                <Text style={{marginTop: 16, color: '#6B7280', fontSize: 12, textAlign: 'center'}}>Para completar la consolidación tiene que haber hecho el Encuentro y estar yendo al GV.</Text>
+              )}
+
+              <Pressable onPress={guardarEdicion} style={{backgroundColor: '#111', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12}}>
                 <Text style={{color: 'white', fontWeight: '800'}}>Guardar Cambios</Text>
               </Pressable>
               <Pressable onPress={()=>setModal(false)} style={{marginTop:12, alignItems:'center', padding:10}}><Text style={{color:'gray', fontWeight:'600'}}>Cancelar</Text></Pressable>
