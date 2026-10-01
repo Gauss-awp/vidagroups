@@ -16,16 +16,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius } from '@/lib/theme';
+import { colors, esTemaOscuro, radius, temaVersion, tipo } from '@/lib/theme';
 import { diaCorto, formatoFecha, hoyISO, iniciales, sumarDias } from '@/lib/utils';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
+/** false = la pantalla no agrega margen arriba (porque ya lo puso algo encima, como el modo dev) */
+export const BordeSuperiorContext = React.createContext(true);
+
 // ---------- Estructura ----------
 
 export function Pantalla({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const conBorde = React.useContext(BordeSuperiorContext);
   return (
-    <SafeAreaView edges={['top']} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
+    <SafeAreaView edges={conBorde ? ['top'] : []} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
       {children}
     </SafeAreaView>
   );
@@ -99,15 +103,22 @@ export function Boton({
 }: {
   titulo: string;
   onPress: () => void;
-  variante?: 'primario' | 'secundario' | 'peligro';
+  variante?: 'primario' | 'secundario' | 'peligro' | 'texto';
   cargando?: boolean;
   deshabilitado?: boolean;
   icono?: IconName;
   compacto?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  // Jerarquía: primario (relleno) > secundario (suave) > texto (sin fondo)
   const fondo =
-    variante === 'primario' ? colors.primary : variante === 'peligro' ? 'rgba(255,69,58,0.16)' : colors.cardAlt;
+    variante === 'primario'
+      ? colors.primary
+      : variante === 'peligro'
+        ? colors.dangerBg
+        : variante === 'texto'
+          ? 'transparent'
+          : colors.primaryBg;
   const texto = variante === 'primario' ? '#FFFFFF' : variante === 'peligro' ? colors.danger : colors.primary;
   const inactivo = !!deshabilitado || !!cargando;
   return (
@@ -125,8 +136,8 @@ export function Boton({
         <ActivityIndicator color={texto} />
       ) : (
         <>
-          {icono ? <Ionicons name={icono} size={compacto ? 16 : 19} color={texto} style={{ marginRight: 6 }} /> : null}
-          <Text style={[s.botonTexto, compacto && { fontSize: 15 }, { color: texto }]}>{titulo}</Text>
+          {icono ? <Ionicons name={icono} size={compacto ? 16 : 18} color={texto} style={{ marginRight: 6 }} /> : null}
+          <Text style={[s.botonTexto, compacto && { fontSize: tipo.chico + 1 }, { color: texto }]}>{titulo}</Text>
         </>
       )}
     </Pressable>
@@ -140,7 +151,7 @@ export function Campo({ etiqueta, ayuda, style, ...props }: TextInputProps & { e
       <TextInput
         placeholderTextColor={colors.textTer}
         selectionColor={colors.primary}
-        keyboardAppearance="light"
+        keyboardAppearance={esTemaOscuro() ? "dark" : "light"}
         style={[s.input, props.multiline && { minHeight: 80, textAlignVertical: 'top', paddingTop: 12 }, style]}
         {...props}
       />
@@ -355,9 +366,10 @@ export function HojaModal({
   );
 }
 
-export const s = StyleSheet.create({
+function crearEstilos() {
+  return StyleSheet.create({
   fila: { flexDirection: 'row', alignItems: 'center' },
-  tituloGrande: { color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.8, lineHeight: 38 },
+  tituloGrande: { color: colors.text, fontSize: tipo.titulo, fontWeight: '800', letterSpacing: -0.6, lineHeight: 34 },
 subtituloGrande: { color: colors.textSec, fontSize: 15, fontWeight: '600', marginBottom: 4, letterSpacing: -0.2 },
   seccion: {
     flexDirection: 'row',
@@ -366,30 +378,30 @@ subtituloGrande: { color: colors.textSec, fontSize: 15, fontWeight: '600', margi
     marginTop: 22,
     marginBottom: 10,
   },
-  seccionTexto: { color: colors.text, fontSize: 20, fontWeight: '700' },
+  seccionTexto: { color: colors.text, fontSize: tipo.h2, fontWeight: '700' },
    card: {
     backgroundColor: colors.card,
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#0F172A',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: colors.cardAlt,
   },
   boton: {
-    height: 50,
+    height: 46,
     borderRadius: radius.sm + 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 18,
   },
-  botonCompacto: { height: 38, paddingHorizontal: 14, borderRadius: radius.sm },
-  botonTexto: { fontSize: 17, fontWeight: '600' },
+  botonCompacto: { height: 36, paddingHorizontal: 14, borderRadius: radius.sm },
+  botonTexto: { fontSize: tipo.h3, fontWeight: '600' },
   etiqueta: { color: colors.textSec, fontSize: 13, marginBottom: 6, marginLeft: 4 },
   ayuda: { color: colors.textSec, fontSize: 12, marginTop: 6, marginLeft: 4 },
   input: {
@@ -398,7 +410,7 @@ subtituloGrande: { color: colors.textSec, fontSize: 15, fontWeight: '600', margi
     borderRadius: radius.sm,
     paddingHorizontal: 14,
     minHeight: 48,
-    fontSize: 17,
+    fontSize: tipo.h3,
   },
   segmentado: {
     flexDirection: 'row',
@@ -441,8 +453,8 @@ subtituloGrande: { color: colors.textSec, fontSize: 15, fontWeight: '600', margi
     justifyContent: 'center',
     marginBottom: 10,
   },
-  statValor: { color: colors.text, fontSize: 24, fontWeight: '700' },
-  statEtiqueta: { color: colors.textSec, fontSize: 13, marginTop: 2 },
+  statValor: { color: colors.text, fontSize: 21, fontWeight: '700' },
+  statEtiqueta: { color: colors.textSec, fontSize: tipo.chico, marginTop: 2 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' },
   badgeTexto: { fontSize: 12, fontWeight: '600' },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, backgroundColor: colors.bg },
@@ -474,6 +486,74 @@ subtituloGrande: { color: colors.textSec, fontSize: 15, fontWeight: '600', margi
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  textoFila: { color: colors.text, fontSize: 16, fontWeight: '500' },
+  textoFila: { color: colors.text, fontSize: tipo.cuerpo + 1, fontWeight: '500' },
   textoFilaSec: { color: colors.textSec, fontSize: 13, marginTop: 2 },
+  });
+}
+
+let estilos = crearEstilos();
+let versionEstilos = temaVersion();
+
+/** Estilos compartidos; se regeneran solos cuando cambia el tema */
+export const s = new Proxy({} as ReturnType<typeof crearEstilos>, {
+  get(_, clave: string) {
+    if (versionEstilos !== temaVersion()) {
+      estilos = crearEstilos();
+      versionEstilos = temaVersion();
+    }
+    return (estilos as Record<string, unknown>)[clave];
+  },
 });
+
+// ---------- Pasos de consolidación ----------
+
+const PASOS: { clave: string; texto: string }[] = [
+  { clave: 'fonovisita', texto: 'Fono' },
+  { clave: 'visita', texto: 'Visita' },
+  { clave: 'pilares', texto: 'Pilares' },
+  { clave: 'comenzo_gv', texto: 'GV' },
+  { clave: 'encuentro', texto: 'Encuentro' },
+];
+
+/** Barra de avance: cinco puntos conectados, rellenos hasta donde llegó la persona. */
+export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 12 }}>
+      {PASOS.map((p, i) => {
+        const hecho = !!tarjeta[p.clave];
+        const siguienteHecho = i < PASOS.length - 1 && !!tarjeta[PASOS[i + 1].clave];
+        return (
+          <View key={p.clave} style={{ flex: 1, alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
+              <View style={{ flex: 1, height: 2, backgroundColor: i === 0 ? 'transparent' : hecho ? colors.success : colors.border }} />
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 11,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: hecho ? colors.success : colors.card,
+                  borderWidth: 2,
+                  borderColor: hecho ? colors.success : colors.border,
+                }}
+              >
+                {hecho ? <Ionicons name="checkmark" size={13} color="#FFFFFF" /> : null}
+              </View>
+              <View
+                style={{
+                  flex: 1,
+                  height: 2,
+                  backgroundColor: i === PASOS.length - 1 ? 'transparent' : siguienteHecho ? colors.success : colors.border,
+                }}
+              />
+            </View>
+            <Text style={{ fontSize: tipo.mini, marginTop: 4, color: hecho ? colors.success : colors.textSec, fontWeight: hecho ? '700' : '500' }}>
+              {p.texto}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}

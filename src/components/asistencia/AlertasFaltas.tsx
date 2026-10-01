@@ -60,7 +60,7 @@ export function AlertasFaltas({
   };
 
   return (
-    <Card style={{ borderWidth: 1.5, borderColor: '#FCA5A5', backgroundColor: '#FFF7F7' }}>
+    <Card style={{ borderWidth: 1.5, borderColor: colors.dangerBorde, backgroundColor: colors.dangerBg }}>
       <Pressable onPress={() => setAbierto(!abierto)} style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Ionicons name="alert-circle" size={22} color={colors.danger} style={{ marginRight: 8 }} />
         <Text style={{ flex: 1, fontWeight: '800', fontSize: 15, color: colors.text }}>
@@ -73,7 +73,7 @@ export function AlertasFaltas({
         ? alertas.map((a) => {
             const rojo = a.faltas >= 3;
             return (
-              <View key={a.miembro_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: '#FECACA', marginTop: 8 }}>
+              <View key={a.miembro_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.dangerBorde, marginTop: 8 }}>
                 <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: rojo ? colors.danger : colors.warning, marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: '700', color: colors.text }}>{`${a.nombre} ${a.apellido ?? ''}`.trim()}</Text>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Switch, TextInput, Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui';
+import { colors } from '@/lib/theme';
 
 export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: string }) {
   const [tarjetas, setTarjetas] = useState<any[]>([]);
@@ -58,27 +59,27 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
     <ScrollView contentContainerStyle={{paddingBottom:20}}>
       {tarjetas.map(t => (
         <Card key={t.id} style={{marginBottom: 15}}>
-          <Text style={{fontWeight: '700', fontSize: 16}}>{t.nombre}</Text>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16}}>{t.nombre}</Text>
           <Text style={{color: 'gray'}}>Tel: {t.telefono} - Zona: {t.zona}</Text>
 
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop: 10}}>
-            <Text>Fonovisita</Text>
+            <Text style={{ color: colors.text }}>Fonovisita</Text>
             <Switch value={!!t.fonovisita} onValueChange={() => toggle(t, 'fonovisita',!!t.fonovisita)} />
           </View>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop:8}}>
-            <Text>Visita</Text>
+            <Text style={{ color: colors.text }}>Visita</Text>
             <Switch value={!!t.visita} onValueChange={() => toggle(t, 'visita',!!t.visita)} />
           </View>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop:8}}>
-            <Text>Pilares (los 5 completos)</Text>
+            <Text style={{ color: colors.text }}>Pilares (los 5 completos)</Text>
             <Switch value={!!t.pilares} onValueChange={() => toggle(t, 'pilares',!!t.pilares)} />
           </View>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop:8}}>
-            <Text>Comenzó GV</Text>
+            <Text style={{ color: colors.text }}>Comenzó GV</Text>
             <Switch value={!!t.comenzo_gv} onValueChange={() => toggle(t, 'comenzo_gv',!!t.comenzo_gv)} />
           </View>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop:8}}>
-            <Text>Encuentro</Text>
+            <Text style={{ color: colors.text }}>Encuentro</Text>
             <Switch value={!!t.encuentro} onValueChange={() => toggle(t, 'encuentro',!!t.encuentro)} />
           </View>
 
@@ -86,7 +87,7 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
             placeholder="Observación..."
             defaultValue={t.observacion}
             onEndEditing={(e) => guardarObs(t.id, e.nativeEvent.text)}
-            style={{borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, marginTop: 12, color: 'black'}}
+            style={{borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, marginTop: 12, color: colors.text}}
             placeholderTextColor="#9CA3AF"
           />
         </Card>

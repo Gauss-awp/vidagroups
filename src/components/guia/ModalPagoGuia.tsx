@@ -44,24 +44,24 @@ export default function ModalPagoGuia({ visible, onClose, onGuardar, miembro, ev
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end' }}>
         <KeyboardAvoidingView behavior={Platform.OS==='ios'?'padding':undefined}>
-          <View style={{ backgroundColor:'white', borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, paddingBottom:34 }}>
+          <View style={{ backgroundColor:colors.card, borderTopLeftRadius:24, borderTopRightRadius:24, padding:20, paddingBottom:34 }}>
 
             {/* Header */}
             <View style={{ alignItems:'center', marginBottom:12 }}>
-              <View style={{ width:40, height:4, backgroundColor:'#E5E7EB', borderRadius:2, marginBottom:16 }} />
-              <Text style={{ fontSize:22, fontWeight:'900' }}>{miembro.nombre}</Text>
-              <Text style={{ fontSize:13, color:'#6B7280', marginTop:2 }}>{evento.titulo} · {f(precio)}</Text>
+              <View style={{ width:40, height:4, backgroundColor:colors.border, borderRadius:2, marginBottom:16 }} />
+              <Text style={{ color: colors.text,  fontSize:22, fontWeight:'900' }}>{miembro.nombre}</Text>
+              <Text style={{ fontSize:13, color:colors.textSec, marginTop:2 }}>{evento.titulo} · {f(precio)}</Text>
 
               <View style={{ flexDirection:'row', gap:8, marginTop:12 }}>
-                <View style={{ backgroundColor: debe===0? '#DCFCE7' : '#FEF3C7', paddingHorizontal:10, paddingVertical:6, borderRadius:20 }}>
-                  <Text style={{ fontSize:12, fontWeight:'800', color: debe===0? '#15803D' : '#92400E' }}>
+                <View style={{ backgroundColor: debe===0? colors.successBg : colors.warningBg, paddingHorizontal:10, paddingVertical:6, borderRadius:20 }}>
+                  <Text style={{ fontSize:12, fontWeight:'800', color: debe===0? '#15803D' : colors.warning }}>
                     {debe===0? '✓ Saldado' : `Debe ${f(debe)} · Pagó ${f(yaPagado)}`}
                   </Text>
                 </View>
               </View>
 
               {miembro.historial && miembro.historial.length>0 && (
-                <Text style={{ fontSize:11, color:'#9CA3AF', marginTop:8 }}>
+                <Text style={{ fontSize:11, color:colors.textTer, marginTop:8 }}>
                   Último: {f(miembro.historial[0].monto)} el {miembro.historial[0].fecha}
                 </Text>
               )}
@@ -71,22 +71,22 @@ export default function ModalPagoGuia({ visible, onClose, onGuardar, miembro, ev
             <View style={{ flexDirection:'row', gap:8, marginVertical:16 }}>
               {atajos.map(b=>(
                 <TouchableOpacity key={b.label} onPress={()=>setMonto(String(b.valor))}
-                  style={{ flex:1, backgroundColor: monto===String(b.valor)? '#111827' : '#F3F4F6', paddingVertical:12, borderRadius:12, alignItems:'center', borderWidth: monto===String(b.valor)? 2 : 0, borderColor:'#111827' }}>
-                  <Text style={{ fontWeight:'800', fontSize:13, color: monto===String(b.valor)? 'white' : '#111827' }}>{b.label}</Text>
+                  style={{ flex:1, backgroundColor: monto===String(b.valor)? colors.text : colors.cardAlt, paddingVertical:12, borderRadius:12, alignItems:'center', borderWidth: monto===String(b.valor)? 2 : 0, borderColor:colors.text }}>
+                  <Text style={{ fontWeight:'800', fontSize:13, color: monto===String(b.valor)? 'white' : colors.text }}>{b.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* Input grande */}
-            <View style={{ backgroundColor:'#F9FAFB', borderRadius:16, borderWidth:2, borderColor: sePasa? '#FCA5A5' : montoValido? '#6EE7B7' : '#E5E7EB', flexDirection:'row', alignItems:'center', paddingHorizontal:16 }}>
-              <Text style={{ fontSize:24, fontWeight:'900', color:'#111827' }}>{simbolo}</Text>
+            <View style={{ backgroundColor:colors.cardAlt, borderRadius:16, borderWidth:2, borderColor: sePasa? colors.dangerBorde : montoValido? '#6EE7B7' : colors.border, flexDirection:'row', alignItems:'center', paddingHorizontal:16 }}>
+              <Text style={{ fontSize:24, fontWeight:'900', color:colors.text }}>{simbolo}</Text>
               <TextInput
                 value={monto}
                 onChangeText={t=>setMonto(t.replace(/[^0-9]/g,''))}
                 placeholder="0"
                 keyboardType="number-pad"
                 autoFocus
-                style={{ flex:1, fontSize:32, fontWeight:'900', paddingVertical:14, textAlign:'center', color:'#111827' }}
+                style={{ flex:1, fontSize:32, fontWeight:'900', paddingVertical:14, textAlign:'center', color:colors.text }}
               />
               {monto!=='' && (
                 <TouchableOpacity onPress={()=>setMonto('')}><Ionicons name="close-circle" size={22} color="#9CA3AF" /></TouchableOpacity>
@@ -97,9 +97,9 @@ export default function ModalPagoGuia({ visible, onClose, onGuardar, miembro, ev
             {monto!=='' && (
               <View style={{ marginTop:12, alignItems:'center' }}>
                 {sePasa? (
-                  <Text style={{ color:'#DC2626', fontSize:12, fontWeight:'700' }}>⚠️ Se pasa por {f(nuevoTotal-precio)}</Text>
+                  <Text style={{ color:colors.danger, fontSize:12, fontWeight:'700' }}>Se pasa por {f(nuevoTotal-precio)}</Text>
                 ) : (
-                  <Text style={{ color: esTotal? '#059669' : '#D97706', fontSize:12, fontWeight:'700' }}>
+                  <Text style={{ color: esTotal? colors.success : colors.warning, fontSize:12, fontWeight:'700' }}>
                     {esTotal? `✓ Queda saldado con ${f(montoNum)}` : `Paga ${f(montoNum)} → faltarán ${f(faltaDespues)}`}
                   </Text>
                 )}
@@ -112,20 +112,20 @@ export default function ModalPagoGuia({ visible, onClose, onGuardar, miembro, ev
               onChangeText={setNota}
               placeholder='Nota (ej: "Cuota 1")'
               placeholderTextColor="#9CA3AF"
-              style={{ marginTop:14, borderWidth:1, borderColor:'#E5E7EB', borderRadius:12, padding:12, color:'#111827' }}
+              style={{ marginTop:14, borderWidth:1, borderColor:colors.border, borderRadius:12, padding:12, color:colors.text }}
             />
 
             {/* Botones */}
             <View style={{ flexDirection:'row', gap:10, marginTop:20 }}>
-              <TouchableOpacity onPress={onClose} style={{ flex:1, backgroundColor:'#F3F4F6', paddingVertical:16, borderRadius:14, alignItems:'center' }}>
-                <Text style={{ fontWeight:'700', color:'#374151' }}>Cancelar</Text>
+              <TouchableOpacity onPress={onClose} style={{ flex:1, backgroundColor:colors.cardAlt, paddingVertical:16, borderRadius:14, alignItems:'center' }}>
+                <Text style={{ fontWeight:'700', color:colors.textSec }}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={()=>montoValido && onGuardar(montoNum, nota.trim())} disabled={!montoValido || cargando}
-                style={{ flex:1, backgroundColor: montoValido? '#111827' : '#E5E7EB', paddingVertical:16, borderRadius:14, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:6 }}>
+                style={{ flex:1, backgroundColor: montoValido? colors.text : colors.border, paddingVertical:16, borderRadius:14, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:6 }}>
                 {cargando? <Text style={{color:'white', fontWeight:'800'}}>Guardando...</Text> : (
                   <>
-                    <Ionicons name="checkmark" size={18} color={montoValido? 'white' : '#9CA3AF'} />
-                    <Text style={{ color: montoValido? 'white' : '#9CA3AF', fontWeight:'800' }}>{esTotal? 'Saldar' : 'Guardar'}</Text>
+                    <Ionicons name="checkmark" size={18} color={montoValido? 'white' : colors.textTer} />
+                    <Text style={{ color: montoValido? 'white' : colors.textTer, fontWeight:'800' }}>{esTotal? 'Saldar' : 'Guardar'}</Text>
                   </>
                 )}
               </TouchableOpacity>

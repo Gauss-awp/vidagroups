@@ -110,8 +110,8 @@ export default function EventosMisionJoven({ redId, puedeGeneral = false }: { re
     <View style={{ gap: 12 }}>
       <View style={[s.fila, { justifyContent: 'space-between', marginTop: 8 }]}>
         <View>
-          <Text style={{ fontSize: 16, fontWeight: '800' }}>Eventos de la red</Text>
-          <Text style={{ fontSize: 12, color: '#6B7280' }}>{eventos.length} eventos</Text>
+          <Text style={{ color: colors.text,  fontSize: 16, fontWeight: '800' }}>Eventos de la red</Text>
+          <Text style={{ fontSize: 12, color: colors.textSec }}>{eventos.length} eventos</Text>
         </View>
         <TouchableOpacity
           onPress={() => {
@@ -134,12 +134,12 @@ export default function EventosMisionJoven({ redId, puedeGeneral = false }: { re
           <Card key={ev.id} style={{ paddingVertical: 14 }}>
             <View style={[s.fila, { justifyContent: 'space-between' }]}>
               <View style={{ flex: 1, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name={ICONO_EVENTO[ev.tipo]} size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '800', fontSize: 14, color: '#111827' }}>{ev.nombre}</Text>
-                  <Text style={{ fontSize: 12, color: '#6B7280' }}>
+                  <Text style={{ fontWeight: '800', fontSize: 14, color: colors.text }}>{ev.nombre}</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSec }}>
                     {formatoFecha(ev.fecha_evento)} · {costo ? f(costo) : 'Gratis'}
                   </Text>
                   {ev.red_id === null ? <Text style={{ fontSize: 11, color: colors.purple, fontWeight: '700' }}>Toda la iglesia</Text> : null}
@@ -151,13 +151,13 @@ export default function EventosMisionJoven({ redId, puedeGeneral = false }: { re
                     setEditando(ev);
                     setModal(true);
                   }}
-                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.cardAlt, alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Ionicons name="pencil" size={16} color="#374151" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => borrar(ev)}
-                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.dangerBg, alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Ionicons name="trash" size={16} color="#DC2626" />
                 </TouchableOpacity>
@@ -167,27 +167,28 @@ export default function EventosMisionJoven({ redId, puedeGeneral = false }: { re
             {costo > 0 ? (
               <TouchableOpacity
                 onPress={() => verResumen(ev)}
-                style={{ marginTop: 10, backgroundColor: eventoActivo === ev.id ? '#111827' : '#6366F1', padding: 12, borderRadius: 20, alignItems: 'center' }}
+                style={{ marginTop: 10, paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: '800', color: 'white' }}>{eventoActivo === ev.id ? 'Ocultar pagos' : 'Ver pagos por GV'}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>{eventoActivo === ev.id ? 'Ocultar pagos' : 'Ver pagos por grupo'}</Text>
+                <Ionicons name={eventoActivo === ev.id ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primary} />
               </TouchableOpacity>
             ) : null}
 
             {eventoActivo === ev.id && (
-              <View style={{ marginTop: 12, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 10, gap: 8 }}>
+              <View style={{ marginTop: 12, backgroundColor: colors.cardAlt, borderRadius: 12, padding: 10, gap: 8 }}>
                 {resumen.length === 0 ? (
-                  <Text style={{ fontSize: 12, color: '#9CA3AF' }}>Cargando o sin grupos en la red...</Text>
+                  <Text style={{ fontSize: 12, color: colors.textTer }}>Cargando o sin grupos en la red...</Text>
                 ) : (
                   <>
-                    <Text style={{ fontSize: 13, fontWeight: '800' }}>
+                    <Text style={{ color: colors.text,  fontSize: 13, fontWeight: '800' }}>
                       Red: {f(totalRed)} de {f(costo * personas)}
                     </Text>
                     <BarraProgreso valor={costo * personas ? totalRed / (costo * personas) : 0} color={colors.success} />
                     {resumen.map((r) => (
-                      <View key={r.grupoId} style={{ backgroundColor: 'white', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                      <View key={r.grupoId} style={{ backgroundColor: colors.card, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.cardAlt }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={{ fontSize: 13, fontWeight: '800', flex: 1 }}>{r.grupo}</Text>
-                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#059669' }}>
+                          <Text style={{ color: colors.text,  fontSize: 13, fontWeight: '800', flex: 1 }}>{r.grupo}</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.success }}>
                             {f(r.total)} · {r.pagaron}/{r.miembros.length}
                           </Text>
                         </View>
@@ -196,8 +197,8 @@ export default function EventosMisionJoven({ redId, puedeGeneral = false }: { re
                             .filter((m) => m.pagado > 0)
                             .map((m, idx) => (
                               <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                <Text style={{ fontSize: 11, color: '#6B7280' }}>{m.nombre}</Text>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: m.pagado >= costo ? '#059669' : '#F59E0B' }}>
+                                <Text style={{ fontSize: 11, color: colors.textSec }}>{m.nombre}</Text>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: m.pagado >= costo ? colors.success : colors.warning }}>
                                   {f(m.pagado)} {m.pagado >= costo ? '✓' : `(falta ${f(costo - m.pagado)})`}
                                 </Text>
                               </View>

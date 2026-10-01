@@ -1,11 +1,11 @@
 import { View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
-import { Cargando } from '@/components/ui';
+import { BordeSuperiorContext, Cargando } from '@/components/ui';
 import { InicioGuia } from '@/components/inicio/InicioGuia';
 import { InicioSupervisor } from '@/components/inicio/InicioSupervisor';
 import { PanelGeneral } from '@/components/inicio/PanelGeneral';
 import { PanelGuiaSupervisor } from '@/components/guia_supervisor/PanelGuiaSupervisor';
-import { DevRoleSwitcher } from '@/components/DevRoleSwitcher';
+import { DevRoleSwitcher, esCuentaDev } from '@/components/DevRoleSwitcher';
 
 export default function Inicio() {
   const { perfil } = useAuth();
@@ -27,7 +27,8 @@ export default function Inicio() {
   return (
     <View style={{ flex: 1 }}>
       <DevRoleSwitcher perfil={perfil} />
-      {contenido()}
+      {/* Si se ve el modo dev, ya ocupa el margen de arriba: la pantalla no lo repite */}
+      <BordeSuperiorContext.Provider value={!esCuentaDev(perfil.email)}>{contenido()}</BordeSuperiorContext.Provider>
     </View>
   );
 }

@@ -59,17 +59,17 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
 
   return (
     <View style={{ marginTop: 12, gap: 8 }}>
-      <Text style={{ fontSize: 16, fontWeight: '800' }}>Gestionar GVs - {redNombre}</Text>
+      <Text style={{ color: colors.text,  fontSize: 16, fontWeight: '800' }}>Gestionar GVs - {redNombre}</Text>
       {grupos.map(g=>{
         const miembrosDelGrupo = miembros.filter(x=>x.grupo_id===g.id);
         const isOpen = abierto===g.id;
         const guiaActual = perfiles.find((p:any)=>p.id===g.guia_id);
         return (
           <Card key={g.id} style={{ padding:0, overflow:'hidden' }}>
-            <Pressable onPress={()=>setAbierto(isOpen? null : g.id)} style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, backgroundColor: isOpen? '#EEF2FF':'white' }}>
+            <Pressable onPress={()=>setAbierto(isOpen? null : g.id)} style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:12, backgroundColor: isOpen? colors.primaryBg:colors.card }}>
               <View style={{flex:1}}>
-                <Text style={{fontWeight:'700', fontSize:14}}>{g.nombre}</Text>
-                <Text style={{fontSize:11, color:'#6B7280', marginTop:2}} numberOfLines={1}>
+                <Text style={{ color: colors.text, fontWeight:'700', fontSize:14}}>{g.nombre}</Text>
+                <Text style={{fontSize:11, color:colors.textSec, marginTop:2}} numberOfLines={1}>
                   {guiaActual? `Guía: ${guiaActual.nombre}` : 'Sin guía'} • {miembrosDelGrupo.length} miembros
                 </Text>
               </View>
@@ -81,16 +81,16 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
                 <View style={{ maxHeight: 320 }}>
                   <ScrollView showsVerticalScrollIndicator={false}>
                     {miembrosDelGrupo.map((m:any)=>(
-                      <View key={m.id} style={[s.fila, { justifyContent:'space-between', paddingVertical:10, borderTopWidth:1, borderTopColor:'#F3F4F6' }]}>
+                      <View key={m.id} style={[s.fila, { justifyContent:'space-between', paddingVertical:10, borderTopWidth:1, borderTopColor:colors.cardAlt }]}>
                         <View style={{flex:1}}>
-                          <Text style={{fontSize:13, fontWeight:'500'}}>{getNombre(m)}</Text>
-                          {m.telefono? <Text style={{fontSize:11, color:'#6B7280'}}>{m.telefono}</Text> : null}
+                          <Text style={{ color: colors.text, fontSize:13, fontWeight:'500'}}>{getNombre(m)}</Text>
+                          {m.telefono? <Text style={{fontSize:11, color:colors.textSec}}>{m.telefono}</Text> : null}
                         </View>
                         <Pressable onPress={()=>setModalMover(m)} style={{paddingHorizontal:8}}><Text style={{color: colors.primary, fontSize:12, fontWeight:'700'}}>Mover</Text></Pressable>
-                        <Pressable onPress={()=>eliminarMiembro(m)} style={{paddingHorizontal:4}}><Text style={{color:'#DC2626', fontSize:12}}>Sacar</Text></Pressable>
+                        <Pressable onPress={()=>eliminarMiembro(m)} style={{paddingHorizontal:4}}><Text style={{color:colors.danger, fontSize:12}}>Sacar</Text></Pressable>
                       </View>
                     ))}
-                    {miembrosDelGrupo.length===0 && <Text style={{fontSize:12, color:'#9CA3AF', textAlign:'center', padding:10}}>Este GV está vacío</Text>}
+                    {miembrosDelGrupo.length===0 && <Text style={{fontSize:12, color:colors.textTer, textAlign:'center', padding:10}}>Este GV está vacío</Text>}
                   </ScrollView>
                 </View>
               </View>
@@ -100,13 +100,13 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
       })}
       <Modal visible={modalGuia} transparent animationType="slide">
         <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end' }}>
-          <View style={{ backgroundColor:'white', padding:16, borderTopLeftRadius:16, borderTopRightRadius:16, maxHeight:'70%' }}>
-            <Text style={{fontWeight:'800', fontSize:16, marginBottom:12}}>Guía para {grupoSel?.nombre}</Text>
+          <View style={{ backgroundColor:colors.card, padding:16, borderTopLeftRadius:16, borderTopRightRadius:16, maxHeight:'70%' }}>
+            <Text style={{ color: colors.text, fontWeight:'800', fontSize:16, marginBottom:12}}>Guía para {grupoSel?.nombre}</Text>
             <ScrollView>
-              <Pressable onPress={()=>cambiarGuia(grupoSel?.id, null)} style={{padding:14, borderBottomWidth:1, borderColor:'#eee'}}><Text style={{color:'#DC2626'}}>Sin guía</Text></Pressable>
+              <Pressable onPress={()=>cambiarGuia(grupoSel?.id, null)} style={{padding:14, borderBottomWidth:1, borderColor:colors.cardAlt}}><Text style={{color:colors.danger}}>Sin guía</Text></Pressable>
               {guias.map((gu:any)=>(
-                <Pressable key={gu.id} onPress={()=>cambiarGuia(grupoSel?.id, gu.id)} style={{padding:14, borderBottomWidth:1, borderColor:'#eee'}}>
-                  <Text>{gu.nombre} {gu.apellido}</Text>
+                <Pressable key={gu.id} onPress={()=>cambiarGuia(grupoSel?.id, gu.id)} style={{padding:14, borderBottomWidth:1, borderColor:colors.cardAlt}}>
+                  <Text style={{ color: colors.text }}>{gu.nombre} {gu.apellido}</Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -116,11 +116,11 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
       </Modal>
       <Modal visible={!!modalMover} transparent animationType="slide">
         <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.5)', justifyContent:'flex-end' }}>
-          <View style={{ backgroundColor:'white', padding:16, borderTopLeftRadius:16, borderTopRightRadius:16 }}>
-            <Text style={{fontWeight:'800', marginBottom:12}}>Mover a:</Text>
+          <View style={{ backgroundColor:colors.card, padding:16, borderTopLeftRadius:16, borderTopRightRadius:16 }}>
+            <Text style={{ color: colors.text, fontWeight:'800', marginBottom:12}}>Mover a:</Text>
             {grupos.map((gr:any)=>(
-              <Pressable key={gr.id} onPress={()=>moverMiembro(modalMover, gr.id)} style={{padding:14, borderBottomWidth:1, borderColor:'#eee'}}>
-                <Text>{gr.nombre}</Text>
+              <Pressable key={gr.id} onPress={()=>moverMiembro(modalMover, gr.id)} style={{padding:14, borderBottomWidth:1, borderColor:colors.cardAlt}}>
+                <Text style={{ color: colors.text }}>{gr.nombre}</Text>
               </Pressable>
             ))}
             <View style={{marginTop:12}}><Boton titulo="Cancelar" onPress={()=>setModalMover(null)}/></View>

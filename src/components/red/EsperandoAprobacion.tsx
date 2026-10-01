@@ -43,7 +43,7 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
               width: 76,
               height: 76,
               borderRadius: 22,
-              backgroundColor: dadoDeBaja ? '#FEE2E2' : '#EEF2FF',
+              backgroundColor: dadoDeBaja ? colors.dangerBg : colors.primaryBg,
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: 16,

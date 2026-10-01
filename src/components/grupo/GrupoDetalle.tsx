@@ -120,14 +120,14 @@ export function GrupoDetalle({
                 borderRadius: 20,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: activo? '#111827' : '#E5E7EB',
+                backgroundColor: activo? colors.text : colors.border,
               }}
             >
               <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{
                 paddingHorizontal: 4,
                 fontSize: 12,
                 fontWeight: activo? '700' : '600',
-                color: activo? 'white' : '#6B7280',
+                color: activo? 'white' : colors.textSec,
               }}>
                 {t.label}
               </Text>

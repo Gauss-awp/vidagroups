@@ -1,9 +1,11 @@
-import { View, Text, Pressable } from 'react-native'
+import { View, Text, Pressable, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
 const CORREO_DEV = 'benjamin_trece@hotmail.com'
+
+export const esCuentaDev = (email?: string | null) => email?.toLowerCase() === CORREO_DEV.toLowerCase()
 
 const ROLES_DEV = [
   { rol: 'guia', texto: 'Guía', color: '#555' },
@@ -18,7 +20,7 @@ export function DevRoleSwitcher({ perfil }: any) {
   const insets = useSafeAreaInsets()
 
   // Solo se muestra en tu cuenta
-  if (perfil?.email?.toLowerCase() !== CORREO_DEV.toLowerCase()) return null
+  if (!esCuentaDev(perfil?.email)) return null
 
   const cambiarRol = async (nuevoRol: string) => {
     const { error } = await supabase.rpc('dev_cambiar_mi_rol', { nuevo_rol: nuevoRol })
@@ -30,15 +32,15 @@ export function DevRoleSwitcher({ perfil }: any) {
   }
 
   return (
-    <View style={{ padding: 10, backgroundColor: '#ffdbdb', borderRadius: 10, marginHorizontal: 10, marginBottom: 4, marginTop: insets.top + 4 }}>
-      <Text style={{ fontWeight: 'bold' }}>MODO DEV - Sos: {perfil?.rol}</Text>
-      <View style={{ flexDirection: 'row', gap: 5, marginTop: 8, flexWrap: 'wrap' }}>
+    <View style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#ffdbdb', borderRadius: 10, marginHorizontal: 10, marginBottom: 4, marginTop: insets.top + 2 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', gap: 5 }}>
+        <Text style={{ fontWeight: 'bold', fontSize: 11, marginRight: 4 }}>DEV · {perfil?.rol}</Text>
         {ROLES_DEV.map((r) => (
-          <Pressable key={r.rol} onPress={() => cambiarRol(r.rol)} style={{ backgroundColor: r.color, padding: 8, borderRadius: 5 }}>
-            <Text style={{ color: 'white' }}>{r.texto}</Text>
+          <Pressable key={r.rol} onPress={() => cambiarRol(r.rol)} style={{ backgroundColor: perfil?.rol === r.rol ? '#4F46E5' : r.color, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 6 }}>
+            <Text style={{ color: 'white', fontSize: 12 }}>{r.texto}</Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
     </View>
   )
 }

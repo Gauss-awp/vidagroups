@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { ROL_COLOR, colors } from '@/lib/theme';
 import type { Perfil } from '@/lib/types';
 import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { ModoTema, useTema } from '@/context/TemaContext';
 import { Avatar, Badge, Boton, Campo, Card, Cargando, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
 
 export default function PerfilPantalla() {
   const { perfil, redesAdmin, refrescarPerfil, cerrarSesion } = useAuth();
+  const { modo, cambiarModo } = useTema();
   const [miRed, setMiRed] = useState<string | null>(null);
   const [nombre, setNombre] = useState(perfil?.nombre?? '');
   const [apellido, setApellido] = useState(perfil?.apellido?? '');
@@ -113,6 +116,38 @@ export default function PerfilPantalla() {
           <Text style={[s.textoFila, { marginTop: 4 }]}>
             {superior? `${nombreCompleto(superior)} · ${ROL_LABEL[superior.rol]}` : 'Sin asignar'}
           </Text>
+        </Card>
+
+        <SeccionTitulo titulo="Apariencia" />
+        <Card>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {([
+              { m: 'claro', texto: 'Claro', icono: 'sunny-outline' },
+              { m: 'oscuro', texto: 'Oscuro', icono: 'moon-outline' },
+              { m: 'sistema', texto: 'Automático', icono: 'phone-portrait-outline' },
+            ] as { m: ModoTema; texto: string; icono: 'sunny-outline' | 'moon-outline' | 'phone-portrait-outline' }[]).map((o) => {
+              const activo = modo === o.m;
+              return (
+                <Pressable
+                  key={o.m}
+                  onPress={() => cambiarModo(o.m)}
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    borderWidth: 1.5,
+                    borderColor: activo ? colors.primary : colors.border,
+                    backgroundColor: activo ? colors.primaryBg : colors.card,
+                  }}
+                >
+                  <Ionicons name={o.icono} size={22} color={activo ? colors.primary : colors.textSec} />
+                  <Text style={{ marginTop: 6, fontSize: 13, fontWeight: '600', color: activo ? colors.primary : colors.textSec }}>{o.texto}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={[s.textoFilaSec, { marginTop: 10 }]}>Automático sigue el modo de tu celular. Se guarda solo en este teléfono.</Text>
         </Card>
 
         <SeccionTitulo titulo="Mis datos" />

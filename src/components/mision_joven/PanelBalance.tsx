@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { Card } from '../ui';
 import EventosMisionJoven from './EventosMisionJoven';
+import { colors } from '@/lib/theme';
 type Props = {
   tarjetas: any[];
   redId: string;
@@ -45,8 +46,8 @@ export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Pro
     return (
       <View style={{ gap: 10, marginTop: 16 }}>
         <Card style={{ marginTop: 12 }}>
-          <Text style={{ fontWeight: '700' }}>Balance Consolidación - Este mes</Text>
-          <Text style={{ marginTop: 6, color: '#6B7280' }}>Aún no hay tarjetas este mes</Text>
+          <Text style={{ color: colors.text,  fontWeight: '700' }}>Balance Consolidación - Este mes</Text>
+          <Text style={{ marginTop: 6, color: colors.textSec }}>Aún no hay tarjetas este mes</Text>
         </Card>
         <EventosMisionJoven redId={redId} puedeGeneral={puedeGeneral} />
       </View>
@@ -57,45 +58,45 @@ export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Pro
 
   return (
     <View style={{ gap: 10, marginTop: 16 }}>
-      <Text style={{ fontSize: 16, fontWeight: '800' }}>Balance Consolidación - Este mes</Text>
-      <Text style={{ fontSize: 12, color: '#6B7280' }}>{stats.nuevas} nuevas este mes · {stats.total} en seguimiento · <Text style={{ color: '#16A34A', fontWeight: '800' }}>{stats.completadasMes} completadas este mes</Text></Text>
+      <Text style={{ color: colors.text,  fontSize: 16, fontWeight: '800' }}>Balance Consolidación - Este mes</Text>
+      <Text style={{ fontSize: 12, color: colors.textSec }}>{stats.nuevas} nuevas este mes · {stats.total} en seguimiento · <Text style={{ color: colors.success, fontWeight: '800' }}>{stats.completadasMes} completadas este mes</Text></Text>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Card style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 22, fontWeight: '800' }}>{stats.fonovisita}</Text>
-          <Text style={{ fontSize: 11, color: '#6B7280' }}>Fonovisita {pct(stats.fonovisita)}%</Text>
+          <Text style={{ color: colors.text,  fontSize: 22, fontWeight: '800' }}>{stats.fonovisita}</Text>
+          <Text style={{ fontSize: 11, color: colors.textSec }}>Fonovisita {pct(stats.fonovisita)}%</Text>
         </Card>
         <Card style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 22, fontWeight: '800' }}>{stats.visita}</Text>
-          <Text style={{ fontSize: 11, color: '#6B7280' }}>Visita {pct(stats.visita)}%</Text>
+          <Text style={{ color: colors.text,  fontSize: 22, fontWeight: '800' }}>{stats.visita}</Text>
+          <Text style={{ fontSize: 11, color: colors.textSec }}>Visita {pct(stats.visita)}%</Text>
         </Card>
         <Card style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={{ fontSize: 22, fontWeight: '800' }}>{stats.pilares}</Text>
-          <Text style={{ fontSize: 11, color: '#6B7280' }}>Pilares</Text>
+          <Text style={{ color: colors.text,  fontSize: 22, fontWeight: '800' }}>{stats.pilares}</Text>
+          <Text style={{ fontSize: 11, color: colors.textSec }}>Pilares</Text>
         </Card>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Card style={{ flex: 1, alignItems: 'center', backgroundColor: '#ECFDF5' }}>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: '#059669' }}>{stats.comenzoGV}</Text>
-          <Text style={{ fontSize: 11, color: '#059669' }}>Comenzó GV {pct(stats.comenzoGV)}%</Text>
+        <Card style={{ flex: 1, alignItems: 'center', backgroundColor: colors.successBg }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: colors.success }}>{stats.comenzoGV}</Text>
+          <Text style={{ fontSize: 11, color: colors.success }}>Comenzó GV {pct(stats.comenzoGV)}%</Text>
         </Card>
-        <Card style={{ flex: 1, alignItems: 'center', backgroundColor: '#EEF2FF' }}>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: '#4F46E5' }}>{stats.encuentro}</Text>
-          <Text style={{ fontSize: 11, color: '#4F46E5' }}>Encuentro</Text>
+        <Card style={{ flex: 1, alignItems: 'center', backgroundColor: colors.primaryBg }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: colors.primary }}>{stats.encuentro}</Text>
+          <Text style={{ fontSize: 11, color: colors.primary }}>Encuentro</Text>
         </Card>
-        <Card style={{ flex: 1, alignItems: 'center', backgroundColor: stats.sinFonovisita3d > 0? '#FEF2F2' : 'white' }}>
-          <Text style={{ fontSize: 22, fontWeight: '800', color: stats.sinFonovisita3d > 0? '#DC2626' : '#111' }}>{stats.sinFonovisita3d}</Text>
-          <Text style={{ fontSize: 11, color: stats.sinFonovisita3d > 0? '#DC2626' : '#6B7280' }}>Alerta +3d</Text>
+        <Card style={{ flex: 1, alignItems: 'center', backgroundColor: stats.sinFonovisita3d > 0? colors.dangerBg : colors.card }}>
+          <Text style={{ fontSize: 22, fontWeight: '800', color: stats.sinFonovisita3d > 0? colors.danger : colors.text }}>{stats.sinFonovisita3d}</Text>
+          <Text style={{ fontSize: 11, color: stats.sinFonovisita3d > 0? colors.danger : colors.textSec }}>Alerta +3d</Text>
         </Card>
       </View>
 
       <Card>
-        <Text style={{ fontWeight: '700', marginBottom: 8 }}>Por GV este mes</Text>
+        <Text style={{ color: colors.text,  fontWeight: '700', marginBottom: 8 }}>Por GV este mes</Text>
         {Object.entries(stats.porGV).map(([gv, cant]) => (
-          <View key={gv} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
-            <Text style={{ flex: 1, fontSize: 13 }}>{gv}</Text>
-            <Text style={{ fontWeight: '700' }}>{cant}</Text>
+          <View key={gv} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.cardAlt }}>
+            <Text style={{ color: colors.text,  flex: 1, fontSize: 13 }}>{gv}</Text>
+            <Text style={{ color: colors.text,  fontWeight: '700' }}>{cant}</Text>
           </View>
         ))}
       </Card>

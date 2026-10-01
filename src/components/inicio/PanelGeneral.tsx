@@ -147,10 +147,10 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
         {/* ---------- 1. Qué necesita tu atención ---------- */}
         <SeccionTitulo titulo="Requiere tu atención" />
         {pendientesTotal === 0 ? (
-          <Card style={{ backgroundColor: '#ECFDF5' }}>
+          <Card style={{ backgroundColor: colors.successBg }}>
             <View style={s.fila}>
               <Ionicons name="checkmark-circle" size={26} color={colors.success} style={{ marginRight: 10 }} />
-              <Text style={{ color: '#065F46', fontSize: 16, fontWeight: '700', flex: 1 }}>Todo en orden esta semana</Text>
+              <Text style={{ color: colors.success, fontSize: 16, fontWeight: '700', flex: 1 }}>Todo en orden esta semana</Text>
             </View>
           </Card>
         ) : (

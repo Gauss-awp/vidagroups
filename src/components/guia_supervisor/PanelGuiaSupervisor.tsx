@@ -117,7 +117,7 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
                 const mGV = miembros.filter((m) => m.grupo_id === gv.id);
                 return (
                   <Card key={gv.id} style={{ marginTop: 8 }}>
-                    <Text style={{ fontWeight: '700' }}>{gv.nombre}</Text>
+                    <Text style={{ color: colors.text,  fontWeight: '700' }}>{gv.nombre}</Text>
                     <Text style={s.textoFilaSec}>{mGV.length} miembros</Text>
                     {mGV.length > 0 && (
                       <Text style={[s.textoFilaSec, { marginTop: 4, fontSize: 12 }]}>

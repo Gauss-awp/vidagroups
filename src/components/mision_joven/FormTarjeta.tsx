@@ -2,17 +2,18 @@ import React, { useState, useMemo } from 'react';
 import { Alert, Text, TextInput, View, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Boton, Card } from '@/components/ui';
+import { colors } from '@/lib/theme';
 
-const inputStyle = {
+const estiloInput = () => ({
   borderWidth: 1,
-  borderColor: '#D1D5DB',
+  borderColor: colors.border,
   borderRadius: 10,
   padding: 12,
   marginTop: 12,
-  backgroundColor: 'white',
-  color: 'black',
+  backgroundColor: colors.card,
+  color: colors.text,
   fontSize: 16
-};
+});
 
 export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
   const [nombre, setNombre] = useState('');
@@ -51,13 +52,13 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios'? 'padding' : 'height'} keyboardVerticalOffset={100} style={{ flex: 1 }}>
       <Card>
-        <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 6 }}>Nueva Tarjeta</Text>
-        <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 4 }}>{listaGVs.length} GVs de tu red</Text>
+        <Text style={{ color: colors.text,  fontSize: 18, fontWeight: '800', marginBottom: 6 }}>Nueva Tarjeta</Text>
+        <Text style={{ fontSize: 11, color: colors.textSec, marginBottom: 4 }}>{listaGVs.length} GVs de tu red</Text>
 
-        <TextInput placeholder="1. Nombre y Apellido" placeholderTextColor="#9CA3AF" value={nombre} onChangeText={setNombre} style={inputStyle} />
-        <TextInput placeholder="2. Tel / Whatsapp" placeholderTextColor="#9CA3AF" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" style={inputStyle} />
-        <TextInput placeholder="3. Edad" placeholderTextColor="#9CA3AF" value={edad} onChangeText={setEdad} keyboardType="numeric" style={inputStyle} />
-        <TextInput placeholder="4. Zona / Barrio" placeholderTextColor="#9CA3AF" value={zona} onChangeText={setZona} style={inputStyle} />
+        <TextInput placeholder="1. Nombre y Apellido" placeholderTextColor="#9CA3AF" value={nombre} onChangeText={setNombre} style={estiloInput()} />
+        <TextInput placeholder="2. Tel / Whatsapp" placeholderTextColor="#9CA3AF" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" style={estiloInput()} />
+        <TextInput placeholder="3. Edad" placeholderTextColor="#9CA3AF" value={edad} onChangeText={setEdad} keyboardType="numeric" style={estiloInput()} />
+        <TextInput placeholder="4. Zona / Barrio" placeholderTextColor="#9CA3AF" value={zona} onChangeText={setZona} style={estiloInput()} />
 
         <View style={{ zIndex: 20 }}>
           <TextInput
@@ -66,19 +67,19 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
             value={gv}
             onChangeText={(t) => { setGv(t); setMostrarLista(true); }}
             onFocus={() => setMostrarLista(true)}
-            style={[inputStyle, { borderColor: mostrarLista? '#6366F1' : '#D1D5DB', borderWidth: mostrarLista? 2 : 1 }]}
+            style={[estiloInput(), { borderColor: mostrarLista? colors.primary : colors.border, borderWidth: mostrarLista? 2 : 1 }]}
           />
           {mostrarLista && (
-            <View style={{ maxHeight: 180, borderWidth: 1, borderColor: '#ddd', borderRadius: 10, marginTop: 6, backgroundColor: 'white' }}>
+            <View style={{ maxHeight: 180, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: 6, backgroundColor: colors.card }}>
               <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled style={{ maxHeight: 180 }}>
                 {filtrados.length === 0 && (
                   <View style={{ padding: 14 }}>
-                    <Text style={{ color: '#9CA3AF' }}>No hay resultados para "{gv}"</Text>
+                    <Text style={{ color: colors.textTer }}>No hay resultados para "{gv}"</Text>
                   </View>
                 )}
                 {filtrados.map((g) => (
-                  <Pressable key={g} onPress={() => { setGv(g); setMostrarLista(false); }} style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-                    <Text style={{ fontWeight: '700' }}>{g}</Text>
+                  <Pressable key={g} onPress={() => { setGv(g); setMostrarLista(false); }} style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: colors.cardAlt }}>
+                    <Text style={{ color: colors.text,  fontWeight: '700' }}>{g}</Text>
                   </Pressable>
                 ))}
               </ScrollView>

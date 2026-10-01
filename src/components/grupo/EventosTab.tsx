@@ -153,23 +153,23 @@ export function EventosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
               padding: 16,
               borderRadius: 20,
               borderWidth: esMeta ? 2 : 0,
-              borderColor: esMeta ? '#10B981' : 'transparent',
-              backgroundColor: esMeta ? '#F0FDF4' : 'white',
+              borderColor: esMeta ? colors.success : 'transparent',
+              backgroundColor: esMeta ? colors.successBg : colors.card,
               overflow: 'hidden',
             }}
           >
             {confetiId === ev.id && (
               <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, alignItems: 'center', justifyContent: 'center', opacity: anim }}>
-                <Text style={{ fontSize: 50 }}>🎉 🎊 ✨ 🎉</Text>
-                <Text style={{ fontWeight: '900', fontSize: 18, color: '#065F46', marginTop: 6 }}>¡META COMPLETADA!</Text>
+                <Text style={{ color: colors.text,  fontSize: 50 }}>🎉 🎊 ✨ 🎉</Text>
+                <Text style={{ fontWeight: '900', fontSize: 18, color: colors.success, marginTop: 6 }}>¡META COMPLETADA!</Text>
               </Animated.View>
             )}
 
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name={ICONO_EVENTO[ev.tipo]} size={22} color={colors.warning} style={{ marginRight: 10 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '900', fontSize: 17 }}>{ev.nombre}</Text>
-                <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                <Text style={{ color: colors.text,  fontWeight: '900', fontSize: 17 }}>{ev.nombre}</Text>
+                <Text style={{ fontSize: 12, color: colors.textSec, marginTop: 2 }}>
                   {formatoFecha(ev.fecha_evento)} · {costo ? `${f(costo)} por persona` : 'Gratis'}
                 </Text>
               </View>
@@ -181,26 +181,27 @@ export function EventosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
 
             {costo > 0 ? (
               <>
-                <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 10 }}>
-                  <Text style={{ fontWeight: '800', color: '#6366F1' }}>
+                <Text style={{ fontSize: 12, color: colors.textSec, marginTop: 10 }}>
+                  <Text style={{ fontWeight: '800', color: colors.primary }}>
                     {pagaron}/{miembros.length} pagaron
                   </Text>
                   {' · '}
-                  <Text style={{ fontWeight: '800', color: esMeta ? '#10B981' : '#6366F1' }}>{f(recaudado)} recaudado</Text>
+                  <Text style={{ fontWeight: '800', color: esMeta ? colors.success : colors.primary }}>{f(recaudado)} recaudado</Text>
                 </Text>
-                <View style={{ height: 12, backgroundColor: '#F3F4F6', borderRadius: 10, marginTop: 8, overflow: 'hidden' }}>
-                  <View style={{ height: 12, width: `${progreso}%`, backgroundColor: esMeta ? '#10B981' : progreso >= 70 ? '#6366F1' : '#F59E0B' }} />
+                <View style={{ height: 12, backgroundColor: colors.cardAlt, borderRadius: 10, marginTop: 8, overflow: 'hidden' }}>
+                  <View style={{ height: 12, width: `${progreso}%`, backgroundColor: esMeta ? colors.success : progreso >= 70 ? colors.primary : colors.warning }} />
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                  <Text style={{ fontSize: 10, color: '#9CA3AF' }}>{Math.round(progreso)}% de la meta</Text>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#6B7280' }}>Meta {f(meta)}</Text>
+                  <Text style={{ fontSize: 10, color: colors.textTer }}>{Math.round(progreso)}% de la meta</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: colors.textSec }}>Meta {f(meta)}</Text>
                 </View>
 
                 <TouchableOpacity
                   onPress={() => setEventoActivo(esActivo ? null : ev.id)}
-                  style={{ marginTop: 14, backgroundColor: esMeta ? '#10B981' : '#111827', padding: 12, borderRadius: 14, alignItems: 'center' }}
+                  style={{ marginTop: 12, paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: 'white' }}>{esActivo ? '▲ Ocultar' : '▼ Ver pagos'}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>{esActivo ? 'Ocultar pagos' : 'Ver pagos de cada hermano'}</Text>
+                  <Ionicons name={esActivo ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primary} />
                 </TouchableOpacity>
               </>
             ) : null}
@@ -222,16 +223,16 @@ export function EventosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      backgroundColor: completo ? '#D1FAE5' : parcial ? '#FEF3C7' : 'white',
+                      backgroundColor: completo ? colors.successBg : parcial ? colors.warningBg : colors.card,
                       padding: 14,
                       borderRadius: 14,
                       borderWidth: 1.5,
-                      borderColor: completo ? '#10B981' : parcial ? '#FBBF24' : '#F3F4F6',
+                      borderColor: completo ? colors.success : parcial ? colors.warning : colors.cardAlt,
                       marginTop: 8,
                     }}
                   >
-                    <Text style={{ fontWeight: '700' }}>{`${m.nombre} ${m.apellido ?? ''}`.trim()}</Text>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: completo ? '#065F46' : parcial ? '#92400E' : '#9CA3AF' }}>
+                    <Text style={{ color: colors.text,  fontWeight: '700' }}>{`${m.nombre} ${m.apellido ?? ''}`.trim()}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: completo ? colors.success : parcial ? colors.warning : colors.textTer }}>
                       {completo ? `Pagó ${f(monto)}` : parcial ? `Puso ${f(monto)} · Falta ${f(costo - monto)}` : 'Pendiente'}
                     </Text>
                   </TouchableOpacity>

@@ -38,20 +38,20 @@ export function AsignarSupervisores({ redId, redNombre }: { redId: string; redNo
     <View style={{ marginTop: 24, paddingBottom: 40 }}>
       <SeccionTitulo titulo={`Supervisores · ${redNombre}`} />
 
-      <Text style={{ fontWeight: '800', marginBottom: 8 }}>1. Guía:</Text>
+      <Text style={{ color: colors.text,  fontWeight: '800', marginBottom: 8 }}>1. Guía:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {guias.map((g:any) => (
-          <TouchableOpacity key={g.id} onPress={() => setSelGuia(g.id)} style={{ padding: 10, borderRadius: 10, backgroundColor: selGuia===g.id ? colors.text : '#fff', borderWidth: 1, borderColor: '#ddd' }}>
-            <Text style={{ color: selGuia===g.id ? '#fff' : '#000', fontSize: 12, fontWeight: '600' }}>{g.nombre} {rels.find(r=>r.guia_id===g.id) ? '→ asignado' : '(libre)'}</Text>
+          <TouchableOpacity key={g.id} onPress={() => setSelGuia(g.id)} style={{ padding: 10, borderRadius: 10, backgroundColor: selGuia===g.id ? colors.text : colors.card, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ color: selGuia===g.id ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{g.nombre} {rels.find(r=>r.guia_id===g.id) ? '→ asignado' : '(libre)'}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={{ fontWeight: '800', marginBottom: 8 }}>2. Supervisor:</Text>
+      <Text style={{ color: colors.text,  fontWeight: '800', marginBottom: 8 }}>2. Supervisor:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {sups.map((s:any) => (
-          <TouchableOpacity key={s.id} onPress={() => setSelSup(s.id)} style={{ padding: 10, borderRadius: 10, backgroundColor: selSup===s.id ? colors.success : '#fff', borderWidth: 1, borderColor: '#ddd' }}>
-            <Text style={{ color: selSup===s.id ? '#fff' : '#000', fontSize: 12, fontWeight: '600' }}>{s.nombre} ({rels.filter((r:any)=>r.supervisor_id===s.id).length})</Text>
+          <TouchableOpacity key={s.id} onPress={() => setSelSup(s.id)} style={{ padding: 10, borderRadius: 10, backgroundColor: selSup===s.id ? colors.success : colors.card, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ color: selSup===s.id ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{s.nombre} ({rels.filter((r:any)=>r.supervisor_id===s.id).length})</Text>
           </TouchableOpacity>
         ))}
       </View>
