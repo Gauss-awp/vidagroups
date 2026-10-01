@@ -121,6 +121,17 @@ export default function EventoPantalla() {
   const alDia = filas.filter((f) => costo > 0 && f.falta === 0).length;
   const variosGrupos = new Set(miembros.map((m) => m.grupo_id)).size > 1;
 
+  // Una sección por grupo (cuando el evento abarca varios grupos)
+  const secciones = (() => {
+    const mapa = new Map<string, Fila[]>();
+    filas.forEach((f) => {
+      const nombre = f.miembro.grupo?.nombre ?? 'Sin grupo';
+      if (!mapa.has(nombre)) mapa.set(nombre, []);
+      mapa.get(nombre)!.push(f);
+    });
+    return [...mapa.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([nombre, lista]) => ({ nombre, filas: lista }));
+  })();
+
   const abrirPago = (miembroId: string | null) => {
     setMiembroPago(miembroId);
     setBusqueda('');
@@ -244,38 +255,48 @@ export default function EventoPantalla() {
             <Vacio icono="people-outline" titulo="No hay miembros" texto="Agregá miembros al grupo para registrar sus pagos." />
           </Card>
         ) : (
-          <Card style={{ paddingVertical: 4 }}>
-            {filas.map((f, i) => {
-              const completo = costo > 0 && f.falta === 0;
-              return (
-                <Pressable
-                  key={f.miembro.id}
-                  onPress={() => setHistorialDe(f.miembro)}
-                  style={({ pressed }) => [
-                    { paddingVertical: 12 },
-                    i < filas.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.border },
-                    pressed && { opacity: 0.6 },
-                  ]}
-                >
-                  <View style={[s.fila, { marginBottom: 8 }]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.textoFila}>{nombreCompleto(f.miembro)}</Text>
-                      {variosGrupos && f.miembro.grupo ? <Text style={s.textoFilaSec}>{f.miembro.grupo.nombre}</Text> : null}
-                    </View>
-                    {completo ? <Ionicons name="checkmark-circle" size={20} color={colors.success} /> : null}
-                    <Ionicons name="chevron-forward" size={16} color={colors.textTer} style={{ marginLeft: 6 }} />
-                  </View>
-                  <View style={[s.fila, { justifyContent: 'space-between', marginBottom: 6 }]}>
-                    <Text style={{ color: colors.success, fontSize: 14, fontWeight: '600' }}>Pagado {formatoMoneda(f.pagado, moneda)}</Text>
-                    <Text style={{ color: f.falta > 0 ? colors.warning : colors.textSec, fontSize: 14, fontWeight: '600' }}>
-                      Falta {formatoMoneda(f.falta, moneda)}
-                    </Text>
-                  </View>
-                  <BarraProgreso valor={f.pct} color={completo ? colors.success : colors.primary} />
-                </Pressable>
-              );
-            })}
-          </Card>
+          secciones.map((sec) => (
+            <View key={sec.nombre}>
+              {variosGrupos ? (
+                <View style={[s.fila, { justifyContent: 'space-between', marginTop: 10, marginBottom: 6, marginHorizontal: 4 }]}>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text, flex: 1 }}>{sec.nombre}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.success }}>
+                    {formatoMoneda(sec.filas.reduce((a, f) => a + f.pagado, 0), moneda)} ·{' '}
+                    {sec.filas.filter((f) => costo > 0 && f.falta === 0).length}/{sec.filas.length}
+                  </Text>
+                </View>
+              ) : null}
+              <Card style={{ paddingVertical: 4 }}>
+                {sec.filas.map((f, i) => {
+                  const completo = costo > 0 && f.falta === 0;
+                  return (
+                    <Pressable
+                      key={f.miembro.id}
+                      onPress={() => setHistorialDe(f.miembro)}
+                      style={({ pressed }) => [
+                        { paddingVertical: 12 },
+                        i < sec.filas.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.border },
+                        pressed && { opacity: 0.6 },
+                      ]}
+                    >
+                      <View style={[s.fila, { marginBottom: 8 }]}>
+                        <Text style={[s.textoFila, { flex: 1 }]}>{nombreCompleto(f.miembro)}</Text>
+                        {completo ? <Ionicons name="checkmark-circle" size={20} color={colors.success} /> : null}
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTer} style={{ marginLeft: 6 }} />
+                      </View>
+                      <View style={[s.fila, { justifyContent: 'space-between', marginBottom: 6 }]}>
+                        <Text style={{ color: colors.success, fontSize: 14, fontWeight: '600' }}>Pagado {formatoMoneda(f.pagado, moneda)}</Text>
+                        <Text style={{ color: f.falta > 0 ? colors.warning : colors.textSec, fontSize: 14, fontWeight: '600' }}>
+                          Falta {formatoMoneda(f.falta, moneda)}
+                        </Text>
+                      </View>
+                      <BarraProgreso valor={f.pct} color={completo ? colors.success : colors.primary} />
+                    </Pressable>
+                  );
+                })}
+              </Card>
+            </View>
+          ))
         )}
         <Text style={[s.textoFilaSec, { marginLeft: 4 }]}>Tocá un nombre para ver su historial de pagos.</Text>
       </ScrollView>

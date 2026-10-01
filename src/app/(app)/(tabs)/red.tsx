@@ -5,6 +5,7 @@ import { colors } from '@/lib/theme';
 import { useAuth } from '@/context/AuthContext';
 import { Boton, Campo, Card, Chip, HojaModal, Pantalla, TituloGrande, Vacio, s } from '@/components/ui';
 import { Aprobaciones } from '@/components/red/Aprobaciones';
+import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
 import { ResponsablesRed } from '@/components/red/ResponsablesRed';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
 import { GestionGrupos } from '@/components/mision_joven/GestionGrupos';
@@ -93,6 +94,8 @@ export default function PanelRed() {
             {esPastorOApostol ? <Chip texto="Nueva red" icono="add" onPress={() => setModalRed(true)} /> : null}
           </ScrollView>
         ) : null}
+
+        <AlertasFaltas minimo={3} redId={red.id} refreshKey={refreshKey} />
 
         <Aprobaciones key={`ap-${refreshKey}`} redId={red.id} />
 

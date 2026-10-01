@@ -10,9 +10,12 @@ import { HabitosTab } from './HabitosTab';
 import { EventosTab } from './EventosTab';
 import { MiembrosTab } from './MiembrosTab';
 import { ConsolidacionGuia } from '../mision_joven/ConsolidacionGuia';
+import { AsistenciaTab } from '../asistencia/AsistenciaTab';
+import { AlertasFaltas } from '../asistencia/AlertasFaltas';
 
 // Acortamos el label largo para que entre bien
 const TABS = [
+  { id: 4, label: 'Asistencia' },
   { id: 0, label: 'Hábitos' },
   { id: 1, label: 'Eventos' },
   { id: 2, label: 'Miembros' },
@@ -31,7 +34,7 @@ export function GrupoDetalle({
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [guia, setGuia] = useState<Perfil | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(4);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refrescando, setRefrescando] = useState(false);
   const onCargadoRef = useRef(onCargado);
@@ -100,8 +103,11 @@ export function GrupoDetalle({
         ) : null}
       </Card>
 
-      {/* TABS TODOS DEL MISMO TAMAÑO - FIX */}
-      <View style={{ flexDirection: 'row', gap: 6, marginTop: 16, marginBottom: 12 }}>
+      <View style={{ marginTop: 12 }}>
+        <AlertasFaltas grupoId={grupo.id} refreshKey={refreshKey} />
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4, marginBottom: 12 }} contentContainerStyle={{ gap: 6 }}>
         {TABS.map(t => {
           const activo = tab === t.id;
           return (
@@ -109,8 +115,8 @@ export function GrupoDetalle({
               key={t.id}
               onPress={() => setTab(t.id)}
               style={{
-                flex: 1, // <- ESTO HACE QUE MIDAN LO MISMO
                 height: 38,
+                paddingHorizontal: 14,
                 borderRadius: 20,
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -128,8 +134,9 @@ export function GrupoDetalle({
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
+      {tab === 4 ? <AsistenciaTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 0? <HabitosTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 1? <EventosTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 2? <MiembrosTab grupoId={grupo.id} grupoNombre={grupo.nombre} refreshKey={refreshKey} /> : null}

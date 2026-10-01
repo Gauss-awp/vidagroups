@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Perfil } from '@/lib/types';
 import { Cargando, Pantalla, TituloGrande, Stat, SeccionTitulo, Card, s } from '@/components/ui';
 import { colors } from '@/lib/theme';
+import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
 
 export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
   const [cargando, setCargando] = useState(true);
@@ -90,6 +91,7 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} />}
       >
         <TituloGrande titulo="Panel Supervisor" />
+        <AlertasFaltas minimo={2} />
         <Text style={s.textoFilaSec}>
           {perfil.nombre} · {stats.totalGuias} guías a cargo · {stats.totalMiembros} miembros totales
         </Text>
