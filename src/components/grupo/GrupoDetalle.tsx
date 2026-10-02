@@ -122,7 +122,7 @@ export function GrupoDetalle({
                 borderRadius: 20,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: activo? colors.text : colors.border,
+                backgroundColor: activo? colors.primary : colors.cardAlt,
               }}
             >
               <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{

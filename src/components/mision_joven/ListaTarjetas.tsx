@@ -74,7 +74,7 @@ export function ListaTarjetas({ refreshKey }: { refreshKey?: number }) {
             <TextInput value={seleccionada?.telefono} onChangeText={v=>setSeleccionada({...seleccionada, telefono:v})} placeholder="Tel" style={{borderWidth:1, borderColor:colors.border, borderRadius:8, padding:10, marginBottom:10}} />
             <TextInput value={seleccionada?.gv_asignado} onChangeText={v=>setSeleccionada({...seleccionada, gv_asignado:v})} placeholder="GV" style={{borderWidth:1, borderColor:colors.border, borderRadius:8, padding:10, marginBottom:15}} />
 
-            <Pressable onPress={guardarEdicion} style={{backgroundColor: colors.text, padding: 14, borderRadius: 10, alignItems: 'center'}}>
+            <Pressable onPress={guardarEdicion} style={{backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center'}}>
               <Text style={{color: 'white', fontWeight: '700'}}>Guardar Cambios</Text>
             </Pressable>
             <Pressable onPress={()=>setModal(false)} style={{marginTop:10, alignItems:'center'}}><Text style={{color:'gray'}}>Cancelar</Text></Pressable>

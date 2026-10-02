@@ -7,6 +7,7 @@ import { Boton, Campo, Card, Chip, HojaModal, Pantalla, TituloGrande, Vacio, s }
 import { Aprobaciones } from '@/components/red/Aprobaciones';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { ResponsablesRed } from '@/components/red/ResponsablesRed';
+import { Importador } from '@/components/red/Importador';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
 import { GestionGrupos } from '@/components/mision_joven/GestionGrupos';
 import { AsignarSupervisores } from '@/components/mision_joven/AsignarSupervisores';
@@ -105,6 +106,8 @@ export default function PanelRed() {
         <AsignarSupervisores key={`as-${refreshKey}`} redId={red.id} redNombre={red.nombre} />
 
         <ResponsablesRed key={`rr-${refreshKey}`} redId={red.id} onCambio={refrescarPerfil} />
+
+        <Importador redId={red.id} redNombre={red.nombre} onImportado={() => setRefreshKey((k) => k + 1)} />
 
         <View style={{ height: 24 }} />
         <Card style={{ backgroundColor: colors.cardAlt }}>

@@ -41,7 +41,7 @@ export function AsignarSupervisores({ redId, redNombre }: { redId: string; redNo
       <Text style={{ color: colors.text,  fontWeight: '800', marginBottom: 8 }}>1. Guía:</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {guias.map((g:any) => (
-          <TouchableOpacity key={g.id} onPress={() => setSelGuia(g.id)} style={{ padding: 10, borderRadius: 10, backgroundColor: selGuia===g.id ? colors.text : colors.card, borderWidth: 1, borderColor: colors.border }}>
+          <TouchableOpacity key={g.id} onPress={() => setSelGuia(g.id)} style={{ padding: 10, borderRadius: 10, backgroundColor: selGuia===g.id ? colors.primary : colors.card, borderWidth: 1, borderColor: colors.border }}>
             <Text style={{ color: selGuia===g.id ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{g.nombre} {rels.find(r=>r.guia_id===g.id) ? '→ asignado' : '(libre)'}</Text>
           </TouchableOpacity>
         ))}
@@ -56,7 +56,7 @@ export function AsignarSupervisores({ redId, redNombre }: { redId: string; redNo
         ))}
       </View>
 
-      <TouchableOpacity onPress={asignar} style={{ backgroundColor: colors.text, padding: 14, borderRadius: 12, alignItems: 'center' }}>
+      <TouchableOpacity onPress={asignar} style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 12, alignItems: 'center' }}>
         <Text style={{ color: '#fff', fontWeight: '800' }}>Asignar Guía a Supervisor</Text>
       </TouchableOpacity>
     </View>

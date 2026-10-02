@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "pruebas": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_AMBIENTE": "pruebas",
+        "EXPO_PUBLIC_SUPABASE_URL_PRUEBAS": "https://ajeeohhhnmpikiowiikf.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_KEY_PRUEBAS": "PEGAR_ACA_LA_KEY_PUBLISHABLE_DE_PRUEBAS"
+      }
+    },
+    "produccion": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_AMBIENTE": "produccion",
+        "EXPO_PUBLIC_SUPABASE_URL_PRODUCCION": "https://PROYECTO-PRODUCCION.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_KEY_PRODUCCION": "PEGAR_ACA_LA_KEY_PUBLISHABLE_DE_PRODUCCION"
+      }
+    }
+  }
+}

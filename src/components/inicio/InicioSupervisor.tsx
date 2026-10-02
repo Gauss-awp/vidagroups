@@ -206,7 +206,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
                 <Text style={{marginTop: 16, color: colors.textSec, fontSize: 12, textAlign: 'center'}}>Para completar la consolidación tiene que haber hecho el Encuentro y estar yendo al GV.</Text>
               )}
 
-              <Pressable onPress={guardarEdicion} style={{backgroundColor: colors.text, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12}}>
+              <Pressable onPress={guardarEdicion} style={{backgroundColor: colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12}}>
                 <Text style={{color: 'white', fontWeight: '800'}}>Guardar Cambios</Text>
               </Pressable>
               <Pressable onPress={()=>setModal(false)} style={{marginTop:12, alignItems:'center', padding:10}}><Text style={{color:'gray', fontWeight:'600'}}>Cancelar</Text></Pressable>

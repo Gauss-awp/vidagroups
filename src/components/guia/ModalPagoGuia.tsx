@@ -71,7 +71,7 @@ export default function ModalPagoGuia({ visible, onClose, onGuardar, miembro, ev
             <View style={{ flexDirection:'row', gap:8, marginVertical:16 }}>
               {atajos.map(b=>(
                 <TouchableOpacity key={b.label} onPress={()=>setMonto(String(b.valor))}
-                  style={{ flex:1, backgroundColor: monto===String(b.valor)? colors.text : colors.cardAlt, paddingVertical:12, borderRadius:12, alignItems:'center', borderWidth: monto===String(b.valor)? 2 : 0, borderColor:colors.text }}>
+                  style={{ flex:1, backgroundColor: monto===String(b.valor)? colors.primary : colors.cardAlt, paddingVertical:12, borderRadius:12, alignItems:'center', borderWidth: monto===String(b.valor)? 2 : 0, borderColor:colors.text }}>
                   <Text style={{ fontWeight:'800', fontSize:13, color: monto===String(b.valor)? 'white' : colors.text }}>{b.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -121,7 +121,7 @@ export default function ModalPagoGuia({ visible, onClose, onGuardar, miembro, ev
                 <Text style={{ fontWeight:'700', color:colors.textSec }}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={()=>montoValido && onGuardar(montoNum, nota.trim())} disabled={!montoValido || cargando}
-                style={{ flex:1, backgroundColor: montoValido? colors.text : colors.border, paddingVertical:16, borderRadius:14, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:6 }}>
+                style={{ flex:1, backgroundColor: montoValido? colors.primary : colors.border, paddingVertical:16, borderRadius:14, alignItems:'center', flexDirection:'row', justifyContent:'center', gap:6 }}>
                 {cargando? <Text style={{color:'white', fontWeight:'800'}}>Guardando...</Text> : (
                   <>
                     <Ionicons name="checkmark" size={18} color={montoValido? 'white' : colors.textTer} />
