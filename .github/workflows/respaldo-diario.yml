@@ -1,0 +1,69 @@
+# =====================================================================
+# Respaldo diario de la base de datos de VidaGroups
+#
+# Todas las noches copia la base (tablas + usuarios), la cifra con una
+# clave que solo vos sabés y la guarda 30 días en GitHub (pestaña Actions).
+# Configuración y cómo restaurar: ver RESPALDOS.md
+# =====================================================================
+name: Respaldo diario de la base
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # 06:00 UTC = 03:00 de Argentina
+  workflow_dispatch: # botón "Run workflow" para correrlo a mano
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PG_VERSION: '18'
+    steps:
+      - name: Instalar las herramientas de PostgreSQL
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq "postgresql-client-${PG_VERSION}"
+
+      - name: Copiar la base
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "Falta el secreto SUPABASE_DB_URL (ver RESPALDOS.md)"; exit 1
+          fi
+          PG="/usr/lib/postgresql/${PG_VERSION}/bin"
+          FECHA=$(date -u +%Y-%m-%d)
+          mkdir -p respaldo
+          # 1. Usuarios (para que todos puedan volver a iniciar sesión)
+          "$PG/pg_dump" "$SUPABASE_DB_URL" --data-only --table=auth.users --table=auth.identities \
+            --format=custom --file=respaldo/1_usuarios.dump
+          # 2. Toda la app: tablas, datos, funciones y seguridad
+          "$PG/pg_dump" "$SUPABASE_DB_URL" --schema=public --no-owner \
+            --format=custom --file=respaldo/2_app.dump
+          tar -czf "respaldo-${FECHA}.tar.gz" respaldo
+          echo "FECHA=${FECHA}" >> "$GITHUB_ENV"
+          ls -lh "respaldo-${FECHA}.tar.gz"
+
+      - name: Cifrar
+        env:
+          CLAVE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLAVE}" ]; then
+            echo "Falta el secreto BACKUP_PASSPHRASE (ver RESPALDOS.md)"; exit 1
+          fi
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$CLAVE" \
+            --symmetric --cipher-algo AES256 "respaldo-${FECHA}.tar.gz"
+          rm "respaldo-${FECHA}.tar.gz"
+
+      - name: Guardar en GitHub (30 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-${{ env.FECHA }}
+          path: respaldo-${{ env.FECHA }}.tar.gz.gpg
+          retention-days: 30
+          if-no-files-found: error

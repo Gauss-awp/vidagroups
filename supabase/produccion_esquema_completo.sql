@@ -3,7 +3,7 @@
 --
 -- Para un proyecto de Supabase NUEVO y vacío. Crea todas las tablas,
 -- funciones, triggers y políticas de seguridad en su versión final
--- (etapas 1 a 7 + endurecimiento de seguridad), SIN el modo dev.
+-- (etapas 1 a 8 + endurecimiento de seguridad, preparado para varias iglesias), SIN el modo dev.
 --
 -- Ejecutar UNA sola vez: Supabase → SQL Editor → pegar todo → Run.
 -- =====================================================================
@@ -11,7 +11,14 @@
 -- PostgreSQL database dump
 --
 
-\restrict Xn7VxOapY4po4HA0SKWZw5rfYvllt4WrEg7QsWWdGXjHbjngM3xXe0KvgIVYVcF
+
+-- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
+-- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
+
+--
+-- PostgreSQL database dump
+--
+
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
@@ -105,17 +112,19 @@ CREATE FUNCTION public.crear_perfil_nuevo_usuario() RETURNS trigger
     AS $$
 declare
   v_red uuid;
+  v_iglesia uuid;
 begin
-  select id into v_red from public.redes
+  select id, iglesia_id into v_red, v_iglesia from public.redes
    where id::text = coalesce(new.raw_user_meta_data ->> 'red_id', '');
 
-  insert into public.profiles (id, email, nombre, apellido, red_id, estado)
+  insert into public.profiles (id, email, nombre, apellido, red_id, iglesia_id, estado)
   values (
     new.id,
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data ->> 'nombre', ''),
     coalesce(new.raw_user_meta_data ->> 'apellido', ''),
     v_red,
+    v_iglesia,
     'pendiente'
   );
   return new;
@@ -245,9 +254,13 @@ CREATE FUNCTION public.es_pastor_de_red(p_red uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
-  select public.es_apostol()
-      or (p_red is not null and public.es_pastor() and exists (
-            select 1 from public.redes_pastores where red_id = p_red and perfil_id = auth.uid()))
+  select p_red is not null
+     and public.iglesia_de_red(p_red) = public.mi_iglesia()
+     and (
+       public.es_apostol()
+       or (public.es_pastor() and exists (
+             select 1 from public.redes_pastores where red_id = p_red and perfil_id = auth.uid()))
+     )
 $$;
 
 
@@ -362,6 +375,79 @@ $$;
 
 
 --
+-- Name: iglesia_de_evento(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.iglesia_de_evento() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  new.iglesia_id := coalesce(
+    public.iglesia_de_grupo(new.grupo_id),
+    public.iglesia_de_red(new.red_id),
+    new.iglesia_id,
+    public.mi_iglesia()
+  );
+  return new;
+end;
+$$;
+
+
+--
+-- Name: iglesia_de_grupo(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.iglesia_de_grupo(p_grupo uuid) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select r.iglesia_id from public.groups g join public.redes r on r.id = g.red_id where g.id = p_grupo
+$$;
+
+
+--
+-- Name: iglesia_de_perfil(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.iglesia_de_perfil(p_perfil uuid) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select iglesia_id from public.profiles where id = p_perfil
+$$;
+
+
+--
+-- Name: iglesia_de_red(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.iglesia_de_red(p_red uuid) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select iglesia_id from public.redes where id = p_red
+$$;
+
+
+--
+-- Name: iglesia_por_defecto_red(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.iglesia_por_defecto_red() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if new.iglesia_id is null then
+    new.iglesia_id := public.mi_iglesia();
+  end if;
+  return new;
+end;
+$$;
+
+
+--
 -- Name: limitar_edicion_guia_tarjeta(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -384,6 +470,18 @@ begin
   end if;
   return new;
 end;
+$$;
+
+
+--
+-- Name: mi_iglesia(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.mi_iglesia() RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select iglesia_id from public.profiles where id = auth.uid()
 $$;
 
 
@@ -691,6 +789,29 @@ CREATE FUNCTION public.panel_supervisor() RETURNS jsonb
                where coalesce(tc.estado, '') <> 'completada'
                order by tc.creado_en desc limit 20) t), '[]'::jsonb)
   )
+$$;
+
+
+--
+-- Name: proteger_iglesia_perfil(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.proteger_iglesia_perfil() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  if auth.uid() is not null and new.iglesia_id is distinct from old.iglesia_id then
+    raise exception 'No se puede cambiar la iglesia de una persona desde la app';
+  end if;
+  if new.red_id is not null and public.iglesia_de_red(new.red_id) is distinct from new.iglesia_id then
+    raise exception 'La red elegida no pertenece a tu iglesia';
+  end if;
+  if new.supervisor_id is not null and public.iglesia_de_perfil(new.supervisor_id) is distinct from new.iglesia_id then
+    raise exception 'El superior tiene que ser de la misma iglesia';
+  end if;
+  return new;
+end;
 $$;
 
 
@@ -1187,7 +1308,8 @@ CREATE TABLE public.auditoria (
     antes jsonb,
     despues jsonb,
     usuario_id uuid DEFAULT auth.uid(),
-    fecha timestamp with time zone DEFAULT now() NOT NULL
+    fecha timestamp with time zone DEFAULT now() NOT NULL,
+    iglesia_id uuid DEFAULT public.mi_iglesia()
 );
 
 
@@ -1221,6 +1343,7 @@ CREATE TABLE public.eventos (
     creado_en timestamp with time zone DEFAULT now() NOT NULL,
     red_id uuid,
     moneda text DEFAULT 'ARS'::text NOT NULL,
+    iglesia_id uuid NOT NULL,
     CONSTRAINT eventos_costo_total_check CHECK ((costo_total >= (0)::numeric)),
     CONSTRAINT eventos_moneda_check CHECK ((moneda = ANY (ARRAY['ARS'::text, 'USD'::text]))),
     CONSTRAINT eventos_tipo_check CHECK ((tipo = ANY (ARRAY['encuentro'::text, 'campamento'::text, 'otro'::text])))
@@ -1263,6 +1386,20 @@ CREATE TABLE public.habitos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     grupo_id uuid NOT NULL,
     nombre text NOT NULL,
+    creado_en timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: iglesias; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.iglesias (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    nombre text NOT NULL,
+    slug text NOT NULL,
+    codigo_invitacion text DEFAULT upper(substr(md5((random())::text), 1, 8)) NOT NULL,
+    activa boolean DEFAULT true NOT NULL,
     creado_en timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -1317,6 +1454,7 @@ CREATE TABLE public.profiles (
     red_id uuid,
     estado text DEFAULT 'pendiente'::text NOT NULL,
     telefono text,
+    iglesia_id uuid,
     CONSTRAINT profiles_estado_check CHECK ((estado = ANY (ARRAY['pendiente'::text, 'activo'::text, 'inactivo'::text]))),
     CONSTRAINT profiles_rol_check CHECK ((rol = ANY (ARRAY['apostol'::text, 'pastor'::text, 'guia_supervisor'::text, 'consolidacion'::text, 'guia'::text])))
 );
@@ -1329,7 +1467,8 @@ CREATE TABLE public.profiles (
 CREATE TABLE public.redes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     nombre text NOT NULL,
-    creado_en timestamp with time zone DEFAULT now() NOT NULL
+    creado_en timestamp with time zone DEFAULT now() NOT NULL,
+    iglesia_id uuid NOT NULL
 );
 
 
@@ -1498,6 +1637,30 @@ ALTER TABLE ONLY public.habitos
 
 
 --
+-- Name: iglesias iglesias_codigo_invitacion_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.iglesias
+    ADD CONSTRAINT iglesias_codigo_invitacion_key UNIQUE (codigo_invitacion);
+
+
+--
+-- Name: iglesias iglesias_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.iglesias
+    ADD CONSTRAINT iglesias_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: iglesias iglesias_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.iglesias
+    ADD CONSTRAINT iglesias_slug_key UNIQUE (slug);
+
+
+--
 -- Name: miembros_grupo miembros_grupo_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1538,11 +1701,11 @@ ALTER TABLE ONLY public.redes_encargados
 
 
 --
--- Name: redes redes_nombre_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: redes redes_iglesia_nombre_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.redes
-    ADD CONSTRAINT redes_nombre_key UNIQUE (nombre);
+    ADD CONSTRAINT redes_iglesia_nombre_key UNIQUE (iglesia_id, nombre);
 
 
 --
@@ -1632,6 +1795,13 @@ CREATE INDEX eventos_grupo_idx ON public.eventos USING btree (grupo_id);
 
 
 --
+-- Name: eventos_iglesia_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX eventos_iglesia_idx ON public.eventos USING btree (iglesia_id);
+
+
+--
 -- Name: eventos_red_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1688,6 +1858,13 @@ CREATE INDEX pagos_miembro_idx ON public.pagos_evento USING btree (miembro_id);
 
 
 --
+-- Name: profiles_iglesia_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX profiles_iglesia_idx ON public.profiles USING btree (iglesia_id);
+
+
+--
 -- Name: profiles_red_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1706,6 +1883,13 @@ CREATE INDEX profiles_rol_idx ON public.profiles USING btree (rol);
 --
 
 CREATE INDEX profiles_supervisor_idx ON public.profiles USING btree (supervisor_id);
+
+
+--
+-- Name: redes_iglesia_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX redes_iglesia_idx ON public.redes USING btree (iglesia_id);
 
 
 --
@@ -1793,6 +1977,13 @@ CREATE TRIGGER trg_auditoria_tarjetas AFTER DELETE OR UPDATE ON public.tarjetas_
 
 
 --
+-- Name: eventos trg_evento_iglesia; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_evento_iglesia BEFORE INSERT OR UPDATE ON public.eventos FOR EACH ROW EXECUTE FUNCTION public.iglesia_de_evento();
+
+
+--
 -- Name: groups trg_grupo_renombrado; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1800,10 +1991,24 @@ CREATE TRIGGER trg_grupo_renombrado AFTER UPDATE OF nombre ON public.groups FOR 
 
 
 --
+-- Name: redes trg_iglesia_red; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_iglesia_red BEFORE INSERT ON public.redes FOR EACH ROW EXECUTE FUNCTION public.iglesia_por_defecto_red();
+
+
+--
 -- Name: tarjetas_consolidacion trg_limitar_guia_tarjeta; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_limitar_guia_tarjeta BEFORE UPDATE ON public.tarjetas_consolidacion FOR EACH ROW EXECUTE FUNCTION public.limitar_edicion_guia_tarjeta();
+
+
+--
+-- Name: profiles trg_proteger_iglesia_perfil; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_proteger_iglesia_perfil BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.proteger_iglesia_perfil();
 
 
 --
@@ -1865,6 +2070,14 @@ ALTER TABLE ONLY public.asistencias
 
 
 --
+-- Name: auditoria auditoria_iglesia_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.auditoria
+    ADD CONSTRAINT auditoria_iglesia_id_fkey FOREIGN KEY (iglesia_id) REFERENCES public.iglesias(id);
+
+
+--
 -- Name: eventos eventos_creado_por_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1878,6 +2091,14 @@ ALTER TABLE ONLY public.eventos
 
 ALTER TABLE ONLY public.eventos
     ADD CONSTRAINT eventos_grupo_id_fkey FOREIGN KEY (grupo_id) REFERENCES public.groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: eventos eventos_iglesia_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.eventos
+    ADD CONSTRAINT eventos_iglesia_id_fkey FOREIGN KEY (iglesia_id) REFERENCES public.iglesias(id);
 
 
 --
@@ -1985,6 +2206,14 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: profiles profiles_iglesia_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profiles
+    ADD CONSTRAINT profiles_iglesia_id_fkey FOREIGN KEY (iglesia_id) REFERENCES public.iglesias(id);
+
+
+--
 -- Name: profiles profiles_red_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2030,6 +2259,14 @@ ALTER TABLE ONLY public.redes_encargados
 
 ALTER TABLE ONLY public.redes_encargados
     ADD CONSTRAINT redes_encargados_red_id_fkey FOREIGN KEY (red_id) REFERENCES public.redes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: redes redes_iglesia_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.redes
+    ADD CONSTRAINT redes_iglesia_id_fkey FOREIGN KEY (iglesia_id) REFERENCES public.iglesias(id);
 
 
 --
@@ -2230,6 +2467,19 @@ ALTER TABLE public.habitos ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY habitos_todo ON public.habitos TO authenticated USING (public.puede_gestionar_grupo(grupo_id)) WITH CHECK (public.puede_gestionar_grupo(grupo_id));
+
+
+--
+-- Name: iglesias; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.iglesias ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: iglesias iglesias_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY iglesias_select ON public.iglesias FOR SELECT TO authenticated USING ((id = public.mi_iglesia()));
 
 
 --
@@ -2454,6 +2704,132 @@ CREATE POLICY seguimientos_select ON public.seguimientos_faltas FOR SELECT TO au
 
 
 --
+-- Name: asistencias solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.asistencias AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(public.grupo_de_reunion(reunion_id)) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(public.grupo_de_reunion(reunion_id)) = public.mi_iglesia()));
+
+
+--
+-- Name: auditoria solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.auditoria AS RESTRICTIVE TO authenticated USING ((iglesia_id = public.mi_iglesia())) WITH CHECK ((iglesia_id = public.mi_iglesia()));
+
+
+--
+-- Name: eventos solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.eventos AS RESTRICTIVE TO authenticated USING ((iglesia_id = public.mi_iglesia())) WITH CHECK ((iglesia_id = public.mi_iglesia()));
+
+
+--
+-- Name: groups solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.groups AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_red(red_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_red(red_id) = public.mi_iglesia()));
+
+
+--
+-- Name: grupo_guias solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.grupo_guias AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia()));
+
+
+--
+-- Name: habitos solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.habitos AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia()));
+
+
+--
+-- Name: miembros_grupo solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.miembros_grupo AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia()));
+
+
+--
+-- Name: pagos_evento solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.pagos_evento AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(public.grupo_de_miembro(miembro_id)) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(public.grupo_de_miembro(miembro_id)) = public.mi_iglesia()));
+
+
+--
+-- Name: profiles solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.profiles AS RESTRICTIVE TO authenticated USING (((id = auth.uid()) OR (iglesia_id = public.mi_iglesia()))) WITH CHECK (((id = auth.uid()) OR (iglesia_id = public.mi_iglesia())));
+
+
+--
+-- Name: redes solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.redes AS RESTRICTIVE TO authenticated USING ((iglesia_id = public.mi_iglesia())) WITH CHECK ((iglesia_id = public.mi_iglesia()));
+
+
+--
+-- Name: redes_consolidadores solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.redes_consolidadores AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_red(red_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_red(red_id) = public.mi_iglesia()));
+
+
+--
+-- Name: redes_encargados solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.redes_encargados AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_red(red_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_red(red_id) = public.mi_iglesia()));
+
+
+--
+-- Name: redes_pastores solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.redes_pastores AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_red(red_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_red(red_id) = public.mi_iglesia()));
+
+
+--
+-- Name: registros_diarios solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.registros_diarios AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(public.grupo_de_habito(habito_id)) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(public.grupo_de_habito(habito_id)) = public.mi_iglesia()));
+
+
+--
+-- Name: relaciones_supervision solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.relaciones_supervision AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_perfil(guia_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_perfil(guia_id) = public.mi_iglesia()));
+
+
+--
+-- Name: reuniones solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.reuniones AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(grupo_id) = public.mi_iglesia()));
+
+
+--
+-- Name: seguimientos_faltas solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.seguimientos_faltas AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_grupo(public.grupo_de_miembro(miembro_id)) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_grupo(public.grupo_de_miembro(miembro_id)) = public.mi_iglesia()));
+
+
+--
+-- Name: tarjetas_consolidacion solo_mi_iglesia; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY solo_mi_iglesia ON public.tarjetas_consolidacion AS RESTRICTIVE TO authenticated USING ((public.iglesia_de_red(red_id) = public.mi_iglesia())) WITH CHECK ((public.iglesia_de_red(red_id) = public.mi_iglesia()));
+
+
+--
 -- Name: tarjetas_consolidacion; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -2660,10 +3036,56 @@ GRANT ALL ON FUNCTION public.grupo_de_reunion(p_reunion uuid) TO authenticated;
 
 
 --
+-- Name: FUNCTION iglesia_de_evento(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.iglesia_de_evento() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION iglesia_de_grupo(p_grupo uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.iglesia_de_grupo(p_grupo uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.iglesia_de_grupo(p_grupo uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION iglesia_de_perfil(p_perfil uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.iglesia_de_perfil(p_perfil uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.iglesia_de_perfil(p_perfil uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION iglesia_de_red(p_red uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.iglesia_de_red(p_red uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.iglesia_de_red(p_red uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION iglesia_por_defecto_red(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.iglesia_por_defecto_red() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION limitar_edicion_guia_tarjeta(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.limitar_edicion_guia_tarjeta() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION mi_iglesia(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.mi_iglesia() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.mi_iglesia() TO authenticated;
 
 
 --
@@ -2704,6 +3126,13 @@ GRANT ALL ON FUNCTION public.panel_pastoral() TO authenticated;
 
 REVOKE ALL ON FUNCTION public.panel_supervisor() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.panel_supervisor() TO authenticated;
+
+
+--
+-- Name: FUNCTION proteger_iglesia_perfil(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.proteger_iglesia_perfil() FROM PUBLIC;
 
 
 --
@@ -2875,6 +3304,13 @@ GRANT ALL ON TABLE public.habitos TO authenticated;
 
 
 --
+-- Name: TABLE iglesias; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.iglesias TO authenticated;
+
+
+--
 -- Name: TABLE miembros_grupo; Type: ACL; Schema: public; Owner: -
 --
 
@@ -2956,7 +3392,6 @@ GRANT ALL ON TABLE public.tarjetas_consolidacion TO authenticated;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Xn7VxOapY4po4HA0SKWZw5rfYvllt4WrEg7QsWWdGXjHbjngM3xXe0KvgIVYVcF
 
 
 
@@ -2969,11 +3404,17 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.crear_perfil_nuevo_usuario();
 
 -- =====================================================================
--- Redes iniciales de Vida Nueva
+-- Iglesia nº 1 y sus redes iniciales
 -- =====================================================================
-INSERT INTO public.redes (nombre) VALUES
-  ('Misión Joven'), ('Red de Hombres'), ('Red de Mujeres'), ('Revolución Kids')
-ON CONFLICT (nombre) DO NOTHING;
+INSERT INTO public.iglesias (nombre, slug) VALUES ('Vida Nueva', 'vida-nueva')
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO public.redes (nombre, iglesia_id)
+SELECT r.nombre, i.id
+  FROM (VALUES ('Misión Joven'), ('Red de Hombres'), ('Red de Mujeres'), ('Revolución Kids')) AS r(nombre)
+ CROSS JOIN public.iglesias i
+ WHERE i.slug = 'vida-nueva'
+ON CONFLICT (iglesia_id, nombre) DO NOTHING;
 
 -- =====================================================================
 -- Seguridad por filas activada en TODAS las tablas
@@ -3025,4 +3466,6 @@ NOTIFY pgrst, 'reload schema';
 --
 --   UPDATE public.profiles SET rol = 'apostol', estado = 'activo', red_id = NULL
 --    WHERE email = 'tu-correo@ejemplo.com';
+--
+-- (Tu perfil queda en la iglesia de la red que elegiste al registrarte.)
 -- =====================================================================
