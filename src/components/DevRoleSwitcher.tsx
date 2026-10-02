@@ -1,11 +1,13 @@
 import { View, Text, Pressable, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { supabase } from '../lib/supabase'
+import { AMBIENTE, supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
 const CORREO_DEV = 'benjamin_trece@hotmail.com'
 
-export const esCuentaDev = (email?: string | null) => email?.toLowerCase() === CORREO_DEV.toLowerCase()
+// El modo dev existe solo en el ambiente de pruebas
+export const esCuentaDev = (email?: string | null) =>
+  AMBIENTE === 'pruebas' && email?.toLowerCase() === CORREO_DEV.toLowerCase()
 
 const ROLES_DEV = [
   { rol: 'guia', texto: 'Guía', color: '#555' },

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
+import { AMBIENTE, supabase } from '@/lib/supabase';
 import { ROL_COLOR, colors } from '@/lib/theme';
 import type { Perfil } from '@/lib/types';
 import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
@@ -211,6 +211,12 @@ export default function PerfilPantalla() {
         <Text style={[s.textoFilaSec, { marginTop: 8, textAlign: 'center' }]}>
           Se borran tu usuario y tus datos personales. Los registros de tus grupos quedan para la iglesia.
         </Text>
+
+        {AMBIENTE === 'pruebas' ? (
+          <Text style={{ marginTop: 20, textAlign: 'center', fontSize: 12, fontWeight: '700', color: colors.warning }}>
+            Ambiente de PRUEBAS · los datos no son reales
+          </Text>
+        ) : null}
       </ScrollView>
     </Pantalla>
   );
