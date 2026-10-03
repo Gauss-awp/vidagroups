@@ -7,6 +7,7 @@ import { colorPorcentaje, colors } from '@/lib/theme';
 import type { Miembro, Moneda } from '@/lib/types';
 import { MESES, formatoCumple, formatoFecha, formatoMoneda, nombreCompleto, parseCumple, porcentaje, sumarDias, hoyISO } from '@/lib/utils';
 import { Avatar, Boton, Campo, Card, Cargando, HojaModal, PasosConsolidacion, SeccionTitulo, Vacio, s } from '@/components/ui';
+import { Notas } from '@/components/notas/Notas';
 
 interface Reunion {
   id: string;
@@ -31,6 +32,7 @@ export default function MiembroPantalla() {
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '', cumple: '' });
   const [guardando, setGuardando] = useState(false);
+  const [puedeNotas, setPuedeNotas] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!id) return;
@@ -79,6 +81,8 @@ export default function MiembroPantalla() {
     });
     setPagos([...porEvento.values()]);
     setTarjeta(((tj.data ?? []) as Record<string, any>[])[0] ?? null);
+    const { data: permiso } = await supabase.rpc('puede_ver_notas', { p_grupo: mm.grupo_id });
+    setPuedeNotas(!!permiso);
   }, [id]);
 
   useEffect(() => {
@@ -232,6 +236,13 @@ export default function MiembroPantalla() {
             );
           })
         )}
+
+        {puedeNotas ? (
+          <>
+            <SeccionTitulo titulo="Notas" />
+            <Notas grupoId={miembro.grupo_id} miembroId={miembro.id} />
+          </>
+        ) : null}
 
         {tarjeta ? (
           <>

@@ -13,6 +13,10 @@ import { ConsolidacionGuia } from '../mision_joven/ConsolidacionGuia';
 import { AsistenciaTab } from '../asistencia/AsistenciaTab';
 import { AlertasFaltas } from '../asistencia/AlertasFaltas';
 import { CumplesSemana } from '../asistencia/CumplesSemana';
+import { Notas } from '../notas/Notas';
+import { HistorialLiderazgo } from '../notas/HistorialLiderazgo';
+import { useAuth } from '@/context/AuthContext';
+import { formatoFecha } from '@/lib/utils';
 
 // Acortamos el label largo para que entre bien
 const TABS = [
@@ -38,6 +42,10 @@ export function GrupoDetalle({
   const [tab, setTab] = useState(4);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refrescando, setRefrescando] = useState(false);
+  const { perfil } = useAuth();
+  const [puedeNotas, setPuedeNotas] = useState(false);
+  const [verHistorial, setVerHistorial] = useState(false);
+  const [traspaso, setTraspaso] = useState<{ anterior: string; fecha: string } | null>(null);
   const onCargadoRef = useRef(onCargado);
   onCargadoRef.current = onCargado;
 
@@ -53,7 +61,27 @@ export function GrupoDetalle({
     onCargadoRef.current?.(g);
     const { data: p } = await supabase.from('profiles').select('*').eq('id', g.guia_id).maybeSingle();
     setGuia((p as Perfil | null)?? null);
-  }, [grupoId]);
+
+    // Notas: solo guía y Guía Supervisor del grupo
+    const { data: permiso } = await supabase.rpc('puede_ver_notas', { p_grupo: g.id });
+    setPuedeNotas(!!permiso);
+
+    // Aviso de traspaso: si recibiste el grupo en los últimos 60 días
+    if (perfil && g.guia_id === perfil.id) {
+      const { data: hist } = await supabase
+        .from('historial_liderazgo')
+        .select('nombre, desde, hasta, perfil_id')
+        .eq('grupo_id', g.id)
+        .eq('rol', 'guia')
+        .order('desde', { ascending: false })
+        .limit(2);
+      const [actual, previo] = (hist ?? []) as { nombre: string; desde: string; hasta: string | null; perfil_id: string | null }[];
+      const reciente = actual && Date.now() - new Date(actual.desde).getTime() < 60 * 86400000;
+      setTraspaso(reciente && previo && previo.perfil_id !== perfil.id ? { anterior: previo.nombre, fecha: actual.desde.slice(0, 10) } : null);
+    } else {
+      setTraspaso(null);
+    }
+  }, [grupoId, perfil]);
 
   useEffect(() => {
     cargar();
@@ -97,6 +125,9 @@ export function GrupoDetalle({
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{grupo.nombre}</Text>
             <Text style={s.textoFilaSec}>Guía: {guia? nombreCompleto(guia) : '—'}</Text>
+            <Pressable onPress={() => setVerHistorial(true)} hitSlop={8}>
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', marginTop: 4 }}>Ver historial de guías</Text>
+            </Pressable>
           </View>
         </View>
         {grupo.descripcion? (
@@ -104,13 +135,22 @@ export function GrupoDetalle({
         ) : null}
       </Card>
 
+      {traspaso ? (
+        <Card onPress={puedeNotas ? () => setTab(5) : undefined} style={{ backgroundColor: colors.primaryBg, marginTop: 12 }}>
+          <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 15 }}>Recibiste este grupo el {formatoFecha(traspaso.fecha)}</Text>
+          <Text style={{ color: colors.text, fontSize: 14, marginTop: 4, lineHeight: 20 }}>
+            Antes lo guiaba {traspaso.anterior}. Tocá acá para leer las notas que dejó sobre el grupo y cada hermano.
+          </Text>
+        </Card>
+      ) : null}
+
       <View style={{ marginTop: 12 }}>
         <AlertasFaltas grupoId={grupo.id} refreshKey={refreshKey} />
         <CumplesSemana grupoId={grupo.id} refreshKey={refreshKey} />
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4, marginBottom: 12 }} contentContainerStyle={{ gap: 6 }}>
-        {TABS.map(t => {
+        {(puedeNotas ? [...TABS, { id: 5, label: 'Notas' }] : TABS).map(t => {
           const activo = tab === t.id;
           return (
             <Pressable
@@ -143,6 +183,9 @@ export function GrupoDetalle({
       {tab === 1? <EventosTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 2? <MiembrosTab grupoId={grupo.id} grupoNombre={grupo.nombre} refreshKey={refreshKey} /> : null}
       {tab === 3? <ConsolidacionGuia miGV={grupo.nombre} grupoId={grupo.id} /> : null}
+      {tab === 5 && puedeNotas ? <Notas grupoId={grupo.id} refreshKey={refreshKey} /> : null}
+
+      <HistorialLiderazgo grupoId={grupo.id} visible={verHistorial} onClose={() => setVerHistorial(false)} />
     </ScrollView>
   );
 }
