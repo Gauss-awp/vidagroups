@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import type { Grupo, Perfil } from '@/lib/types';
-import { Card, Pantalla, SeccionTitulo, TituloGrande, PasosConsolidacion } from '@/components/ui';
+import { Card, Pantalla, SeccionTitulo, TituloGrande, PasosConsolidacion, SelectorPilares } from '@/components/ui';
 import { EquipoLista } from '@/components/EquipoLista';
 import { FormTarjeta } from '@/components/mision_joven/FormTarjeta';
 import { useAuth } from '@/context/AuthContext';
@@ -72,6 +72,11 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
       fonovisita: seleccionada.fonovisita,
       visita: seleccionada.visita,
       pilares: seleccionada.pilares,
+      pilar_1: !!seleccionada.pilar_1,
+      pilar_2: !!seleccionada.pilar_2,
+      pilar_3: !!seleccionada.pilar_3,
+      pilar_4: !!seleccionada.pilar_4,
+      pilar_5: !!seleccionada.pilar_5,
       comenzo_gv: seleccionada.comenzo_gv,
       encuentro: seleccionada.encuentro,
       observacion: seleccionada.observacion,
@@ -196,7 +201,11 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
                 {k:'pilares', l:'Pilares'},
                 {k:'comenzo_gv', l:'Comenzó GV'},
                 {k:'encuentro', l:'Encuentro'},
-              ].map(item => (
+              ].map(item => item.k === 'pilares' ? (
+                <View key="pilares" style={{ borderBottomWidth:1, borderBottomColor:colors.cardAlt }}>
+                  <SelectorPilares tarjeta={seleccionada ?? {}} onCambio={(c) => setSeleccionada({ ...seleccionada, ...c })} />
+                </View>
+              ) : (
                 <View key={item.k} style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:10, borderBottomWidth:1, borderBottomColor:colors.cardAlt}}>
                   <Text style={{ color: colors.text, fontWeight:'600'}}>{item.l}</Text>
                   <Switch value={!!seleccionada?.[item.k]} onValueChange={v=>setSeleccionada({...seleccionada, [item.k]:v})} />

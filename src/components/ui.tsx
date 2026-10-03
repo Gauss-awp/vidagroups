@@ -515,13 +515,61 @@ const PASOS: { clave: string; texto: string }[] = [
   { clave: 'encuentro', texto: 'Encuentro' },
 ];
 
+/** Cuántos de los 5 pilares hizo (si solo está la marca vieja de "pilares", cuenta 5) */
+export function pilaresHechos(t: Record<string, any>): number {
+  const n = [1, 2, 3, 4, 5].filter((k) => !!t[`pilar_${k}`]).length;
+  return n === 0 && t.pilares ? 5 : n;
+}
+
+/** Los 5 pilares para marcar uno por uno */
+export function SelectorPilares({ tarjeta, onCambio }: { tarjeta: Record<string, any>; onCambio: (cambios: Record<string, boolean>) => void }) {
+  const hechos = [1, 2, 3, 4, 5].map((k) => !!tarjeta[`pilar_${k}`] || (pilaresHechos(tarjeta) === 5 && !!tarjeta.pilares));
+  return (
+    <View style={{ paddingVertical: 10 }}>
+      <Text style={{ color: colors.text, fontWeight: '600', marginBottom: 8 }}>
+        Pilares <Text style={{ color: colors.textSec, fontWeight: '400' }}>({hechos.filter(Boolean).length} de 5)</Text>
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {hechos.map((hecho, i) => (
+          <Pressable
+            key={i}
+            onPress={() => {
+              const nuevos = hechos.slice();
+              nuevos[i] = !hecho;
+              const cambios: Record<string, boolean> = { pilares: nuevos.every(Boolean) };
+              nuevos.forEach((v, k) => (cambios[`pilar_${k + 1}`] = v));
+              onCambio(cambios);
+            }}
+            style={{
+              flex: 1,
+              height: 40,
+              borderRadius: 10,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: hecho ? colors.success : colors.cardAlt,
+              borderWidth: 1,
+              borderColor: hecho ? colors.success : colors.border,
+            }}
+            accessibilityLabel={`Pilar ${i + 1}`}
+          >
+            <Text style={{ color: hecho ? '#FFFFFF' : colors.textSec, fontWeight: '800', fontSize: 15 }}>{i + 1}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /** Barra de avance: cinco puntos conectados, rellenos hasta donde llegó la persona. */
 export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 12 }}>
       {PASOS.map((p, i) => {
-        const hecho = !!tarjeta[p.clave];
-        const siguienteHecho = i < PASOS.length - 1 && !!tarjeta[PASOS[i + 1].clave];
+        const nPilares = pilaresHechos(tarjeta);
+        const hechoDe = (clave: string) => (clave === 'pilares' ? nPilares === 5 : !!tarjeta[clave]);
+        const hecho = hechoDe(p.clave);
+        const parcial = p.clave === 'pilares' && nPilares > 0 && nPilares < 5;
+        const siguienteHecho = i < PASOS.length - 1 && hechoDe(PASOS[i + 1].clave);
         return (
           <View key={p.clave} style={{ flex: 1, alignItems: 'center' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
@@ -535,10 +583,11 @@ export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }
                   justifyContent: 'center',
                   backgroundColor: hecho ? colors.success : colors.card,
                   borderWidth: 2,
-                  borderColor: hecho ? colors.success : colors.border,
+                  borderColor: hecho || parcial ? colors.success : colors.border,
                 }}
               >
                 {hecho ? <Ionicons name="checkmark" size={13} color="#FFFFFF" /> : null}
+                {parcial ? <Text style={{ color: colors.success, fontSize: 10, fontWeight: '800' }}>{nPilares}</Text> : null}
               </View>
               <View
                 style={{
@@ -549,7 +598,7 @@ export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }
               />
             </View>
             <Text style={{ fontSize: tipo.mini, marginTop: 4, color: hecho ? colors.success : colors.textSec, fontWeight: hecho ? '700' : '500' }}>
-              {p.texto}
+              {p.clave === 'pilares' && parcial ? `Pilares ${nPilares}/5` : p.texto}
             </Text>
           </View>
         );

@@ -237,6 +237,11 @@ export function MiembrosTab({
                   <Avatar nombre={nombreCompleto(a.miembro)} color={color} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={s.textoFila}>{nombreCompleto(a.miembro)}</Text>
+                    {a.miembro.rol_equipo ? (
+                      <Text style={{ color: a.miembro.rol_equipo === 'guia' ? colors.primary : colors.teal, fontSize: 12, fontWeight: '700' }}>
+                        {a.miembro.rol_equipo === 'guia' ? 'Guía' : 'Equipo'}
+                      </Text>
+                    ) : null}
                     {a.miembro.telefono ? <Text style={s.textoFilaSec}>{a.miembro.telefono}</Text> : null}
                     {cumpleProximo(a.miembro.cumpleanos) ? (
                       <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700', marginTop: 2 }}>

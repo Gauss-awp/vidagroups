@@ -38,6 +38,8 @@ export interface Miembro {
   apellido: string;
   telefono: string | null;
   cumpleanos?: string | null;
+  /** Rol dentro del grupo: guía o equipo (timoteos, anfitrión, colaboradores) */
+  rol_equipo?: 'guia' | 'equipo' | null;
   activo: boolean;
   creado_en: string;
 }

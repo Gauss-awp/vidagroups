@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View, Pressable } from 'react-native';
+import { Alert, RefreshControl, ScrollView, Text, View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import type { Grupo, Perfil } from '@/lib/types';
 import { nombreCompleto } from '@/lib/utils';
-import { Card, Cargando, Vacio, s } from '@/components/ui';
+import { Card, Cargando, Vacio, s, HojaModal, Campo, Boton } from '@/components/ui';
 import { HabitosTab } from './HabitosTab';
 import { EventosTab } from './EventosTab';
 import { MiembrosTab } from './MiembrosTab';
@@ -45,6 +45,9 @@ export function GrupoDetalle({
   const { perfil } = useAuth();
   const [puedeNotas, setPuedeNotas] = useState(false);
   const [verHistorial, setVerHistorial] = useState(false);
+  const [editandoDatos, setEditandoDatos] = useState(false);
+  const [datosGrupo, setDatosGrupo] = useState({ dia_horario: '', barrio: '', direccion: '', lider_supervisor: '' });
+  const [guardandoGrupo, setGuardandoGrupo] = useState(false);
   const [traspaso, setTraspaso] = useState<{ anterior: string; fecha: string } | null>(null);
   const onCargadoRef = useRef(onCargado);
   onCargadoRef.current = onCargado;
@@ -125,11 +128,33 @@ export function GrupoDetalle({
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{grupo.nombre}</Text>
             <Text style={s.textoFilaSec}>Guía: {guia? nombreCompleto(guia) : '—'}</Text>
-            <Pressable onPress={() => setVerHistorial(true)} hitSlop={8}>
-              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', marginTop: 4 }}>Ver historial de guías</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
+              <Pressable onPress={() => setVerHistorial(true)} hitSlop={8}>
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Historial de guías</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const g = grupo as any;
+                  setDatosGrupo({
+                    dia_horario: g.dia_horario ?? '',
+                    barrio: g.barrio ?? '',
+                    direccion: g.direccion ?? '',
+                    lider_supervisor: g.lider_supervisor ?? '',
+                  });
+                  setEditandoDatos(true);
+                }}
+                hitSlop={8}
+              >
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Datos del grupo</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
+        {(grupo as any).dia_horario || (grupo as any).barrio || (grupo as any).direccion ? (
+          <Text style={{ color: colors.textSec, fontSize: 14, marginTop: 12, lineHeight: 20 }}>
+            {[(grupo as any).dia_horario, (grupo as any).barrio, (grupo as any).direccion].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
         {grupo.descripcion? (
           <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 12, lineHeight: 21 }}>{grupo.descripcion}</Text>
         ) : null}
@@ -186,6 +211,36 @@ export function GrupoDetalle({
       {tab === 5 && puedeNotas ? <Notas grupoId={grupo.id} refreshKey={refreshKey} /> : null}
 
       <HistorialLiderazgo grupoId={grupo.id} visible={verHistorial} onClose={() => setVerHistorial(false)} />
+
+      <HojaModal visible={editandoDatos} onClose={() => setEditandoDatos(false)} titulo="Datos del grupo">
+        <Text style={[s.textoFilaSec, { marginBottom: 12 }]}>Aparecen en el encabezado de la planilla mensual de asistencia.</Text>
+        <Campo etiqueta="Día y horario" placeholder="Viernes 21:00 hs" value={datosGrupo.dia_horario} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, dia_horario: v })} />
+        <Campo etiqueta="Barrio" placeholder="Villa del Río" value={datosGrupo.barrio} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, barrio: v })} />
+        <Campo etiqueta="Dirección" placeholder="Cruz Palacios 109" value={datosGrupo.direccion} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, direccion: v })} />
+        <Campo
+          etiqueta="Líder supervisor (como figura en la planilla)"
+          placeholder="Flor y Samu"
+          value={datosGrupo.lider_supervisor}
+          onChangeText={(v) => setDatosGrupo({ ...datosGrupo, lider_supervisor: v })}
+          ayuda="Si lo dejás vacío, se usa el nombre del Guía Supervisor asignado."
+        />
+        <Boton
+          titulo="Guardar"
+          cargando={guardandoGrupo}
+          onPress={async () => {
+            setGuardandoGrupo(true);
+            const cambios = Object.fromEntries(Object.entries(datosGrupo).map(([k, v]) => [k, v.trim() || null]));
+            const { error } = await supabase.from('groups').update(cambios).eq('id', grupo.id);
+            setGuardandoGrupo(false);
+            if (error) {
+              Alert.alert('No se pudo guardar', error.message);
+              return;
+            }
+            setEditandoDatos(false);
+            cargar();
+          }}
+        />
+      </HojaModal>
     </ScrollView>
   );
 }

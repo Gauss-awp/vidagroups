@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { colorPorcentaje, colors } from '@/lib/theme';
 import type { Miembro, Moneda } from '@/lib/types';
 import { MESES, formatoCumple, formatoFecha, formatoMoneda, nombreCompleto, parseCumple, porcentaje, sumarDias, hoyISO } from '@/lib/utils';
-import { Avatar, Boton, Campo, Card, Cargando, HojaModal, PasosConsolidacion, SeccionTitulo, Vacio, s } from '@/components/ui';
+import { Avatar, Boton, Campo, Card, Cargando, Chip, HojaModal, PasosConsolidacion, SeccionTitulo, Vacio, s } from '@/components/ui';
 import { Notas } from '@/components/notas/Notas';
 
 interface Reunion {
@@ -30,7 +30,7 @@ export default function MiembroPantalla() {
   const [tarjeta, setTarjeta] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
-  const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '', cumple: '' });
+  const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '', cumple: '', rol: null as 'guia' | 'equipo' | null });
   const [guardando, setGuardando] = useState(false);
   const [puedeNotas, setPuedeNotas] = useState(false);
 
@@ -112,6 +112,7 @@ export default function MiembroPantalla() {
       apellido: miembro.apellido ?? '',
       telefono: miembro.telefono ?? '',
       cumple: formatoCumple(miembro.cumpleanos),
+      rol: miembro.rol_equipo ?? null,
     });
     setEditando(true);
   };
@@ -129,7 +130,7 @@ export default function MiembroPantalla() {
     setGuardando(true);
     const { error: err } = await supabase
       .from('miembros_grupo')
-      .update({ nombre: form.nombre.trim(), apellido: form.apellido.trim(), telefono: form.telefono.trim() || null, cumpleanos: cumple })
+      .update({ nombre: form.nombre.trim(), apellido: form.apellido.trim(), telefono: form.telefono.trim() || null, cumpleanos: cumple, rol_equipo: form.rol })
       .eq('id', miembro.id);
     setGuardando(false);
     if (err) {
@@ -152,7 +153,10 @@ export default function MiembroPantalla() {
             <Avatar nombre={nombre} color={reuniones.length ? colorPorcentaje(pct) : colors.textTer} tamano={52} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={{ color: colors.text, fontSize: 19, fontWeight: '700' }}>{nombre}</Text>
-              <Text style={s.textoFilaSec}>{miembro.grupo?.nombre ?? ''}</Text>
+              <Text style={s.textoFilaSec}>
+                {miembro.grupo?.nombre ?? ''}
+                {miembro.rol_equipo === 'guia' ? ' · Guía' : miembro.rol_equipo === 'equipo' ? ' · Equipo' : ''}
+              </Text>
               {miembro.cumpleanos ? <Text style={s.textoFilaSec}>Cumpleaños: {formatoCumple(miembro.cumpleanos)}</Text> : null}
             </View>
             <Pressable onPress={abrirEdicion} hitSlop={10} accessibilityLabel="Editar datos">
@@ -266,6 +270,13 @@ export default function MiembroPantalla() {
           onChangeText={(v) => setForm({ ...form, cumple: v })}
           keyboardType="numbers-and-punctuation"
         />
+        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Rol en el grupo</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
+          <Chip texto="Miembro" activo={form.rol === null} onPress={() => setForm({ ...form, rol: null })} />
+          <Chip texto="Equipo (timoteo, anfitrión, colaborador)" activo={form.rol === 'equipo'} onPress={() => setForm({ ...form, rol: 'equipo' })} />
+          <Chip texto="Guía" activo={form.rol === 'guia'} onPress={() => setForm({ ...form, rol: 'guia' })} />
+        </View>
+        <Text style={[s.textoFilaSec, { marginBottom: 14 }]}>En la planilla, los guías aparecen con "G" en azul y el equipo en celeste.</Text>
         <Boton titulo="Guardar" onPress={guardar} cargando={guardando} />
       </HojaModal>
     </>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Switch, TextInput, Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { Card } from '@/components/ui';
+import { Card, SelectorPilares } from '@/components/ui';
 import { colors } from '@/lib/theme';
 
 export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: string }) {
@@ -70,10 +70,14 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
             <Text style={{ color: colors.text }}>Visita</Text>
             <Switch value={!!t.visita} onValueChange={() => toggle(t, 'visita',!!t.visita)} />
           </View>
-          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop:8}}>
-            <Text style={{ color: colors.text }}>Pilares (los 5 completos)</Text>
-            <Switch value={!!t.pilares} onValueChange={() => toggle(t, 'pilares',!!t.pilares)} />
-          </View>
+          <SelectorPilares
+            tarjeta={t}
+            onCambio={async (c) => {
+              setTarjetas((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...c } : x)));
+              const { error } = await supabase.from('tarjetas_consolidacion').update(c).eq('id', t.id);
+              if (error) Alert.alert('Error', error.message);
+            }}
+          />
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop:8}}>
             <Text style={{ color: colors.text }}>Comenzó GV</Text>
             <Switch value={!!t.comenzo_gv} onValueChange={() => toggle(t, 'comenzo_gv',!!t.comenzo_gv)} />
