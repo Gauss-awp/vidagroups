@@ -3,6 +3,7 @@ import { Alert, Text, View } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { hoyISO, parseCumple } from '@/lib/utils';
+import { esEncabezadoTarjetas, filaATarjeta, normalizarFilaTarjeta } from '@/lib/tarjetasExcel';
 import { Boton, Campo, Card, Chip, HojaModal, s } from '@/components/ui';
 
 type Modo = 'miembros' | 'tarjetas';
@@ -19,16 +20,15 @@ interface FilaMiembro {
 interface FilaTarjeta {
   fila: number;
   nombre: string;
-  telefono: string | null;
-  edad: number | null;
-  zona: string | null;
-  grupo: string | null;
+  linea_lider: string | null;
   fecha: string | null;
   fonovisita: boolean;
   visita: boolean;
-  pilares: boolean;
+  pilares: boolean[];
+  asistencia_gv: string | null;
   comenzo_gv: boolean;
   encuentro: boolean;
+  observacion: string | null;
 }
 interface Plan {
   gruposNuevos: string[];
@@ -52,6 +52,17 @@ function leerFilas(texto: string): string[][] {
   return /grupo|nombre/.test(primera) ? filas.slice(1) : filas;
 }
 
+/** Filas útiles según el tipo: en Tarjetas se saltean los encabezados de la planilla (pueden ser varias filas) */
+function filasSegunModo(texto: string, modo: Modo): string[][] {
+  if (modo === 'miembros') return leerFilas(texto);
+  const lineas = texto.replace(/\r/g, '').split('\n').filter((l) => l.trim() !== '');
+  if (lineas.length === 0) return [];
+  const sep = lineas[0].includes('\t') ? '\t' : lineas[0].includes(';') ? ';' : ',';
+  return lineas
+    .map((l) => normalizarFilaTarjeta(l.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''))))
+    .filter((c) => !esEncabezadoTarjetas(c));
+}
+
 /** Importa grupos y miembros, o tarjetas de consolidación, a una red desde una planilla. */
 export function Importador({ redId, redNombre, onImportado }: { redId: string; redNombre: string; onImportado?: () => void }) {
   const [abierto, setAbierto] = useState(false);
@@ -59,6 +70,7 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
   const [texto, setTexto] = useState('');
   const [plan, setPlan] = useState<Plan | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  const filasDelModo = (txt: string) => filasSegunModo(txt, modo);
 
   const cerrar = () => {
     setAbierto(false);
@@ -67,7 +79,7 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
   };
 
   const revisar = async () => {
-    const filas = leerFilas(texto);
+    const filas = filasDelModo(texto);
     if (pareceOtraHoja) {
       Alert.alert(
         'Parece la hoja equivocada',
@@ -124,45 +136,27 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
       nuevos.forEach((g) => unicos.set(clave(g), unicos.get(clave(g)) ?? g));
       setPlan({ gruposNuevos: [...unicos.values()], miembros, tarjetas: [], omitidos, errores });
     } else {
-      const { data: existentes } = await supabase.from('tarjetas_consolidacion').select('nombre, telefono').eq('red_id', redId);
-      const yaEstan = new Set(
-        ((existentes ?? []) as { nombre: string; telefono: string | null }[]).map((t) => `${clave(t.nombre)}|${(t.telefono ?? '').replace(/\D/g, '')}`)
-      );
+      const { data: existentes } = await supabase.from('tarjetas_consolidacion').select('nombre').eq('red_id', redId);
+      const yaEstan = new Set(((existentes ?? []) as { nombre: string }[]).map((t) => clave(t.nombre)));
       const tarjetas: FilaTarjeta[] = [];
       let omitidos = 0;
       filas.forEach((c, i) => {
-        const n = i + 2;
-        const [nombre = '', telefono = '', edad = '', zona = '', grupo = '', fecha = '', fono, visita, pilares, gv, encuentro] = c;
-        if (!nombre) {
+        const n = i + 1;
+        const d = filaATarjeta(c);
+        if (!d.nombre) {
           errores.push(`Fila ${n}: falta el nombre`);
           return;
         }
-        if (telefono.includes('@')) {
-          errores.push(`Fila ${n}: en Teléfono hay un correo; revisá que sea la hoja Tarjetas`);
+        if (d.nombre.includes('@') || (c[2] ?? '').includes('@')) {
+          errores.push(`Fila ${n}: hay un correo donde va el nombre o la línea; revisá que sea la planilla de tarjetas`);
           return;
         }
-        if (edad && isNaN(Number(edad))) errores.push(`Fila ${n}: la edad "${edad}" no es un número (se carga sin edad)`);
-        const k = `${clave(nombre)}|${telefono.replace(/\D/g, '')}`;
-        if (yaEstan.has(k)) {
+        if (yaEstan.has(clave(d.nombre))) {
           omitidos++;
           return;
         }
-        yaEstan.add(k);
-        if (grupo && !gruposPorNombre.has(clave(grupo))) errores.push(`Fila ${n}: el grupo "${grupo}" no existe en ${redNombre} (la tarjeta se carga sin grupo)`);
-        tarjetas.push({
-          fila: n,
-          nombre: nombre.trim(),
-          telefono: telefono || null,
-          edad: Number(edad) || null,
-          zona: zona || null,
-          grupo: grupo && gruposPorNombre.has(clave(grupo)) ? grupo.trim() : null,
-          fecha: fecha ? parseCumple(fecha) : null,
-          fonovisita: siNo(fono),
-          visita: siNo(visita),
-          pilares: siNo(pilares),
-          comenzo_gv: siNo(gv),
-          encuentro: siNo(encuentro),
-        });
+        yaEstan.add(clave(d.nombre));
+        tarjetas.push({ fila: n, ...d });
       });
       setPlan({ gruposNuevos: [], miembros: [], tarjetas, omitidos, errores });
     }
@@ -207,17 +201,24 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
       } else {
         const filas = plan.tarjetas.map((t) => ({
           nombre: t.nombre,
-          telefono: t.telefono,
-          edad: t.edad,
-          zona: t.zona,
-          gv_asignado: t.grupo,
+          linea_lider: t.linea_lider,
           fecha_reu: t.fecha ?? hoyISO(),
+          fecha_entrada: t.fecha,
+          // La fecha de entrega cuenta como fecha de alta: así lo viejo no infla el balance de este mes
+          creado_en: t.fecha ? `${t.fecha}T12:00:00` : new Date().toISOString(),
           red_id: redId,
           fonovisita: t.fonovisita,
           visita: t.visita,
-          pilares: t.pilares,
+          pilar_1: t.pilares[0],
+          pilar_2: t.pilares[1],
+          pilar_3: t.pilares[2],
+          pilar_4: t.pilares[3],
+          pilar_5: t.pilares[4],
+          pilares: t.pilares.every(Boolean),
+          asistencia_gv: t.asistencia_gv,
           comenzo_gv: t.comenzo_gv,
           encuentro: t.encuentro,
+          observacion: t.observacion,
           creado_por: yo,
         }));
         for (let i = 0; i < filas.length; i += 200) {
@@ -240,21 +241,21 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
   };
 
   // Vista previa: cada fila pegada, con sus datos ordenados y con nombre
-  const filasPegadas = texto.trim() ? leerFilas(texto) : [];
+  const filasPegadas = texto.trim() ? filasDelModo(texto) : [];
   const etiquetas =
     modo === 'miembros'
       ? ['Grupo', 'Guía', 'Nombre', 'Apellido', 'Teléfono', 'Cumpleaños']
-      : ['Nombre', 'Teléfono', 'Edad', 'Zona', 'Grupo', 'Fecha', 'Fono', 'Visita', 'Pilares', 'GV', 'Encuentro'];
+      : ['N°', 'Nombre', 'Línea - líder', 'Fecha de entrega', 'Fonovisita', 'Visita', 'Pilar 1', 'Pilar 2', 'Pilar 3', 'Pilar 4', 'Pilar 5', 'Grupo de vida', 'Encuentro', 'Observación'];
   const pareceOtraHoja =
     filasPegadas.length > 0 &&
     (modo === 'tarjetas'
-      ? filasPegadas.some((c) => (c[1] ?? '').includes('@'))
+      ? filasPegadas.some((c) => (c[1] ?? '').includes('@') || (c[2] ?? '').includes('@'))
       : filasPegadas.every((c) => !(c[1] ?? '').includes('@') && c.length >= 7));
 
   const columnas =
     modo === 'miembros'
       ? 'Grupo · Correo del guía · Nombre · Apellido · Teléfono · Cumpleaños'
-      : 'Nombre · Teléfono · Edad · Zona · Grupo · Fecha · Fonovisita · Visita · Pilares · Comenzó GV · Encuentro';
+      : 'La planilla TARJETAS DE CONSOLIDACION tal cual: Cant. · Tarjeta · Línea-líder · Fecha de entrega · Fonovisita · Visita · Pilares 1 a 5 · Grupo de vida · Encuentro · Observación';
 
   return (
     <View>

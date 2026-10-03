@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { Alert } from 'react-native';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '@/lib/supabase';
 import { formatoCumple, formatoFecha, hoyISO, porcentaje, sumarDias } from '@/lib/utils';
 import { Boton } from '@/components/ui';
+import { hojaTarjetasConFormato } from '@/lib/tarjetasExcel';
 
-const siNo = (v: unknown) => (v ? 'sí' : 'no');
 
 /**
  * Exporta a Excel los miembros y las tarjetas de consolidación de una red.
  * Las primeras columnas tienen el mismo orden que la planilla de importación.
  */
-export function Exportador({ redId, redNombre }: { redId: string; redNombre: string }) {
+export function Exportador({ redId, redNombre, soloTarjetas = false }: { redId: string; redNombre: string; soloTarjetas?: boolean }) {
   const [trabajando, setTrabajando] = useState(false);
 
   const exportar = async () => {
@@ -67,24 +67,12 @@ export function Exportador({ redId, redNombre }: { redId: string; redNombre: str
         };
       });
 
-      const filasTarjetas = ((tj.data ?? []) as any[]).map((t) => ({
-        Nombre: t.nombre,
-        Teléfono: t.telefono ?? '',
-        Edad: t.edad ?? '',
-        Zona: t.zona ?? '',
-        Grupo: t.gv_asignado ?? '',
-        Fecha: t.fecha_reu ? formatoFecha(t.fecha_reu) : '',
-        Fonovisita: siNo(t.fonovisita),
-        Visita: siNo(t.visita),
-        Pilares: siNo(t.pilares),
-        'Comenzó GV': siNo(t.comenzo_gv),
-        Encuentro: siNo(t.encuentro),
-        Estado: t.estado === 'completada' ? 'Completada' : 'En seguimiento',
-        'Completada el': t.completada_en ? formatoFecha(String(t.completada_en).slice(0, 10)) : '',
-        Observación: t.observacion ?? '',
-      }));
+      // Tarjetas: de la más vieja a la más nueva, como en la planilla de la iglesia
+      const filasTarjetas = ((tj.data ?? []) as any[])
+        .slice()
+        .sort((a, b) => String(a.fecha_entrada ?? a.creado_en).localeCompare(String(b.fecha_entrada ?? b.creado_en)));
 
-      if (filasMiembros.length === 0 && filasTarjetas.length === 0) {
+      if ((soloTarjetas || filasMiembros.length === 0) && filasTarjetas.length === 0) {
         setTrabajando(false);
         Alert.alert('No hay datos', `Todavía no hay miembros ni tarjetas en ${redNombre}.`);
         return;
@@ -92,15 +80,16 @@ export function Exportador({ redId, redNombre }: { redId: string; redNombre: str
 
       // Armar el Excel con una hoja por tipo de dato
       const libro = XLSX.utils.book_new();
-      const hojaMiembros = XLSX.utils.json_to_sheet(filasMiembros.length ? filasMiembros : [{ Grupo: 'Sin miembros' }]);
-      const hojaTarjetas = XLSX.utils.json_to_sheet(filasTarjetas.length ? filasTarjetas : [{ Nombre: 'Sin tarjetas' }]);
-      hojaMiembros['!cols'] = [22, 28, 16, 16, 16, 12, 22, 12, 12, 12, 12].map((w) => ({ wch: w }));
-      hojaTarjetas['!cols'] = [22, 16, 6, 16, 20, 12, 10, 8, 8, 10, 10, 14, 14, 30].map((w) => ({ wch: w }));
-      XLSX.utils.book_append_sheet(libro, hojaMiembros, 'Miembros');
-      XLSX.utils.book_append_sheet(libro, hojaTarjetas, 'Tarjetas');
+      const hojaTarjetas = hojaTarjetasConFormato(XLSX, filasTarjetas);
+      if (!soloTarjetas) {
+        const hojaMiembros = XLSX.utils.json_to_sheet(filasMiembros.length ? filasMiembros : [{ Grupo: 'Sin miembros' }]);
+        hojaMiembros['!cols'] = [22, 28, 16, 16, 16, 12, 22, 12, 12, 12, 12].map((w) => ({ wch: w }));
+        XLSX.utils.book_append_sheet(libro, hojaMiembros, 'Miembros');
+      }
+      XLSX.utils.book_append_sheet(libro, hojaTarjetas, 'TARJETAS DE CONSOLIDACION');
       const base64 = XLSX.write(libro, { type: 'base64', bookType: 'xlsx' });
 
-      const nombreArchivo = `VidaGroups_${redNombre.replace(/[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ]+/g, '_')}_${hoyISO()}.xlsx`;
+      const nombreArchivo = `${soloTarjetas ? 'Tarjetas_de_consolidacion' : 'VidaGroups'}_${redNombre.replace(/[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ]+/g, '_')}_${hoyISO()}.xlsx`;
       const archivo = new File(Paths.cache, nombreArchivo);
       if (archivo.exists) archivo.delete();
       archivo.create();
@@ -125,7 +114,9 @@ export function Exportador({ redId, redNombre }: { redId: string; redNombre: str
   const confirmar = () =>
     Alert.alert(
       'Exportar a Excel',
-      `Se genera un Excel con los miembros y las tarjetas de ${redNombre}. Tiene datos personales (teléfonos, cumpleaños): compartilo solo con quien corresponda.`,
+      soloTarjetas
+        ? `Se genera el Excel de tarjetas de consolidación de ${redNombre}, con el mismo formato de la planilla. Tiene datos personales: compartilo solo con quien corresponda.`
+        : `Se genera un Excel con los miembros y las tarjetas de ${redNombre}. Tiene datos personales (teléfonos, cumpleaños): compartilo solo con quien corresponda.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Exportar', onPress: exportar },
@@ -133,6 +124,6 @@ export function Exportador({ redId, redNombre }: { redId: string; redNombre: str
     );
 
   return (
-    <Boton titulo="Exportar a Excel" icono="download-outline" variante="secundario" onPress={confirmar} cargando={trabajando} style={{ marginTop: 10 }} />
+    <Boton titulo={soloTarjetas ? 'Exportar tarjetas a Excel' : 'Exportar a Excel'} icono="download-outline" variante="secundario" onPress={confirmar} cargando={trabajando} style={{ marginTop: 10 }} />
   );
 }

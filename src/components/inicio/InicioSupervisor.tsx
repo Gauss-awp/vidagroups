@@ -7,8 +7,13 @@ import type { Grupo, Perfil } from '@/lib/types';
 import { Card, Pantalla, SeccionTitulo, TituloGrande, PasosConsolidacion } from '@/components/ui';
 import { EquipoLista } from '@/components/EquipoLista';
 import { FormTarjeta } from '@/components/mision_joven/FormTarjeta';
+import { useAuth } from '@/context/AuthContext';
+import { Exportador } from '@/components/red/Exportador';
 
 export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
+  const { redesConsolida } = useAuth();
+  // Red de la que se exportan las tarjetas: la que consolida (o la suya)
+  const redExport = redesConsolida[0] ?? (perfil.red_id ? { id: perfil.red_id, nombre: 'mi red' } : null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refrescando, setRefrescando] = useState(false);
   const [misGrupos, setMisGrupos] = useState<Grupo[]>([]);
@@ -63,6 +68,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
       zona: seleccionada.zona,
       edad: seleccionada.edad? Number(seleccionada.edad) : null,
       gv_asignado: seleccionada.gv_asignado,
+      linea_lider: seleccionada.linea_lider || null,
       fonovisita: seleccionada.fonovisita,
       visita: seleccionada.visita,
       pilares: seleccionada.pilares,
@@ -119,6 +125,8 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
             <Text style={{ color: '#fff', fontWeight: '800' }}>{showForm? 'Cerrar' : 'Registrar persona nueva'}</Text>
           </TouchableOpacity>
 
+          {redExport ? <Exportador redId={redExport.id} redNombre={redExport.nombre} soloTarjetas /> : null}
+
           {showForm && (
             <View style={{ marginBottom: 16 }}>
               {/* FIX: Ahora le pasamos TODOS los grupos para que aparezca el 04.1 */}
@@ -149,7 +157,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
               <Card style={{ borderLeftWidth: 4, borderLeftColor: t.encuentro? colors.success : t.visita? colors.warning : colors.border }}>
                 <Text style={{ color: colors.text,  fontSize: 16, fontWeight: '800' }}>{t.nombre} {t.edad? `- ${t.edad} años` : ''}</Text>
                 {t.estado === 'completada' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}><Ionicons name="checkmark-circle" size={14} color={colors.success} /><Text style={{ color: colors.success, fontWeight: '800', fontSize: 12 }}>Consolidación completada</Text></View> : null}
-                <Text style={{ color: colors.textSec, fontSize: 12, marginTop: 2 }}>{t.zona} | {t.telefono} | GV: {t.gv_asignado || 'Sin asignar'}</Text>
+                <Text style={{ color: colors.textSec, fontSize: 12, marginTop: 2 }}>{[t.linea_lider ? `Línea: ${t.linea_lider}` : null, t.zona, t.telefono, `GV: ${t.gv_asignado || 'Sin asignar'}`].filter(Boolean).join(' · ')}</Text>
                 <PasosConsolidacion tarjeta={t} />
                 {t.observacion? <View style={{ flexDirection: 'row', gap: 6, marginTop: 10, backgroundColor: colors.warningBg, padding: 8, borderRadius: 8 }}><Ionicons name="document-text-outline" size={14} color={colors.warning} /><Text style={{ fontSize: 12, color: colors.warning, flex: 1 }}>{t.observacion}</Text></View> : null}
                 <Text style={{ fontSize: 11, color: colors.textTer, marginTop: 8 }}>Tocá para editar</Text>
@@ -178,6 +186,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
               <TextInput value={seleccionada?.nombre} onChangeText={v=>setSeleccionada({...seleccionada, nombre:v})} placeholder="Nombre" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10}} />
               <TextInput value={seleccionada?.telefono} onChangeText={v=>setSeleccionada({...seleccionada, telefono:v})} placeholder="Tel" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10}} />
               <TextInput value={seleccionada?.zona} onChangeText={v=>setSeleccionada({...seleccionada, zona:v})} placeholder="Zona" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10}} />
+              <TextInput value={seleccionada?.linea_lider ?? ''} onChangeText={v=>setSeleccionada({...seleccionada, linea_lider:v})} placeholder="Línea - Líder (ej: MICA Y SANTI)" placeholderTextColor={colors.textTer} style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10, color: colors.text}} />
               <TextInput value={seleccionada?.gv_asignado} onChangeText={v=>setSeleccionada({...seleccionada, gv_asignado:v})} placeholder="GV asignado" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:15}} />
               <TextInput value={seleccionada?.observacion} onChangeText={v=>setSeleccionada({...seleccionada, observacion:v})} placeholder="Observación" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:15}} />
 

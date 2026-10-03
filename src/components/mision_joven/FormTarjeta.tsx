@@ -21,6 +21,7 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
   const [edad, setEdad] = useState('');
   const [zona, setZona] = useState('');
   const [gv, setGv] = useState('');
+  const [linea, setLinea] = useState('');
   const [cargando, setCargando] = useState(false);
   const [mostrarLista, setMostrarLista] = useState(false);
 
@@ -42,11 +43,12 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
     const { error } = await supabase.from('tarjetas_consolidacion').insert({
       nombre, telefono, edad: edad? Number(edad) : null, zona,
       gv_asignado: gv || null,
+      linea_lider: linea.trim() || null,
       estado: 'nueva',
     });
     setCargando(false);
     if (error) Alert.alert('Error', error.message);
-    else { onCreada?.(); onClose?.(); setNombre(''); setTelefono(''); setEdad(''); setZona(''); setGv(''); }
+    else { onCreada?.(); onClose?.(); setNombre(''); setTelefono(''); setEdad(''); setZona(''); setGv(''); setLinea(''); }
   };
 
   return (
@@ -59,6 +61,7 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
         <TextInput placeholder="2. Tel / Whatsapp" placeholderTextColor="#9CA3AF" value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" style={estiloInput()} />
         <TextInput placeholder="3. Edad" placeholderTextColor="#9CA3AF" value={edad} onChangeText={setEdad} keyboardType="numeric" style={estiloInput()} />
         <TextInput placeholder="4. Zona / Barrio" placeholderTextColor="#9CA3AF" value={zona} onChangeText={setZona} style={estiloInput()} />
+        <TextInput placeholder="Línea - Líder (ej: MICA Y SANTI)" placeholderTextColor="#9CA3AF" value={linea} onChangeText={setLinea} autoCapitalize="characters" style={estiloInput()} />
 
         <View style={{ zIndex: 20 }}>
           <TextInput
