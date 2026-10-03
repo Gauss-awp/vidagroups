@@ -8,6 +8,7 @@ import { Aprobaciones } from '@/components/red/Aprobaciones';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { ResponsablesRed } from '@/components/red/ResponsablesRed';
 import { Importador } from '@/components/red/Importador';
+import { Exportador } from '@/components/red/Exportador';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
 import { GestionGrupos } from '@/components/mision_joven/GestionGrupos';
 import { AsignarSupervisores } from '@/components/mision_joven/AsignarSupervisores';
@@ -108,6 +109,7 @@ export default function PanelRed() {
         <ResponsablesRed key={`rr-${refreshKey}`} redId={red.id} onCambio={refrescarPerfil} />
 
         <Importador redId={red.id} redNombre={red.nombre} onImportado={() => setRefreshKey((k) => k + 1)} />
+        <Exportador redId={red.id} redNombre={red.nombre} />
 
         <View style={{ height: 24 }} />
         <Card style={{ backgroundColor: colors.cardAlt }}>

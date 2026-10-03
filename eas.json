@@ -23,7 +23,7 @@
       "env": {
         "EXPO_PUBLIC_AMBIENTE": "produccion",
         "EXPO_PUBLIC_SUPABASE_URL_PRODUCCION": "https://PROYECTO-PRODUCCION.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_KEY_PRODUCCION": "sb_publishable_2_CIRGZvo0aI_Fmzyx_EsA_h7UxJPN_"
+        "EXPO_PUBLIC_SUPABASE_KEY_PRODUCCION": ""
       }
     }
   }

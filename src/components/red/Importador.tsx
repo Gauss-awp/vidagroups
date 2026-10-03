@@ -68,6 +68,15 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
 
   const revisar = async () => {
     const filas = leerFilas(texto);
+    if (pareceOtraHoja) {
+      Alert.alert(
+        'Parece la hoja equivocada',
+        modo === 'tarjetas'
+          ? 'Lo que pegaste tiene correos en la segunda columna: parece la hoja Miembros. Elegí "Grupos y miembros" arriba.'
+          : 'Lo que pegaste parece la hoja Tarjetas. Elegí "Tarjetas de consolidación" arriba.'
+      );
+      return;
+    }
     if (filas.length === 0) {
       Alert.alert('No hay datos', 'Pegá las filas copiadas de la planilla.');
       return;
@@ -128,6 +137,11 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
           errores.push(`Fila ${n}: falta el nombre`);
           return;
         }
+        if (telefono.includes('@')) {
+          errores.push(`Fila ${n}: en Teléfono hay un correo; revisá que sea la hoja Tarjetas`);
+          return;
+        }
+        if (edad && isNaN(Number(edad))) errores.push(`Fila ${n}: la edad "${edad}" no es un número (se carga sin edad)`);
         const k = `${clave(nombre)}|${telefono.replace(/\D/g, '')}`;
         if (yaEstan.has(k)) {
           omitidos++;
@@ -225,6 +239,18 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
     }
   };
 
+  // Vista previa: cada fila pegada, con sus datos ordenados y con nombre
+  const filasPegadas = texto.trim() ? leerFilas(texto) : [];
+  const etiquetas =
+    modo === 'miembros'
+      ? ['Grupo', 'Guía', 'Nombre', 'Apellido', 'Teléfono', 'Cumpleaños']
+      : ['Nombre', 'Teléfono', 'Edad', 'Zona', 'Grupo', 'Fecha', 'Fono', 'Visita', 'Pilares', 'GV', 'Encuentro'];
+  const pareceOtraHoja =
+    filasPegadas.length > 0 &&
+    (modo === 'tarjetas'
+      ? filasPegadas.some((c) => (c[1] ?? '').includes('@'))
+      : filasPegadas.every((c) => !(c[1] ?? '').includes('@') && c.length >= 7));
+
   const columnas =
     modo === 'miembros'
       ? 'Grupo · Correo del guía · Nombre · Apellido · Teléfono · Cumpleaños'
@@ -247,7 +273,40 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
           {modo === 'miembros' ? ' Si el guía todavía no tiene cuenta, el grupo queda a tu nombre y después lo cambiás en Gestionar GVs.' : ''}
         </Text>
 
-        <Campo placeholder="Pegá acá las filas de la planilla" value={texto} onChangeText={(v) => { setTexto(v); setPlan(null); }} multiline style={{ minHeight: 140 }} />
+        <Campo
+          placeholder="Pegá acá las filas de la planilla"
+          value={texto}
+          onChangeText={(v) => { setTexto(v); setPlan(null); }}
+          multiline
+          numberOfLines={3}
+          style={{ minHeight: 70, maxHeight: 90, fontSize: 12 }}
+        />
+
+        {filasPegadas.length > 0 ? (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>
+              {filasPegadas.length} {filasPegadas.length === 1 ? 'fila detectada' : 'filas detectadas'}. Así se va a leer:
+            </Text>
+            {pareceOtraHoja ? (
+              <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700', marginBottom: 6 }}>
+                {modo === 'tarjetas' ? 'Parece la hoja Miembros: elegí "Grupos y miembros".' : 'Parece la hoja Tarjetas: elegí "Tarjetas de consolidación".'}
+              </Text>
+            ) : null}
+            {filasPegadas.slice(0, 5).map((c, i) => (
+              <View key={i} style={{ backgroundColor: colors.cardAlt, borderRadius: 10, padding: 10, marginBottom: 6 }}>
+                {etiquetas.map((et, j) =>
+                  (c[j] ?? '').trim() ? (
+                    <Text key={et} style={{ fontSize: 13, color: colors.text }}>
+                      <Text style={{ color: colors.textSec }}>{et}: </Text>
+                      {c[j]}
+                    </Text>
+                  ) : null
+                )}
+              </View>
+            ))}
+            {filasPegadas.length > 5 ? <Text style={s.textoFilaSec}>y {filasPegadas.length - 5} filas más</Text> : null}
+          </View>
+        ) : null}
 
         {!plan ? (
           <Boton titulo="Revisar antes de importar" onPress={revisar} cargando={trabajando} />
