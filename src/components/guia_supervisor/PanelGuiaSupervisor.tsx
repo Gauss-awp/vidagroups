@@ -97,7 +97,7 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
         contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.textSec} />}
       >
-        <TituloGrande titulo="Mis Guías" subtitulo={`Hola, ${perfil.nombre || 'Supervisor'}`} />
+        <TituloGrande titulo="Mis Guías ✓" subtitulo={`Hola, ${perfil.nombre || 'Supervisor'}`} />
 
         {datos.grupos.length === 0 ? (
           <Card>

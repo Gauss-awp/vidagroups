@@ -52,5 +52,5 @@ if (canal === 'produccion') {
 rl.close();
 
 console.log(`\nPublicando en el canal "${canal}"...\n`);
-execSync(`npx eas-cli@latest update --channel ${canal} --message "${mensaje.replace(/"/g, "'")}"`, { stdio: 'inherit' });
+execSync(`npx eas-cli@latest update --channel ${canal} --platform android --message "${mensaje.replace(/"/g, "'")}"`, { stdio: 'inherit' });
 console.log('\n✅ Listo. Los celulares la descargan la próxima vez que abren la app.\n');
