@@ -29,6 +29,19 @@
     "plugins": [
       "expo-router",
       "expo-sharing"
-    ]
+    ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "06d639af-1084-432d-91e1-9ff09bd8edab"
+      }
+    },
+    "owner": "benjaliendos-team",
+    "updates": {
+      "url": "https://u.expo.dev/06d639af-1084-432d-91e1-9ff09bd8edab"
+    }
   }
 }

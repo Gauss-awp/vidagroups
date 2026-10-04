@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AMBIENTE, supabase } from '@/lib/supabase';
+import * as Updates from 'expo-updates';
+import Constants from 'expo-constants';
 import { ROL_COLOR, colors } from '@/lib/theme';
 import type { Perfil } from '@/lib/types';
 import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
@@ -210,6 +212,12 @@ export default function PerfilPantalla() {
         />
         <Text style={[s.textoFilaSec, { marginTop: 8, textAlign: 'center' }]}>
           Se borran tu usuario y tus datos personales. Los registros de tus grupos quedan para la iglesia.
+        </Text>
+
+        <Text style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: colors.textTer }}>
+          VidaGroups {Constants.expoConfig?.version ?? ''}
+          {Updates.updateId ? ` · actualización ${Updates.updateId.slice(0, 8)}` : ''}
+          {Updates.createdAt && !Updates.isEmbeddedLaunch ? ` del ${Updates.createdAt.toLocaleDateString('es-AR')}` : ''}
         </Text>
 
         {AMBIENTE === 'pruebas' ? (

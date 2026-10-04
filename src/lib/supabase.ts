@@ -2,6 +2,7 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
+import * as Updates from 'expo-updates';
 
 // ---------------------------------------------------------------------
 // Ambientes: "pruebas" (datos inventados, modo dev) y "produccion" (la iglesia).
@@ -10,7 +11,16 @@ import { AppState } from 'react-native';
 // ---------------------------------------------------------------------
 export type Ambiente = 'pruebas' | 'produccion';
 
-export const AMBIENTE: Ambiente = process.env.EXPO_PUBLIC_AMBIENTE === 'produccion' ? 'produccion' : 'pruebas';
+// En la app instalada (APK, TestFlight) manda el canal con el que se generó: así una
+// actualización publicada en "produccion" nunca apunta a la base de pruebas.
+// En Expo Go no hay canal y se usa el .env.
+const canal = Updates.channel;
+export const AMBIENTE: Ambiente =
+  canal === 'produccion' || canal === 'pruebas'
+    ? canal
+    : process.env.EXPO_PUBLIC_AMBIENTE === 'produccion'
+      ? 'produccion'
+      : 'pruebas';
 
 const config = {
   pruebas: {

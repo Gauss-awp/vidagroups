@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/context/AuthContext';
 import { TemaProvider, useTema } from '@/context/TemaContext';
 import { colors } from '@/lib/theme';
+import { Actualizaciones } from '@/components/Actualizaciones';
 
 function Navegacion() {
   const { oscuro } = useTema();
@@ -21,6 +22,7 @@ function Navegacion() {
   return (
     <ThemeProvider value={tema}>
       <StatusBar style={oscuro ? 'light' : 'dark'} />
+      <Actualizaciones />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
     </ThemeProvider>
   );

@@ -12,9 +12,9 @@ export const esCuentaDev = (email?: string | null) =>
 const ROLES_DEV = [
   { rol: 'guia', texto: 'Guía', color: '#555' },
   { rol: 'guia_supervisor', texto: 'Guía Sup', color: '#555' },
-  { rol: 'consolidacion', texto: 'Consolidador', color: '#777777' },
+  { rol: 'consolidacion', texto: 'Consolidador', color: '#555' },
   { rol: 'pastor', texto: 'Pastor', color: '#555' },
-  { rol: 'apostol', texto: 'Apóstol', color: 'black' },
+  { rol: 'apostol', texto: 'Apóstol', color: '#555' },
 ]
 
 export function DevRoleSwitcher({ perfil }: any) {

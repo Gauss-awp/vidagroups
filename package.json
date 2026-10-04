@@ -16,6 +16,7 @@
     "expo-router": "~57.0.23",
     "expo-sharing": "~57.0.22",
     "expo-status-bar": "~57.0.1",
+    "expo-updates": "~57.0.24",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -36,7 +37,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "publicar:pruebas": "node scripts/publicar.mjs pruebas",
+    "publicar:produccion": "node scripts/publicar.mjs produccion"
   },
   "private": true
 }
