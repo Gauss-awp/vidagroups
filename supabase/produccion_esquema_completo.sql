@@ -3674,150 +3674,177 @@ notify pgrst, 'reload schema';
 
 
 -- =====================================================================
--- (incluye Etapa 10: planilla de asistencia de los grupos)
+-- (incluye Etapa 11: equipo desde planilla)
 -- =====================================================================
 -- =====================================================================
--- VidaGroups · Etapa 10: planilla de asistencia de los grupos
---   1. Datos del grupo para el encabezado (día y horario, barrio, dirección, líder supervisor)
---   2. Datos de cada reunión: nota de la semana, ofrenda, material y quién lo compartió
---   3. Consolidación semanal de cada ausente ("C" + motivo)
---   4. Rol de cada miembro dentro del grupo: guía o equipo (timoteos, anfitrión, colaboradores)
---   5. El panel del supervisor muestra los 5 pilares por separado
+-- VidaGroups · Etapa 11: configurar el equipo de la red desde una planilla
+--   El encargado carga correo, rol, supervisor, grupo y si consolida.
+--   · Quien ya se registró queda aprobado al instante.
+--   · Quien todavía no, queda aprobado SOLO apenas se registra con ese correo.
 -- Ejecutar UNA vez en Supabase → SQL Editor → Run.
 -- =====================================================================
 
 begin;
 
-alter table public.groups
-  add column if not exists dia_horario text,
-  add column if not exists barrio text,
-  add column if not exists direccion text,
-  add column if not exists lider_supervisor text;
+create table if not exists public.preaprobaciones (
+  id                uuid primary key default gen_random_uuid(),
+  red_id            uuid not null references public.redes(id) on delete cascade,
+  email             text not null,
+  nombre            text,
+  rol               text not null check (rol in ('guia', 'guia_supervisor', 'consolidacion')),
+  supervisor_email  text,
+  grupo             text,
+  consolidador      boolean not null default false,
+  perfil_id         uuid references public.profiles(id) on delete set null,
+  aplicado_en       timestamptz,
+  creado_por        uuid references public.profiles(id) on delete set null default auth.uid(),
+  creado_en         timestamptz not null default now(),
+  unique (red_id, email)
+);
 
-alter table public.reuniones
-  add column if not exists ofrenda numeric(12, 2),
-  add column if not exists material text,
-  add column if not exists compartio text;
-
-alter table public.asistencias
-  add column if not exists consolidado boolean not null default false,
-  add column if not exists motivo text;
-
-alter table public.miembros_grupo
-  add column if not exists rol_equipo text;
-
-do $$
+-- Los correos siempre en minúscula
+create or replace function public.normalizar_preaprobacion()
+returns trigger language plpgsql set search_path = public as $$
 begin
-  if not exists (select 1 from pg_constraint where conname = 'miembros_rol_equipo_valido') then
-    alter table public.miembros_grupo
-      add constraint miembros_rol_equipo_valido check (rol_equipo is null or rol_equipo in ('guia', 'equipo'));
-  end if;
+  new.email := lower(trim(new.email));
+  new.supervisor_email := nullif(lower(trim(coalesce(new.supervisor_email, ''))), '');
+  new.grupo := nullif(trim(coalesce(new.grupo, '')), '');
+  return new;
 end;
 $$;
+drop trigger if exists trg_normalizar_preaprobacion on public.preaprobaciones;
+create trigger trg_normalizar_preaprobacion before insert or update on public.preaprobaciones
+  for each row execute function public.normalizar_preaprobacion();
 
--- Los pilares de la consolidación marcados uno por uno también cuentan como "pilares" completos
-update public.tarjetas_consolidacion
-   set pilar_1 = true, pilar_2 = true, pilar_3 = true, pilar_4 = true, pilar_5 = true
- where pilares and not (coalesce(pilar_1, false) or coalesce(pilar_2, false) or coalesce(pilar_3, false)
-                        or coalesce(pilar_4, false) or coalesce(pilar_5, false));
+alter table public.preaprobaciones enable row level security;
+revoke all on public.preaprobaciones from anon;
+grant select, insert, update, delete on public.preaprobaciones to authenticated;
 
-CREATE OR REPLACE FUNCTION public.panel_supervisor()
- RETURNS jsonb
- LANGUAGE sql
- STABLE
- SET search_path TO 'public'
-AS $function$
-  with
-  f as (
-    select current_date as hoy,
-           date_trunc('month', current_date)::date as mes,
-           (date_trunc('month', current_date) - interval '1 month')::date as mes_ant
-  ),
-  g as (
-    select gr.id, gr.nombre, gr.guia_id, gr.red_id
-      from public.groups gr
-     where gr.supervisor_id = auth.uid() or public.es_subordinado(gr.guia_id) or gr.guia_id = auth.uid()
-  ),
-  m as (
-    select grupo_id, count(*) as n,
-           count(*) filter (where creado_en >= (select mes from f)) as nuevos
-      from public.miembros_grupo where activo group by grupo_id
-  ),
-  r as (
-    select re.grupo_id, re.fecha,
-           (select count(*) from public.asistencias a where a.reunion_id = re.id and a.presente) as presentes
-      from public.reuniones re
-     where re.fecha >= (select mes_ant from f)
-  ),
-  asis as (
-    select g.id as grupo_id,
-           (select max(x.fecha) from public.reuniones x where x.grupo_id = g.id) as ultima,
-           sum(r.presentes) filter (where r.fecha >= (select mes from f)) as pres_mes,
-           count(r.fecha) filter (where r.fecha >= (select mes from f)) as reu_mes,
-           sum(r.presentes) filter (where r.fecha < (select mes from f)) as pres_ant,
-           count(r.fecha) filter (where r.fecha < (select mes from f)) as reu_ant
-      from g left join r on r.grupo_id = g.id
-     group by g.id
-  ),
-  alertas as (select grupo_id, count(*) as n from public.miembros_en_alerta(3) group by grupo_id),
-  tarj as (
-    select t.grupo_id, count(*) filter (where not coalesce(t.comenzo_gv, false)) as sin_empezar
-      from public.tarjetas_consolidacion t
-     where coalesce(t.estado, '') <> 'completada'
-     group by t.grupo_id
-  ),
-  filas as (
-    select g.id, g.nombre,
-           nullif(trim(coalesce(p.nombre, '') || ' ' || coalesce(p.apellido, '')), '') as guia,
-           p.telefono as guia_telefono,
-           g.guia_id = auth.uid() as es_mio,
-           coalesce(m.n, 0) as miembros,
-           coalesce(m.nuevos, 0) as nuevos,
-           a.ultima as ultima_reunion,
-           case when a.reu_mes * coalesce(m.n, 0) > 0 then round(100.0 * a.pres_mes / (a.reu_mes * m.n))::int end as asistencia,
-           case when a.reu_ant * coalesce(m.n, 0) > 0 then round(100.0 * a.pres_ant / (a.reu_ant * m.n))::int end as asistencia_anterior,
-           coalesce(al.n, 0) as alertas,
-           coalesce(tj.sin_empezar, 0) as sin_empezar,
-           (select jsonb_build_object(
-                     'id', e.id, 'nombre', e.nombre, 'moneda', e.moneda, 'costo', e.costo_total,
-                     'recaudado', coalesce((select sum(pe.monto_pagado)
-                                              from public.pagos_evento pe
-                                              join public.miembros_grupo mm on mm.id = pe.miembro_id
-                                             where pe.evento_id = e.id and mm.grupo_id = g.id), 0))
-              from public.eventos e
-             where e.fecha_evento >= (select hoy from f) and e.costo_total > 0
-               and (e.grupo_id = g.id or (e.grupo_id is null and (e.red_id is null or e.red_id = g.red_id)))
-             order by e.fecha_evento
-             limit 1) as evento
-      from g
-      left join m on m.grupo_id = g.id
-      left join asis a on a.grupo_id = g.id
-      left join alertas al on al.grupo_id = g.id
-      left join tarj tj on tj.grupo_id = g.id
-      left join public.profiles p on p.id = g.guia_id
-  )
-  select jsonb_build_object(
-    'grupos', coalesce((select jsonb_agg(to_jsonb(x) order by x.asistencia nulls first, x.nombre) from filas x), '[]'::jsonb),
-    'cumples', coalesce((
-      select jsonb_agg(jsonb_build_object('id', mm.id, 'nombre', trim(mm.nombre || ' ' || coalesce(mm.apellido, '')),
-                                          'grupo', g.nombre, 'dia', to_char(mm.cumpleanos, 'DD/MM'))
-                       order by to_char(mm.cumpleanos, 'MMDD'))
-        from public.miembros_grupo mm join g on g.id = mm.grupo_id
-       where mm.activo and mm.cumpleanos is not null
-         and case
-               when to_char((select hoy from f), 'MMDD') <= to_char((select hoy from f) + 6, 'MMDD')
-                 then to_char(mm.cumpleanos, 'MMDD') between to_char((select hoy from f), 'MMDD') and to_char((select hoy from f) + 6, 'MMDD')
-               else to_char(mm.cumpleanos, 'MMDD') >= to_char((select hoy from f), 'MMDD')
-                 or to_char(mm.cumpleanos, 'MMDD') <= to_char((select hoy from f) + 6, 'MMDD')
-             end), '[]'::jsonb),
-    'tarjetas', coalesce((
-      select jsonb_agg(to_jsonb(t) order by t.creado_en desc)
-        from (select tc.id, tc.nombre, tc.gv_asignado, tc.fonovisita, tc.visita, tc.pilares, tc.pilar_1, tc.pilar_2, tc.pilar_3, tc.pilar_4, tc.pilar_5, tc.comenzo_gv, tc.encuentro, tc.creado_en
-                from public.tarjetas_consolidacion tc join g on g.id = tc.grupo_id
-               where coalesce(tc.estado, '') <> 'completada'
-               order by tc.creado_en desc limit 20) t), '[]'::jsonb)
-  )
-$function$;
+drop policy if exists preaprobaciones_todo on public.preaprobaciones;
+create policy preaprobaciones_todo on public.preaprobaciones
+  for all to authenticated
+  using (public.administra_red(red_id))
+  with check (public.administra_red(red_id));
+
+drop policy if exists solo_mi_iglesia on public.preaprobaciones;
+create policy solo_mi_iglesia on public.preaprobaciones as restrictive for all to authenticated
+  using (public.iglesia_de_red(red_id) = public.mi_iglesia())
+  with check (public.iglesia_de_red(red_id) = public.mi_iglesia());
+
+-- ---------------------------------------------------------------------
+-- Aplica la configuración de una persona (uso interno)
+-- ---------------------------------------------------------------------
+create or replace function public.aplicar_preaprobacion_perfil(p_perfil uuid)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare
+  v_perfil public.profiles%rowtype;
+  v_pre    public.preaprobaciones%rowtype;
+  v_sup    uuid;
+begin
+  select * into v_perfil from public.profiles where id = p_perfil;
+  if not found then return false; end if;
+
+  select * into v_pre from public.preaprobaciones
+   where email = lower(v_perfil.email) and aplicado_en is null
+     and public.iglesia_de_red(red_id) = v_perfil.iglesia_id
+   order by creado_en desc limit 1;
+  if not found then return false; end if;
+
+  -- Operación del sistema: saltea el control de roles
+  perform set_config('app.dev_switch', 'on', true);
+
+  -- 1. Aprobado, con su rol y su red
+  update public.profiles
+     set estado = 'activo', rol = v_pre.rol, red_id = v_pre.red_id,
+         nombre = coalesce(nullif(nombre, ''), split_part(coalesce(v_pre.nombre, ''), ' ', 1))
+   where id = p_perfil;
+
+  -- 2. Su supervisor, si ya tiene cuenta
+  if v_pre.supervisor_email is not null then
+    select id into v_sup from public.profiles
+     where lower(email) = v_pre.supervisor_email and iglesia_id = v_perfil.iglesia_id and id <> p_perfil;
+    if v_sup is not null then
+      update public.profiles set supervisor_id = v_sup where id = p_perfil;
+    end if;
+  end if;
+
+  -- 3. Los que lo esperaban como supervisor
+  update public.profiles p
+     set supervisor_id = p_perfil
+    from public.preaprobaciones x
+   where x.red_id = v_pre.red_id and x.supervisor_email = lower(v_perfil.email)
+     and x.perfil_id = p.id and p.supervisor_id is null and p.id <> p_perfil;
+
+  -- 4. El grupo que guía (si no existe, se crea)
+  if v_pre.grupo is not null then
+    update public.groups set guia_id = p_perfil
+     where red_id = v_pre.red_id and lower(trim(nombre)) = lower(v_pre.grupo);
+    if not found then
+      insert into public.groups (nombre, red_id, guia_id) values (v_pre.grupo, v_pre.red_id, p_perfil);
+    end if;
+  end if;
+
+  -- 5. Consolidador/a de la red
+  if v_pre.consolidador then
+    insert into public.redes_consolidadores (red_id, perfil_id) values (v_pre.red_id, p_perfil)
+    on conflict do nothing;
+  end if;
+
+  update public.preaprobaciones set perfil_id = p_perfil, aplicado_en = now() where id = v_pre.id;
+  perform set_config('app.dev_switch', 'off', true);
+  return true;
+end;
+$$;
+revoke execute on function public.aplicar_preaprobacion_perfil(uuid) from public, anon, authenticated;
+
+-- Cuando alguien se registra, si estaba en la planilla, queda aprobado solo
+create or replace function public.preaprobar_al_registrarse()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  perform public.aplicar_preaprobacion_perfil(new.id);
+  return new;
+end;
+$$;
+revoke execute on function public.preaprobar_al_registrarse() from public, anon, authenticated;
+
+drop trigger if exists trg_preaprobar_al_registrarse on public.profiles;
+create trigger trg_preaprobar_al_registrarse after insert on public.profiles
+  for each row execute function public.preaprobar_al_registrarse();
+
+-- ---------------------------------------------------------------------
+-- La llama el encargado al guardar la planilla: aplica a quienes ya se registraron
+-- ---------------------------------------------------------------------
+create or replace function public.aplicar_preaprobaciones(p_red uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_x record;
+  v_aplicados int := 0;
+begin
+  if not public.administra_red(p_red) then
+    raise exception 'Solo el encargado o el pastor de la red puede hacer esto';
+  end if;
+
+  -- Primero los supervisores, así sus guías los encuentran
+  for v_x in
+    select p.id
+      from public.preaprobaciones x
+      join public.profiles p on lower(p.email) = x.email and p.iglesia_id = public.iglesia_de_red(x.red_id)
+     where x.red_id = p_red and x.aplicado_en is null
+     order by case x.rol when 'guia_supervisor' then 0 when 'consolidacion' then 1 else 2 end
+  loop
+    if public.aplicar_preaprobacion_perfil(v_x.id) then
+      v_aplicados := v_aplicados + 1;
+    end if;
+  end loop;
+
+  return jsonb_build_object(
+    'aplicados', v_aplicados,
+    'esperando', (select count(*) from public.preaprobaciones where red_id = p_red and aplicado_en is null)
+  );
+end;
+$$;
+revoke execute on function public.aplicar_preaprobaciones(uuid) from public, anon;
+grant execute on function public.aplicar_preaprobaciones(uuid) to authenticated;
 
 commit;
 

@@ -9,6 +9,7 @@ import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { ResponsablesRed } from '@/components/red/ResponsablesRed';
 import { Importador } from '@/components/red/Importador';
 import { Exportador } from '@/components/red/Exportador';
+import { EquipoDesdePlanilla } from '@/components/red/EquipoDesdePlanilla';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
 import { GestionGrupos } from '@/components/mision_joven/GestionGrupos';
 import { AsignarSupervisores } from '@/components/mision_joven/AsignarSupervisores';
@@ -105,6 +106,8 @@ export default function PanelRed() {
         <GestionGrupos key={`gg-${refreshKey}`} redId={red.id} redNombre={red.nombre} />
 
         <AsignarSupervisores key={`as-${refreshKey}`} redId={red.id} redNombre={red.nombre} />
+
+        <EquipoDesdePlanilla key={`eq-${refreshKey}`} redId={red.id} redNombre={red.nombre} onCambio={() => setRefreshKey((k) => k + 1)} />
 
         <ResponsablesRed key={`rr-${refreshKey}`} redId={red.id} onCambio={refrescarPerfil} />
 
