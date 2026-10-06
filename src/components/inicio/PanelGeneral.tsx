@@ -11,6 +11,7 @@ import { BarraProgreso, Boton, Card, Cargando, Pantalla, SeccionTitulo, TituloGr
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
 import { FormEvento } from '@/components/eventos/FormEvento';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
+import { SupervisoresPastoral } from './SupervisoresPastoral';
 
 interface Semana {
   semana: string;
@@ -193,6 +194,9 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
             ) : null}
           </Card>
         )}
+
+        {/* ---------- Supervisores: a quién acompañar ---------- */}
+        <SupervisoresPastoral refreshKey={refreshKey} />
 
         {/* ---------- 2. Cómo viene la iglesia ---------- */}
         <SeccionTitulo titulo="Cómo viene" />
