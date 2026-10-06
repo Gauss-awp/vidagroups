@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, Image } from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -29,19 +29,11 @@ export default function Login() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }} keyboardShouldPersistTaps="handled">
           <View style={{ alignItems: 'center', marginBottom: 36 }}>
-            <View
-              style={{
-                width: 84,
-                height: 84,
-                borderRadius: 24,
-                backgroundColor: colors.success,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 16,
-              }}
-            >
-              <Ionicons name="leaf" size={44} color="#FFFFFF" />
-            </View>
+            <Image
+              source={require('../../../assets/logo.png')}
+              style={{ width: 96, height: 96, marginBottom: 16 }}
+              accessibilityLabel="Logo de la iglesia Vida Nueva"
+            />
             <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800' }}>VidaGroups</Text>
             <Text style={{ color: colors.textSec, fontSize: 16, marginTop: 6 }}>Grupos de vida de tu iglesia</Text>
           </View>
