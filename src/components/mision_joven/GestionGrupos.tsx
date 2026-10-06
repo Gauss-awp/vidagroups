@@ -3,6 +3,7 @@ import { Alert, Text, View, ScrollView, Modal, Pressable } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Card, Boton, s } from '@/components/ui';
+import { SupervisoresDelGrupo } from './SupervisoresDelGrupo';
 
 export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: string }) {
   const [grupos, setGrupos] = useState<any[]>([]);
@@ -78,6 +79,7 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
             {isOpen && (
               <View style={{ padding:12, gap:8 }}>
                 <Boton titulo="Cambiar Guía" variante="secundario" onPress={()=>{setGrupoSel(g); setModalGuia(true)}} />
+                <SupervisoresDelGrupo grupoId={g.id} redId={redId} principalId={g.supervisor_id ?? null} />
                 <View style={{ maxHeight: 320 }}>
                   <ScrollView showsVerticalScrollIndicator={false}>
                     {miembrosDelGrupo.map((m:any)=>(

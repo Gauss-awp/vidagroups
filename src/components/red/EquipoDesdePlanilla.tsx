@@ -12,6 +12,7 @@ interface FilaEquipo {
   nombre: string | null;
   rol: RolEquipo;
   supervisor_email: string | null;
+  supervisor2_email: string | null;
   grupo: string | null;
   consolidador: boolean;
 }
@@ -40,7 +41,7 @@ function leerEquipo(texto: string): { filas: FilaEquipo[]; errores: string[] } {
   const errores: string[] = [];
   const vistos = new Set<string>();
   lineas.forEach((l, i) => {
-    const [email = '', nombre = '', rol = '', sup = '', grupo = '', consolida = ''] = l.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
+    const [email = '', nombre = '', rol = '', sup = '', grupo = '', consolida = '', sup2 = ''] = l.split(sep).map((c) => c.trim().replace(/^"|"$/g, ''));
     if (/correo|email/i.test(email) && i === 0) return; // encabezado
     if (!email.includes('@')) {
       errores.push(`Fila ${i + 1}: "${email || '(vacío)'}" no es un correo`);
@@ -63,6 +64,7 @@ function leerEquipo(texto: string): { filas: FilaEquipo[]; errores: string[] } {
       nombre: nombre || null,
       rol: r,
       supervisor_email: sup.includes('@') ? sup.toLowerCase() : null,
+      supervisor2_email: sup2.includes('@') ? sup2.toLowerCase() : null,
       grupo: grupo || null,
       consolidador: siNo(consolida),
     });
@@ -180,7 +182,7 @@ export function EquipoDesdePlanilla({ redId, redNombre, onCambio }: { redId: str
       <HojaModal visible={abierto} onClose={() => setAbierto(false)} titulo={`Equipo de ${redNombre}`}>
         <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Columnas, en este orden:</Text>
         <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', marginBottom: 10 }}>
-          Correo · Nombre · Rol · Correo del supervisor · Grupo que guía · Consolidador (SI/NO)
+          Correo · Nombre · Rol · Correo del supervisor · Grupo que guía · Consolidador (SI/NO) · Correo del 2º supervisor (opcional)
         </Text>
         <Text style={[s.textoFilaSec, { marginBottom: 12 }]}>
           Rol: Guía, Guía Supervisor o Consolidador. Si el grupo no existe, se crea. Si ya existe con otro guía, pasa a esta persona.
@@ -193,6 +195,7 @@ export function EquipoDesdePlanilla({ redId, redNombre, onCambio }: { redId: str
               <Text key={f.email} style={{ color: colors.text, fontSize: 13, marginBottom: 3 }}>
                 {f.nombre || f.email} · {ROL_TEXTO[f.rol]}
                 {f.supervisor_email ? ` · sup: ${f.supervisor_email}` : ''}
+                {f.supervisor2_email ? ` y ${f.supervisor2_email}` : ''}
                 {f.grupo ? ` · ${f.grupo}` : ''}
                 {f.consolidador ? ' · Consolida' : ''}
               </Text>

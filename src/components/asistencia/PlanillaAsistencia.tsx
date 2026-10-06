@@ -62,9 +62,14 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         ? await supabase.from('seguimientos_faltas').select('miembro_id, creado_en, nota').in('miembro_id', ids).gte('creado_en', `${anio}-01-01`)
         : { data: [] };
 
-      const lider =
-        g.lider_supervisor ||
-        (sup.data ? `${(sup.data as any).nombre ?? ''} ${(sup.data as any).apellido ?? ''}`.trim() : '');
+      const { data: segundos } = await supabase.from('grupo_supervisores').select('perfil_id').eq('grupo_id', grupoId);
+      const idsSeg = ((segundos ?? []) as { perfil_id: string }[]).map((x) => x.perfil_id);
+      const { data: perfSeg } = idsSeg.length ? await supabase.from('profiles').select('nombre').in('id', idsSeg) : { data: [] };
+      const nombresSup = [
+        sup.data ? String((sup.data as any).nombre ?? '').trim() : '',
+        ...((perfSeg ?? []) as { nombre: string | null }[]).map((p) => String(p.nombre ?? '').trim()),
+      ].filter(Boolean);
+      const lider = g.lider_supervisor || nombresSup.join(' y ');
 
       const hoja = hojaAsistenciaConFormato(
         XLSX,
