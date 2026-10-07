@@ -9,16 +9,34 @@ import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { MESES } from '@/lib/utils';
 import { FALTAS_ALEJADO, hojaAsistenciaConFormato, leerPlanillaAsistencia, type PlanillaLeida, type RolEquipo } from '@/lib/asistenciaExcel';
-import { Boton, Card, HojaModal, s } from '@/components/ui';
+import { Boton, Card, Chip, HojaModal, s } from '@/components/ui';
+import { candidatosParecidos } from '@/lib/parecidos';
+import { formatoFecha } from '@/lib/utils';
 
 const clave = (t: string) =>
   t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+interface ChoqueFecha {
+  planilla: string; // fecha en la planilla
+  app: string; // fecha de la reunión cargada en la app
+  appId: string;
+  unir: boolean; // true = es la misma reunión, pasa a la fecha de la planilla
+}
+interface NombreDudoso {
+  planilla: string; // como está escrito en la planilla
+  candidatos: { id: string; nombre: string }[];
+  eleccion: string; // id del hermano de la app, o 'nuevo'
+}
 interface Resumen {
   meses: string[];
   reuniones: number;
   asistencias: number;
-  nuevos: string[];
+  actualizan: number; // reuniones que ya estaban (misma fecha)
+  nuevasFechas: number;
+  choques: ChoqueFecha[];
+  coinciden: number; // hermanos con el mismo nombre
+  nuevos: string[]; // hermanos sin ningún parecido
+  dudosos: NombreDudoso[];
   planilla: PlanillaLeida;
 }
 
@@ -127,9 +145,42 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         Alert.alert('No se encontraron reuniones', 'La planilla no tiene meses con fechas cargadas en la fila "Equipo de Trabajo".');
         return;
       }
-      const { data: existentes } = await supabase.from('miembros_grupo').select('nombre, apellido').eq('grupo_id', grupoId);
-      const ya = new Set(((existentes ?? []) as any[]).map((m) => clave(`${m.nombre} ${m.apellido ?? ''}`)));
-      const nuevos = new Set<string>();
+      // Lo que ya hay en la app, para avisar los choques
+      const fechasPlanilla = planilla.meses.flatMap((m) => m.semanas.filter(Boolean).map((s) => s!.fecha)).sort();
+      const desde = new Date(`${fechasPlanilla[0]}T12:00:00`);
+      desde.setDate(desde.getDate() - 7);
+      const hasta = new Date(`${fechasPlanilla[fechasPlanilla.length - 1]}T12:00:00`);
+      hasta.setDate(hasta.getDate() + 7);
+      const iso = (d: Date) => d.toISOString().slice(0, 10);
+      const [ex, reu] = await Promise.all([
+        supabase.from('miembros_grupo').select('id, nombre, apellido').eq('grupo_id', grupoId),
+        supabase.from('reuniones').select('id, fecha').eq('grupo_id', grupoId).gte('fecha', iso(desde)).lte('fecha', iso(hasta)),
+      ]);
+      const existentes = ((ex.data ?? []) as any[]).map((m) => ({ id: m.id as string, nombre: `${m.nombre} ${m.apellido ?? ''}`.trim() }));
+      const enApp = ((reu.data ?? []) as { id: string; fecha: string }[]);
+      const setPlanilla = new Set(fechasPlanilla);
+      const setApp = new Set(enApp.map((r) => r.fecha));
+
+      // Reuniones: misma fecha = se actualiza; fecha parecida (±3 días) = posible choque
+      const actualizan = fechasPlanilla.filter((f) => setApp.has(f)).length;
+      const choques: ChoqueFecha[] = [];
+      const usadas = new Set<string>();
+      fechasPlanilla
+        .filter((f) => !setApp.has(f))
+        .forEach((f) => {
+          const cerca = enApp.find(
+            (r) => !setPlanilla.has(r.fecha) && !usadas.has(r.id) &&
+              Math.abs(new Date(`${r.fecha}T12:00:00`).getTime() - new Date(`${f}T12:00:00`).getTime()) <= 3 * 86400000
+          );
+          if (cerca) {
+            usadas.add(cerca.id);
+            choques.push({ planilla: f, app: cerca.fecha, appId: cerca.id, unir: true });
+          }
+        });
+
+      // Hermanos: igual nombre, parecido (a elegir) o nuevo
+      const exacto = new Set(existentes.map((m) => clave(m.nombre)));
+      const nombresPlanilla = new Map<string, string>();
       let reuniones = 0;
       let asistencias = 0;
       planilla.meses.forEach((m) => {
@@ -137,14 +188,39 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         m.miembros.forEach((h) => {
           const n = h.valores.filter(Boolean).length;
           asistencias += n;
-          if (n > 0 && !ya.has(clave(h.nombre))) nuevos.add(h.nombre);
+          if (n > 0) nombresPlanilla.set(clave(h.nombre), h.nombre);
         });
       });
+      let coinciden = 0;
+      const nuevos: string[] = [];
+      const dudosos: NombreDudoso[] = [];
+      for (const nombre of nombresPlanilla.values()) {
+        if (exacto.has(clave(nombre))) {
+          coinciden++;
+          continue;
+        }
+        const cand = candidatosParecidos(nombre, existentes);
+        if (cand.length) {
+          dudosos.push({
+            planilla: nombre,
+            candidatos: cand.map((c) => ({ id: c.id, nombre: c.nombre })),
+            eleccion: cand[0].puntaje >= 0.75 ? cand[0].id : 'nuevo',
+          });
+        } else {
+          nuevos.push(nombre);
+        }
+      }
+
       setResumen({
         meses: planilla.meses.map((m) => `${MESES[m.mes]} ${m.anio}`),
         reuniones,
         asistencias,
-        nuevos: [...nuevos],
+        actualizan,
+        nuevasFechas: reuniones - actualizan - choques.length,
+        choques,
+        coinciden,
+        nuevos,
+        dudosos,
         planilla,
       });
     } catch (e) {
@@ -153,12 +229,23 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
     setTrabajando(false);
   };
 
+  const cambiarChoque = (i: number, unir: boolean) =>
+    setResumen((r) => (r ? { ...r, choques: r.choques.map((c, k) => (k === i ? { ...c, unir } : c)) } : r));
+  const cambiarDudoso = (i: number, eleccion: string) =>
+    setResumen((r) => (r ? { ...r, dudosos: r.dudosos.map((d, k) => (k === i ? { ...d, eleccion } : d)) } : r));
+
   // ---------------- Importar: cargar en la base ----------------
   const importar = async () => {
     if (!resumen) return;
     setTrabajando(true);
     try {
       const { planilla } = resumen;
+
+      // 0. Reuniones que son la misma con otra fecha: pasan a la fecha de la planilla
+      for (const c of resumen.choques.filter((x) => x.unir)) {
+        const { error } = await supabase.from('reuniones').update({ fecha: c.planilla }).eq('id', c.appId);
+        if (error) throw new Error(`Al unir la reunión del ${c.app}: ${error.message}`);
+      }
 
       // 1. Hermanos: los que no existen se crean, con la fecha de su primera reunión
       const { data: existentes } = await supabase.from('miembros_grupo').select('id, nombre, apellido, rol_equipo').eq('grupo_id', grupoId);
@@ -177,6 +264,11 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       );
       const nombreOriginal = new Map<string, string>();
       planilla.meses.forEach((m) => m.miembros.forEach((h) => nombreOriginal.set(clave(h.nombre), h.nombre)));
+      // Los nombres parecidos que se eligieron como "el mismo hermano"
+      const porId = new Map(((existentes ?? []) as any[]).map((m) => [m.id, m]));
+      resumen.dudosos.forEach((d) => {
+        if (d.eleccion !== 'nuevo' && porId.has(d.eleccion)) porNombre.set(clave(d.planilla), porId.get(d.eleccion));
+      });
       const aCrear = [...primeraFecha.keys()].filter((k) => !porNombre.has(k));
       if (aCrear.length) {
         const filas = aCrear.map((k) => {
@@ -268,12 +360,48 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         {resumen ? (
           <>
             <Text style={s.textoFila}>{resumen.meses.length} meses: {resumen.meses.join(', ')}</Text>
-            <Text style={[s.textoFila, { marginTop: 8 }]}>{resumen.reuniones} reuniones · {resumen.asistencias} asistencias</Text>
-            <Text style={[s.textoFila, { marginTop: 8 }]}>
-              {resumen.nuevos.length ? `${resumen.nuevos.length} hermanos nuevos: ${resumen.nuevos.slice(0, 12).join(', ')}${resumen.nuevos.length > 12 ? '…' : ''}` : 'No hay hermanos nuevos'}
+            <Text style={[s.textoFilaSec, { marginTop: 4 }]}>{resumen.reuniones} reuniones · {resumen.asistencias} asistencias</Text>
+
+            <Text style={[s.textoFila, { marginTop: 14, fontWeight: '700' }]}>Reuniones</Text>
+            <Text style={s.textoFilaSec}>
+              {resumen.actualizan ? `${resumen.actualizan} ya estaban en la app y se actualizan con la planilla. ` : ''}
+              {resumen.nuevasFechas > 0 ? `${resumen.nuevasFechas} se agregan. ` : ''}
+              {resumen.actualizan ? 'En esas reuniones, el P/A y la C de la planilla reemplazan lo cargado en la app.' : ''}
             </Text>
-            <Text style={[s.textoFilaSec, { marginTop: 10, marginBottom: 14 }]}>
-              Las reuniones que ya estaban en la app se actualizan con lo de la planilla. Los "G" quedan como guías y los "A", "C1" y "C2" como equipo.
+            {resumen.choques.map((c, i) => (
+              <View key={c.appId} style={{ backgroundColor: colors.warningBg, borderRadius: 10, padding: 10, marginTop: 8 }}>
+                <Text style={{ color: colors.text, fontSize: 13 }}>
+                  En la app hay una reunión el <Text style={{ fontWeight: '700' }}>{formatoFecha(c.app)}</Text> y en la planilla el{' '}
+                  <Text style={{ fontWeight: '700' }}>{formatoFecha(c.planilla)}</Text>.
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 }}>
+                  <Chip texto="Es la misma reunión" activo={c.unir} onPress={() => cambiarChoque(i, true)} />
+                  <Chip texto="Son distintas" activo={!c.unir} onPress={() => cambiarChoque(i, false)} />
+                </View>
+              </View>
+            ))}
+
+            <Text style={[s.textoFila, { marginTop: 14, fontWeight: '700' }]}>Hermanos</Text>
+            <Text style={s.textoFilaSec}>
+              {resumen.coinciden} coinciden con la app
+              {resumen.nuevos.length ? ` · ${resumen.nuevos.length} nuevos: ${resumen.nuevos.slice(0, 10).join(', ')}${resumen.nuevos.length > 10 ? '…' : ''}` : ''}
+            </Text>
+            {resumen.dudosos.map((d, i) => (
+              <View key={d.planilla} style={{ backgroundColor: colors.cardAlt, borderRadius: 10, padding: 10, marginTop: 8 }}>
+                <Text style={{ color: colors.text, fontSize: 13 }}>
+                  En la planilla dice <Text style={{ fontWeight: '700' }}>"{d.planilla}"</Text>. ¿Es…?
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 }}>
+                  {d.candidatos.map((c) => (
+                    <Chip key={c.id} texto={c.nombre} activo={d.eleccion === c.id} onPress={() => cambiarDudoso(i, c.id)} />
+                  ))}
+                  <Chip texto="Es un hermano nuevo" activo={d.eleccion === 'nuevo'} onPress={() => cambiarDudoso(i, 'nuevo')} />
+                </View>
+              </View>
+            ))}
+
+            <Text style={[s.textoFilaSec, { marginTop: 14, marginBottom: 14 }]}>
+              Los "G" quedan como guías y los "A", "C1" y "C2" como equipo. Lo que no está en la planilla no se toca.
             </Text>
             <Boton titulo="Importar" icono="checkmark" onPress={importar} cargando={trabajando} />
           </>
