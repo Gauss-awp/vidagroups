@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colorPorcentaje, colors } from '@/lib/theme';
@@ -40,7 +39,6 @@ const abrirWhatsApp = (tel: string, texto: string) => {
 
 /** Una tarjeta por Guía Supervisor: para que el pastor vea a qué supervisor acompañar. */
 export function SupervisoresPastoral({ refreshKey = 0 }: { refreshKey?: number }) {
-  const router = useRouter();
   const [lista, setLista] = useState<Supervisor[]>([]);
   const [abierto, setAbierto] = useState<string | null>(null);
 
@@ -108,18 +106,14 @@ export function SupervisoresPastoral({ refreshKey = 0 }: { refreshKey?: number }
               )}
 
               <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', marginTop: 10 }}>
-                {estaAbierto ? 'Ocultar grupos' : 'Ver sus grupos'}
+                {estaAbierto ? 'Ocultar grupos' : 'Ver cómo vienen sus grupos'}
               </Text>
             </Pressable>
 
             {estaAbierto ? (
               <View style={{ marginTop: 6 }}>
                 {sp.lista_grupos.map((g) => (
-                  <Pressable
-                    key={g.id}
-                    onPress={() => router.push({ pathname: '/grupo/[id]', params: { id: g.id } })}
-                    style={s.filaLista}
-                  >
+                  <View key={g.id} style={s.filaLista}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.textoFila}>{g.nombre}</Text>
                       <Text style={s.textoFilaSec}>
@@ -132,7 +126,7 @@ export function SupervisoresPastoral({ refreshKey = 0 }: { refreshKey?: number }
                     <Text style={{ fontWeight: '800', color: g.asistencia === null ? colors.textTer : colorPorcentaje(g.asistencia) }}>
                       {g.asistencia === null ? '—' : `${g.asistencia}%`}
                     </Text>
-                  </Pressable>
+                  </View>
                 ))}
                 {sp.telefono ? (
                   <Pressable

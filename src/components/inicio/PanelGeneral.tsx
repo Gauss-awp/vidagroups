@@ -160,7 +160,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
                 color={colors.warning}
                 texto={`${g.nombre} no registra reunión ${g.ultima ? `desde el ${formatoFecha(g.ultima)}` : 'nunca'}`}
                 detalle={g.guia ? `Guía: ${g.guia}` : undefined}
-                onPress={() => router.push({ pathname: '/grupo/[id]', params: { id: g.id } })}
               />
             ))}
 
@@ -171,7 +170,6 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
                 color={colors.danger}
                 texto={`${g.nombre}: la asistencia bajó de ${g.anterior}% a ${g.actual}%`}
                 detalle="Últimos 30 días contra los 30 anteriores"
-                onPress={() => router.push({ pathname: '/grupo/[id]', params: { id: g.id } })}
               />
             ))}
 
@@ -320,17 +318,17 @@ function ItemAtencion({
   color: string;
   texto: string;
   detalle?: string;
-  onPress: () => void;
+  onPress?: () => void;
   abierto?: boolean;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.filaLista, pressed && { opacity: 0.6 }]}>
+    <Pressable disabled={!onPress} onPress={onPress} style={({ pressed }) => [s.filaLista, pressed && onPress ? { opacity: 0.6 } : null]}>
       <Ionicons name={icono} size={22} color={color} style={{ marginRight: 10 }} />
       <View style={{ flex: 1 }}>
         <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{texto}</Text>
         {detalle ? <Text style={s.textoFilaSec}>{detalle}</Text> : null}
       </View>
-      <Ionicons name={abierto ? 'chevron-up' : 'chevron-forward'} size={18} color={colors.textTer} />
+      {onPress ? <Ionicons name={abierto ? 'chevron-up' : 'chevron-forward'} size={18} color={colors.textTer} /> : null}
     </Pressable>
   );
 }
