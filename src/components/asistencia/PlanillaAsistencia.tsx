@@ -77,7 +77,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
 
       const ids = miembrosRaw.map((m) => m.id);
       const { data: contactos } = ids.length
-        ? await supabase.from('seguimientos_faltas').select('miembro_id, creado_en, nota').in('miembro_id', ids).gte('creado_en', `${anio}-01-01`)
+        ? await supabase.from('seguimientos_faltas').select('miembro_id, creado_en, nota').in('miembro_id', ids).eq('tipo', 'contacto').gte('creado_en', `${anio}-01-01`)
         : { data: [] };
 
       const { data: segundos } = await supabase.from('grupo_supervisores').select('perfil_id').eq('grupo_id', grupoId);

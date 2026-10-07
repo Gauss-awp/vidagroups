@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { formatoFecha } from '@/lib/utils';
 import { Boton, Campo, Card, HojaModal } from '@/components/ui';
+import { Deslizable } from '@/components/Deslizable';
 
 interface Alerta {
   miembro_id: string;
@@ -20,6 +21,7 @@ interface Alerta {
   contactado_por: string | null;
   contactado_en: string | null;
   nota: string | null;
+  descartada: boolean;
 }
 
 /**
@@ -43,6 +45,8 @@ export function AlertasFaltas({
   const [contactando, setContactando] = useState<Alerta | null>(null);
   const [nota, setNota] = useState('');
   const [guardando, setGuardando] = useState(false);
+  // Última alerta descartada, para poder deshacer
+  const [deshacer, setDeshacer] = useState<{ id: string; nombre: string } | null>(null);
 
   const cargar = useCallback(async () => {
     const { data, error } = await supabase.rpc('miembros_en_alerta', { p_minimo: minimo, p_incluir_contactados: true });
@@ -58,7 +62,31 @@ export function AlertasFaltas({
   }, [cargar, refreshKey]);
 
   const pendientes = alertas.filter((a) => !a.contactado);
-  const contactados = alertas.filter((a) => a.contactado);
+
+  // Ocultar la alerta sin anotar contacto: vuelve sola si falta a otra reunión
+  const descartar = async (a: Alerta) => {
+    setAlertas((prev) => prev.map((x) => (x.miembro_id === a.miembro_id ? { ...x, contactado: true, descartada: true } : x)));
+    const { data: usuario } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('seguimientos_faltas')
+      .insert({ miembro_id: a.miembro_id, faltas: a.faltas, tipo: 'descartada', contactado_por: usuario.user?.id })
+      .select('id')
+      .single();
+    if (error) {
+      Alert.alert('No se pudo ocultar', error.message);
+      cargar();
+      return;
+    }
+    setDeshacer({ id: data.id, nombre: `${a.nombre} ${a.apellido ?? ''}`.trim() });
+  };
+
+  const deshacerDescarte = async () => {
+    if (!deshacer) return;
+    await supabase.from('seguimientos_faltas').delete().eq('id', deshacer.id);
+    setDeshacer(null);
+    cargar();
+  };
+  const contactados = alertas.filter((a) => a.contactado && !a.descartada);
 
   const registrarContacto = async () => {
     if (!contactando) return;
@@ -80,7 +108,8 @@ export function AlertasFaltas({
     cargar();
   };
 
-  if (alertas.length === 0) return null;
+  // Si no queda ninguna alerta pendiente, la tarjeta se va de la pantalla
+  if (pendientes.length === 0 && !deshacer) return null;
 
   const llamar = (tel: string) => Linking.openURL(`tel:${tel.replace(/[^0-9+]/g, '')}`);
   const whatsapp = (tel: string) => {
@@ -95,7 +124,7 @@ export function AlertasFaltas({
       <Pressable onPress={() => setAbierto(!abierto)} style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Ionicons name="alert-circle" size={22} color={colors.danger} style={{ marginRight: 8 }} />
         <Text style={{ flex: 1, fontWeight: '800', fontSize: 15, color: colors.text }}>
-          {pendientes.length ? `Miembros que necesitan atención (${pendientes.length})` : 'Faltas: todos contactados'}
+          {pendientes.length ? `Miembros que necesitan atención (${pendientes.length})` : 'Alertas ocultas'}
         </Text>
         <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSec} />
       </Pressable>
@@ -104,7 +133,8 @@ export function AlertasFaltas({
         ? pendientes.map((a) => {
             const rojo = a.faltas >= 3;
             return (
-              <View key={a.miembro_id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.dangerBorde, marginTop: 8 }}>
+              <Deslizable key={a.miembro_id} onDescartar={() => descartar(a)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.dangerBorde, marginTop: 8, backgroundColor: colors.dangerBg }}>
                 <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: rojo ? colors.danger : colors.warning, marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: '700', color: colors.text }}>{`${a.nombre} ${a.apellido ?? ''}`.trim()}</Text>
@@ -133,10 +163,29 @@ export function AlertasFaltas({
                     </Pressable>
                   </View>
                 ) : null}
+                <Pressable onPress={() => descartar(a)} hitSlop={8} style={{ padding: 6 }} accessibilityLabel="Ocultar esta alerta">
+                  <Ionicons name="close" size={20} color={colors.textSec} />
+                </Pressable>
               </View>
+              </Deslizable>
             );
           })
         : null}
+
+      {deshacer ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+          <Text style={{ color: colors.textSec, fontSize: 13, flex: 1 }}>Se ocultó la alerta de {deshacer.nombre}.</Text>
+          <Pressable onPress={deshacerDescarte} hitSlop={8}>
+            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Deshacer</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {abierto && pendientes.length > 0 ? (
+        <Text style={{ color: colors.textSec, fontSize: 11, marginTop: 8 }}>
+          Deslizá una alerta hacia la izquierda o tocá ✕ para ocultarla. Vuelve sola si falta a otra reunión.
+        </Text>
+      ) : null}
 
       {abierto && contactados.length > 0 ? (
         <Pressable onPress={() => setVerContactados(!verContactados)} style={{ marginTop: 10, paddingVertical: 4 }}>
