@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -6,6 +6,7 @@ import { colors } from '@/lib/theme';
 import { formatoFecha, hoyISO } from '@/lib/utils';
 import { Boton, Campo, Card, Cargando, HojaModal, SelectorFecha, Vacio, s } from '@/components/ui';
 import { PlanillaAsistencia } from './PlanillaAsistencia';
+import { encolar, esErrorDeRed, escucharPendientes, guardarCache, leerCache, pendientesDe, sincronizar } from '@/lib/sinConexion';
 
 interface MiembroLite {
   id: string;
@@ -28,6 +29,59 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
   // Datos de la reunión para la planilla
   const [datos, setDatos] = useState({ notas: '', ofrenda: '', material: '', compartio: '' });
   const [guardandoDatos, setGuardandoDatos] = useState(false);
+  // Sin señal: lo que se marca queda en el celular y se envía después
+  const [sinRed, setSinRed] = useState(false);
+  const [pendientes, setPendientes] = useState(0);
+
+  // Aplica encima los cambios hechos sin señal que todavía no se enviaron
+  const aplicarPendientes = async (
+    base: Record<string, boolean>,
+    baseConsol: Record<string, { consolidado: boolean; motivo: string | null }>
+  ) => {
+    const pend = await pendientesDe(grupoId, fecha);
+    const p = { ...base };
+    const c = { ...baseConsol };
+    let datosPend: Record<string, unknown> | null = null;
+    pend.forEach((x) => {
+      if (x.tipo === 'asistencia') {
+        p[x.miembro_id] = x.presente;
+        if (x.consolidado !== undefined) c[x.miembro_id] = { consolidado: x.consolidado, motivo: x.motivo ?? null };
+      } else {
+        datosPend = { ...(datosPend ?? {}), ...x.datos };
+      }
+    });
+    return { p, c, datosPend: datosPend as Record<string, unknown> | null, hay: pend.length > 0 };
+  };
+
+  const cargarSinRed = async () => {
+    setSinRed(true);
+    const copia = await leerCache<{ miembros: MiembroLite[]; ultimas: { fecha: string; presentes: number }[] }>(`asis:${grupoId}`);
+    const delDia = await leerCache<{
+      reunionId: string | null;
+      presentes: Record<string, boolean>;
+      consol: Record<string, { consolidado: boolean; motivo: string | null }>;
+      datos: typeof datos;
+    }>(`asis:${grupoId}:${fecha}`);
+    setMiembros(copia?.miembros ?? []);
+    setUltimas(copia?.ultimas ?? []);
+    const { p, c, datosPend, hay } = await aplicarPendientes(delDia?.presentes ?? {}, delDia?.consol ?? {});
+    setPresentes(p);
+    setConsol(c);
+    setReunionId(delDia?.reunionId ?? (hay ? 'local' : null));
+    const d = delDia?.datos ?? { notas: '', ofrenda: '', material: '', compartio: '' };
+    if (datosPend) {
+      const dp = datosPend as any;
+      setDatos({
+        notas: dp.notas ?? d.notas,
+        ofrenda: dp.ofrenda !== undefined && dp.ofrenda !== null ? String(dp.ofrenda) : d.ofrenda,
+        material: dp.material ?? d.material,
+        compartio: dp.compartio ?? d.compartio,
+      });
+    } else {
+      setDatos(d);
+    }
+    setCargando(false);
+  };
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -36,7 +90,12 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       supabase.from('reuniones').select('id, notas, ofrenda, material, compartio').eq('grupo_id', grupoId).eq('fecha', fecha).maybeSingle(),
       supabase.from('reuniones').select('fecha, asistencias(presente)').eq('grupo_id', grupoId).order('fecha', { ascending: false }).limit(6),
     ]);
+    if (m.error && esErrorDeRed(m.error)) {
+      await cargarSinRed();
+      return;
+    }
     if (m.error) Alert.alert('Error', m.error.message);
+    setSinRed(false);
     setMiembros((m.data ?? []) as MiembroLite[]);
     const id = (r.data?.id as string | undefined) ?? null;
     setReunionId(id);
@@ -55,20 +114,41 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
         mapa[a.miembro_id] = a.presente;
         mapaConsol[a.miembro_id] = { consolidado: a.consolidado, motivo: a.motivo };
       });
-      setPresentes(mapa);
-      setConsol(mapaConsol);
+      const { p, c } = await aplicarPendientes(mapa, mapaConsol);
+      setPresentes(p);
+      setConsol(c);
     } else {
-      setPresentes({});
-      setConsol({});
+      const { p, c, hay } = await aplicarPendientes({}, {});
+      setPresentes(p);
+      setConsol(c);
+      if (hay) setReunionId('local');
     }
-    setUltimas(
-      (hist.data ?? []).map((x: { fecha: string; asistencias: { presente: boolean }[] | null }) => ({
-        fecha: x.fecha,
-        presentes: (x.asistencias ?? []).filter((a) => a.presente).length,
-      }))
-    );
+    const ult = (hist.data ?? []).map((x: { fecha: string; asistencias: { presente: boolean }[] | null }) => ({
+      fecha: x.fecha,
+      presentes: (x.asistencias ?? []).filter((a) => a.presente).length,
+    }));
+    setUltimas(ult);
+    guardarCache(`asis:${grupoId}`, { miembros: m.data ?? [], ultimas: ult });
     setCargando(false);
   }, [grupoId, fecha]);
+
+  // Copia del día en el celular, con lo pendiente aplicado encima
+  useEffect(() => {
+    if (cargando || sinRed) return;
+    guardarCache(`asis:${grupoId}:${fecha}`, { reunionId, presentes, consol, datos });
+  }, [cargando, sinRed, grupoId, fecha, reunionId, presentes, consol, datos]);
+
+  // Cantidad de cambios esperando enviarse; cuando llegan a cero, se recarga
+  const pendientesAntes = useRef(0);
+  useEffect(
+    () =>
+      escucharPendientes((n) => {
+        if (pendientesAntes.current > 0 && n === 0) cargar();
+        pendientesAntes.current = n;
+        setPendientes(n);
+      }),
+    [cargar]
+  );
 
   useEffect(() => {
     cargar();
@@ -76,6 +156,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
 
   // Crea la reunión del día la primera vez que se marca algo
   const asegurarReunion = async (): Promise<string | null> => {
+    if (sinRed || reunionId === 'local') return 'sin-red';
     if (reunionId) return reunionId;
     const { data, error } = await supabase
       .from('reuniones')
@@ -83,11 +164,21 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       .select('id')
       .single();
     if (error) {
+      if (esErrorDeRed(error)) {
+        setSinRed(true);
+        return 'sin-red';
+      }
       Alert.alert('No se pudo crear la reunión', error.message);
       return null;
     }
     setReunionId(data.id);
     return data.id as string;
+  };
+
+  const guardarEnCelular = async (cambios: { miembro_id: string; presente: boolean; consolidado?: boolean; motivo?: string | null }[]) => {
+    setSinRed(true);
+    if (!reunionId) setReunionId('local');
+    for (const c of cambios) await encolar({ tipo: 'asistencia', grupo_id: grupoId, fecha, ...c });
   };
 
   const guardar = async (cambios: { miembro_id: string; presente: boolean }[]) => {
@@ -98,10 +189,16 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       cambios.forEach((c) => (nuevo[c.miembro_id] = c.presente));
       return nuevo;
     });
+    if (id === 'sin-red') {
+      await guardarEnCelular(cambios);
+      return;
+    }
     const { error } = await supabase
       .from('asistencias')
       .upsert(cambios.map((c) => ({ reunion_id: id, ...c })), { onConflict: 'reunion_id,miembro_id' });
-    if (error) {
+    if (error && esErrorDeRed(error)) {
+      await guardarEnCelular(cambios);
+    } else if (error) {
       Alert.alert('No se pudo guardar', error.message);
       cargar();
     }
@@ -112,10 +209,15 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
     const id = await asegurarReunion();
     if (!id) return;
     const valor = { consolidado: !quitar, motivo: quitar ? null : motivo.trim() || null };
-    const { error } = await supabase
-      .from('asistencias')
-      .upsert({ reunion_id: id, miembro_id: consolidando.id, presente: false, ...valor }, { onConflict: 'reunion_id,miembro_id' });
-    if (error) {
+    let error: { message: string } | null = null;
+    if (id !== 'sin-red') {
+      ({ error } = await supabase
+        .from('asistencias')
+        .upsert({ reunion_id: id, miembro_id: consolidando.id, presente: false, ...valor }, { onConflict: 'reunion_id,miembro_id' }));
+    }
+    if (id === 'sin-red' || (error && esErrorDeRed(error))) {
+      await guardarEnCelular([{ miembro_id: consolidando.id, presente: false, ...valor }]);
+    } else if (error) {
       Alert.alert('No se pudo guardar', error.message);
       return;
     }
@@ -131,23 +233,31 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       Alert.alert('Ofrenda inválida', 'Escribí solo el número, por ejemplo 12000.');
       return;
     }
+    const cambios = {
+      notas: datos.notas.trim() || null,
+      ofrenda,
+      material: datos.material.trim() || null,
+      compartio: datos.compartio.trim() || null,
+    };
     setGuardandoDatos(true);
-    const { error } = await supabase
-      .from('reuniones')
-      .update({
-        notas: datos.notas.trim() || null,
-        ofrenda,
-        material: datos.material.trim() || null,
-        compartio: datos.compartio.trim() || null,
-      })
-      .eq('id', id);
+    let error: { message: string } | null = null;
+    if (id !== 'sin-red') ({ error } = await supabase.from('reuniones').update(cambios).eq('id', id));
     setGuardandoDatos(false);
-    if (error) Alert.alert('No se pudo guardar', error.message);
+    if (id === 'sin-red' || (error && esErrorDeRed(error))) {
+      setSinRed(true);
+      if (!reunionId) setReunionId('local');
+      await encolar({ tipo: 'datos_reunion', grupo_id: grupoId, fecha, datos: cambios });
+      Alert.alert('Guardado en el celular', 'No hay señal. Los datos se envían solos cuando vuelva la conexión.');
+    } else if (error) Alert.alert('No se pudo guardar', error.message);
     else Alert.alert('Listo', 'Datos de la reunión guardados.');
   };
 
   const borrarReunion = () => {
     if (!reunionId) return;
+    if (sinRed || reunionId === 'local') {
+      Alert.alert('Sin conexión', 'Para borrar una reunión necesitás señal. Probá de nuevo cuando vuelva la conexión.');
+      return;
+    }
     Alert.alert('Borrar reunión', `¿Borrar la reunión del ${formatoFecha(fecha)}? Se pierde la asistencia de ese día.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -169,6 +279,29 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
 
   return (
     <View>
+      {sinRed || pendientes > 0 ? (
+        <Card style={{ backgroundColor: colors.warningBg, borderWidth: 1, borderColor: colors.warning }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name={sinRed ? 'cloud-offline-outline' : 'cloud-upload-outline'} size={20} color={colors.warning} style={{ marginRight: 8 }} />
+            <Text style={{ color: colors.text, fontSize: 13, flex: 1, lineHeight: 18 }}>
+              {sinRed
+                ? 'Sin señal: lo que marques se guarda en el celular y se envía solo cuando vuelva la conexión.'
+                : 'Hay cambios guardados en el celular esperando enviarse.'}
+              {pendientes > 0 ? ` (${pendientes} pendientes)` : ''}
+            </Text>
+          </View>
+          <Pressable
+            onPress={async () => {
+              await sincronizar();
+              cargar();
+            }}
+            style={{ marginTop: 8 }}
+          >
+            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Reintentar ahora</Text>
+          </Pressable>
+        </Card>
+      ) : null}
+
       <SelectorFecha valor={fecha} onChange={setFecha} />
 
       {miembros.length === 0 ? (

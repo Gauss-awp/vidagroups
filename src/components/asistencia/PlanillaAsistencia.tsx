@@ -76,6 +76,14 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         ultimas.every((r) => r.fecha >= desde.slice(0, 10) && !(r.asistencias ?? []).some((a) => a.miembro_id === id && a.presente));
 
       const ids = miembrosRaw.map((m) => m.id);
+      const { data: historialRoles } = ids.length
+        ? await supabase.from('miembros_rol_historial').select('miembro_id, rol, desde').in('miembro_id', ids).order('desde')
+        : { data: [] };
+      const rolesDe = (id: string) =>
+        ((historialRoles ?? []) as { miembro_id: string; rol: RolEquipo; desde: string }[])
+          .filter((h) => h.miembro_id === id)
+          .map((h) => ({ rol: h.rol, desde: h.desde }));
+
       const { data: contactos } = ids.length
         ? await supabase.from('seguimientos_faltas').select('miembro_id, creado_en, nota').in('miembro_id', ids).eq('tipo', 'contacto').gte('creado_en', `${anio}-01-01`)
         : { data: [] };
@@ -99,6 +107,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
           rol_equipo: m.rol_equipo,
           desde: m.creado_en.slice(0, 10),
           alejado: alejado(m.id, m.creado_en),
+          roles: rolesDe(m.id),
         })),
         ((re.data ?? []) as any[]).map((r) => ({ ...r, asistencias: r.asistencias ?? [] })),
         ((contactos ?? []) as any[]).map((c) => ({ miembro_id: c.miembro_id, fecha: String(c.creado_en).slice(0, 10), nota: c.nota }))
@@ -252,10 +261,14 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       const porNombre = new Map(((existentes ?? []) as any[]).map((m) => [clave(`${m.nombre} ${m.apellido ?? ''}`), m]));
       const primeraFecha = new Map<string, string>();
       const rolDe = new Map<string, RolEquipo>();
+      const rolDesde = new Map<string, string>();
       planilla.meses.forEach((m) =>
         m.miembros.forEach((h) => {
           const k = clave(h.nombre);
           if (h.rol && !rolDe.get(k)) rolDe.set(k, h.rol);
+          // Primer mes en que aparece como G o equipo
+          const inicioMes = `${m.anio}-${String(m.mes + 1).padStart(2, '0')}-01`;
+          if (h.rol && (!rolDesde.has(k) || inicioMes < rolDesde.get(k)!)) rolDesde.set(k, inicioMes);
           h.valores.forEach((v, i) => {
             const f = m.semanas[i]?.fecha;
             if (v && f && (!primeraFecha.has(k) || f < primeraFecha.get(k)!)) primeraFecha.set(k, f);
@@ -286,9 +299,21 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         (creados ?? []).forEach((m: any) => porNombre.set(clave(`${m.nombre} ${m.apellido ?? ''}`), m));
       }
       // Rol de los que ya estaban, si no tenían
+      const conRolNuevo: string[] = [];
       for (const [k, rol] of rolDe) {
         const m = porNombre.get(k);
-        if (m && !m.rol_equipo && rol) await supabase.from('miembros_grupo').update({ rol_equipo: rol }).eq('id', m.id);
+        if (m && !m.rol_equipo && rol) {
+          await supabase.from('miembros_grupo').update({ rol_equipo: rol }).eq('id', m.id);
+          conRolNuevo.push(k);
+        }
+      }
+      // El rol cuenta desde el primer mes de la planilla en que figura como G o equipo
+      for (const k of [...conRolNuevo, ...aCrear.filter((x) => rolDe.get(x))]) {
+        const m = porNombre.get(k);
+        const desde = rolDesde.get(k);
+        if (m && desde) {
+          await supabase.from('miembros_rol_historial').update({ desde: `${desde}T12:00:00` }).eq('miembro_id', m.id).gt('desde', `${desde}T12:00:00`);
+        }
       }
 
       // 2. Reuniones y asistencia

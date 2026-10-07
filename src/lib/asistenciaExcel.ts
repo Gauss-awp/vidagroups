@@ -29,6 +29,15 @@ export interface MiembroPlanilla {
   rol_equipo: RolEquipo;
   desde: string; // fecha en que se sumó (YYYY-MM-DD)
   alejado: boolean;
+  /** Cambios de rol con su fecha; si no hay, se usa rol_equipo para todos los meses */
+  roles?: { rol: RolEquipo; desde: string }[];
+}
+
+/** El rol que tenía el hermano a fin de un mes (según el historial) */
+export function rolEnFecha(m: MiembroPlanilla, fecha: string): RolEquipo {
+  if (!m.roles || m.roles.length === 0) return m.rol_equipo;
+  const previos = m.roles.filter((r) => r.desde.slice(0, 10) <= fecha).sort((a, b) => a.desde.localeCompare(b.desde));
+  return previos.length ? previos[previos.length - 1].rol : null;
 }
 export interface ReunionPlanilla {
   id: string;
@@ -78,15 +87,18 @@ export function hojaAsistenciaConFormato(
   };
 
   // Orden de la lista: guías, equipo, miembros, y al final los que hace mucho no van
-  const peso = (m: MiembroPlanilla) => (m.rol_equipo === 'guia' ? 0 : m.rol_equipo === 'equipo' ? 1 : m.alejado ? 3 : 2);
-  const ordenados = miembros.slice().sort((a, b) => peso(a) - peso(b) || a.nombre.localeCompare(b.nombre));
 
   let s = 2;
   for (let mes = 0; mes < 12; mes++) {
     const prefijo = `${anio}-${String(mes + 1).padStart(2, '0')}`;
     const finMes = `${prefijo}-31`;
     const delMes = reuniones.filter((r) => r.fecha.startsWith(prefijo)).sort((a, b) => a.fecha.localeCompare(b.fecha)).slice(0, 5);
-    const lista = ordenados.filter((m) => m.desde <= finMes);
+    // El rol de cada uno en ESTE mes: azul o celeste solo desde que es parte del equipo
+    const conRol = miembros
+      .filter((m) => m.desde <= finMes)
+      .map((m) => ({ ...m, rol_equipo: rolEnFecha(m, finMes) }));
+    const peso = (m: MiembroPlanilla) => (m.rol_equipo === 'guia' ? 0 : m.rol_equipo === 'equipo' ? 1 : m.alejado ? 3 : 2);
+    const lista = conRol.sort((a, b) => peso(a) - peso(b) || a.nombre.localeCompare(b.nombre));
     const filas = Math.max(FILAS_MIEMBROS, lista.length);
 
     // Encabezado del informe

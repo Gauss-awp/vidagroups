@@ -6,6 +6,7 @@ import { Cargando, Chip, Pantalla, TituloGrande } from '@/components/ui';
 import { GrupoDetalle } from '@/components/grupo/GrupoDetalle';
 import { CrearGrupo } from '@/components/grupo/CrearGrupo';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
+import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
 
 export function InicioGuia({ perfil }: { perfil: Perfil }) {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
@@ -14,8 +15,13 @@ export function InicioGuia({ perfil }: { perfil: Perfil }) {
 
   const cargar = useCallback(async () => {
     const { data, error } = await supabase.from('groups').select('*').eq('guia_id', perfil.id).order('creado_en');
-    if (error) Alert.alert('Error', error.message);
-    const lista = (data ?? []) as Grupo[];
+    let lista = (data ?? []) as Grupo[];
+    if (error) {
+      if (esErrorDeRed(error)) lista = (await leerCache<Grupo[]>(`grupos:${perfil.id}`)) ?? [];
+      else Alert.alert('Error', error.message);
+    } else {
+      guardarCache(`grupos:${perfil.id}`, lista);
+    }
     setGrupos(lista);
     setSeleccionado((prev) => (prev && lista.some((g) => g.id === prev) ? prev : lista[0]?.id ?? null));
     setCargando(false);

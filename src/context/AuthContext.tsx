@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
 import type { Perfil, Red } from '@/lib/types';
 
 interface AuthContextValue {
@@ -59,6 +60,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const cargarPerfil = useCallback(async (uid: string) => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
     if (error) {
+      // Sin señal: se usa el perfil guardado la última vez
+      if (esErrorDeRed(error)) {
+        const guardado = await leerCache<{ perfil: Perfil; adm: Red[]; cons: Red[] }>(`perfil:${uid}`);
+        if (guardado) {
+          setRedesAdmin(guardado.adm);
+          setRedesConsolida(guardado.cons);
+          setErrorPerfil(null);
+          setPerfil(guardado.perfil);
+          return;
+        }
+      }
       setPerfil(null);
       setErrorPerfil(error.message);
       return;
@@ -74,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRedesConsolida(cons);
     setErrorPerfil(null);
     setPerfil(p);
+    guardarCache(`perfil:${uid}`, { perfil: p, adm, cons });
   }, []);
 
   useEffect(() => {

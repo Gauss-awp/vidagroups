@@ -4,6 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { TemaProvider, useTema } from '@/context/TemaContext';
 import { colors } from '@/lib/theme';
 import { Actualizaciones } from '@/components/Actualizaciones';
+import { Sincronizador } from '@/components/Sincronizador';
 
 function Navegacion() {
   const { oscuro } = useTema();
@@ -23,6 +24,7 @@ function Navegacion() {
     <ThemeProvider value={tema}>
       <StatusBar style={oscuro ? 'light' : 'dark'} />
       <Actualizaciones />
+      <Sincronizador />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
     </ThemeProvider>
   );

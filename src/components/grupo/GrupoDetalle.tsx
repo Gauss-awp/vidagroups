@@ -17,6 +17,7 @@ import { Notas } from '../notas/Notas';
 import { HistorialLiderazgo } from '../notas/HistorialLiderazgo';
 import { useAuth } from '@/context/AuthContext';
 import { formatoFecha } from '@/lib/utils';
+import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
 
 // Acortamos el label largo para que entre bien
 const TABS = [
@@ -54,6 +55,17 @@ export function GrupoDetalle({
 
   const cargar = useCallback(async () => {
     const { data, error: err } = await supabase.from('groups').select('*').eq('id', grupoId).maybeSingle();
+    if (err && esErrorDeRed(err)) {
+      // Sin señal: el grupo y su guía, como quedaron guardados
+      const guardado = await leerCache<{ grupo: Grupo; guia: Perfil | null }>(`grupo:${grupoId}`);
+      if (guardado) {
+        setError(null);
+        setGrupo(guardado.grupo);
+        setGuia(guardado.guia);
+        onCargadoRef.current?.(guardado.grupo);
+        return;
+      }
+    }
     if (err ||!data) {
       setError(err?.message?? 'No tenés acceso a este grupo o ya no existe.');
       return;
@@ -64,6 +76,7 @@ export function GrupoDetalle({
     onCargadoRef.current?.(g);
     const { data: p } = await supabase.from('profiles').select('*').eq('id', g.guia_id).maybeSingle();
     setGuia((p as Perfil | null)?? null);
+    guardarCache(`grupo:${grupoId}`, { grupo: g, guia: (p as Perfil | null) ?? null });
 
     // Notas: solo guía y Guía Supervisor del grupo
     const { data: permiso } = await supabase.rpc('puede_ver_notas', { p_grupo: g.id });
