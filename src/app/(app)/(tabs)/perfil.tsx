@@ -9,11 +9,26 @@ import type { Perfil } from '@/lib/types';
 import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { ModoTema, useTema } from '@/context/TemaContext';
+import { Switch } from 'react-native';
+import { guardarPreferencias, leerPreferencias, pedirPermiso, reprogramar, type PreferenciasRecordatorios } from '@/lib/recordatorios';
 import { Avatar, Badge, Boton, Campo, Card, Cargando, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
 
 export default function PerfilPantalla() {
   const { perfil, redesAdmin, refrescarPerfil, cerrarSesion } = useAuth();
   const { modo, cambiarModo } = useTema();
+  const [rec, setRec] = useState<PreferenciasRecordatorios>({ asistencia: true, consolidaciones: true });
+  useEffect(() => {
+    leerPreferencias().then(setRec);
+  }, []);
+  const cambiarRec = async (clave: keyof PreferenciasRecordatorios, valor: boolean) => {
+    const nuevo = { ...rec, [clave]: valor };
+    setRec(nuevo);
+    await guardarPreferencias(nuevo);
+    if (valor && !(await pedirPermiso(true))) {
+      Alert.alert('Notificaciones desactivadas', 'Para recibir recordatorios, permití las notificaciones de VidaGroups en los ajustes del celular.');
+    }
+    if (perfil) reprogramar(perfil.id);
+  };
   const [miRed, setMiRed] = useState<string | null>(null);
   const [nombre, setNombre] = useState(perfil?.nombre?? '');
   const [apellido, setApellido] = useState(perfil?.apellido?? '');
@@ -153,6 +168,25 @@ export default function PerfilPantalla() {
           <Text style={[s.textoFila, { marginTop: 4 }]}>
             {superior? `${nombreCompleto(superior)} · ${ROL_LABEL[superior.rol]}` : 'Sin asignar'}
           </Text>
+        </Card>
+
+        <SeccionTitulo titulo="Recordatorios" />
+        <Card>
+          <View style={[s.fila, { justifyContent: 'space-between' }]}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={s.textoFila}>Cargar la reunión</Text>
+              <Text style={s.textoFilaSec}>2 horas después del GV, si todavía no la cargaste.</Text>
+            </View>
+            <Switch value={rec.asistencia} onValueChange={(v) => cambiarRec('asistencia', v)} />
+          </View>
+          <View style={[s.fila, { justifyContent: 'space-between', marginTop: 14 }]}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={s.textoFila}>Consolidaciones pendientes</Text>
+              <Text style={s.textoFilaSec}>El martes a las 19 h, si faltan C de la última reunión.</Text>
+            </View>
+            <Switch value={rec.consolidaciones} onValueChange={(v) => cambiarRec('consolidaciones', v)} />
+          </View>
+          <Text style={[s.textoFilaSec, { marginTop: 12 }]}>Usan el día y la hora de reunión cargados en "Datos del grupo".</Text>
         </Card>
 
         <SeccionTitulo titulo="Apariencia" />

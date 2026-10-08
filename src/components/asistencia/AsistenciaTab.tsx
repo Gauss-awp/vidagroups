@@ -6,6 +6,7 @@ import { colors } from '@/lib/theme';
 import { formatoFecha, hoyISO } from '@/lib/utils';
 import { Boton, Campo, Card, Cargando, HojaModal, SelectorFecha, Vacio, s } from '@/components/ui';
 import { PlanillaAsistencia } from './PlanillaAsistencia';
+import { reprogramarPronto } from '@/lib/recordatorios';
 import { encolar, esErrorDeRed, escucharPendientes, guardarCache, leerCache, pendientesDe, sincronizar } from '@/lib/sinConexion';
 
 interface MiembroLite {
@@ -184,6 +185,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
   const guardar = async (cambios: { miembro_id: string; presente: boolean }[]) => {
     const id = await asegurarReunion();
     if (!id) return;
+    reprogramarPronto();
     setPresentes((prev) => {
       const nuevo = { ...prev };
       cambios.forEach((c) => (nuevo[c.miembro_id] = c.presente));
@@ -222,6 +224,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       return;
     }
     setConsol((prev) => ({ ...prev, [consolidando.id]: valor }));
+    reprogramarPronto();
     setConsolidando(null);
   };
 

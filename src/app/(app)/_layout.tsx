@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/lib/theme';
 import { Boton, Cargando, Pantalla, Vacio } from '@/components/ui';
 import { EsperandoAprobacion } from '@/components/red/EsperandoAprobacion';
+import { Recordatorios } from '@/components/Recordatorios';
 
 export default function AppLayout() {
   const { session, perfil, cargando, errorPerfil, refrescarPerfil, cerrarSesion } = useAuth();
@@ -30,6 +31,8 @@ export default function AppLayout() {
   if (perfil.estado !== 'activo') return <EsperandoAprobacion perfil={perfil} />;
 
   return (
+    <>
+    <Recordatorios perfilId={perfil.id} />
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
@@ -46,6 +49,8 @@ export default function AppLayout() {
       <Stack.Screen name="evento/[id]" options={{ title: 'Evento' }} />
       <Stack.Screen name="reporte" options={{ title: 'Reporte mensual' }} />
       <Stack.Screen name="miembro/[id]" options={{ title: 'Hermano' }} />
+      <Stack.Screen name="reunion/[id]" options={{ title: 'Cargar reunión' }} />
     </Stack>
+    </>
   );
 }

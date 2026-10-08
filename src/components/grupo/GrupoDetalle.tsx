@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import type { Grupo, Perfil } from '@/lib/types';
 import { nombreCompleto } from '@/lib/utils';
-import { Card, Cargando, Vacio, s, HojaModal, Campo, Boton } from '@/components/ui';
+import { Card, Cargando, Vacio, s, HojaModal, Campo, Boton, Chip } from '@/components/ui';
 import { HabitosTab } from './HabitosTab';
 import { EventosTab } from './EventosTab';
 import { MiembrosTab } from './MiembrosTab';
@@ -16,6 +16,8 @@ import { CumplesSemana } from '../asistencia/CumplesSemana';
 import { Notas } from '../notas/Notas';
 import { HistorialLiderazgo } from '../notas/HistorialLiderazgo';
 import { useAuth } from '@/context/AuthContext';
+import { router } from 'expo-router';
+import { reprogramarPronto } from '@/lib/recordatorios';
 import { formatoFecha } from '@/lib/utils';
 import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
 
@@ -49,6 +51,8 @@ export function GrupoDetalle({
   const [editandoDatos, setEditandoDatos] = useState(false);
   const [datosGrupo, setDatosGrupo] = useState({ dia_horario: '', barrio: '', direccion: '', lider_supervisor: '' });
   const [guardandoGrupo, setGuardandoGrupo] = useState(false);
+  const [diaReunion, setDiaReunion] = useState<number | null>(null);
+  const [horaReunion, setHoraReunion] = useState('');
   const [traspaso, setTraspaso] = useState<{ anterior: string; fecha: string } | null>(null);
   const onCargadoRef = useRef(onCargado);
   onCargadoRef.current = onCargado;
@@ -154,6 +158,8 @@ export function GrupoDetalle({
                     direccion: g.direccion ?? '',
                     lider_supervisor: g.lider_supervisor ?? '',
                   });
+                  setDiaReunion(g.dia_reunion ?? null);
+                  setHoraReunion(g.hora_reunion ?? '');
                   setEditandoDatos(true);
                 }}
                 hitSlop={8}
@@ -181,6 +187,13 @@ export function GrupoDetalle({
           </Text>
         </Card>
       ) : null}
+
+      <Boton
+        titulo={(grupo as any).dia_reunion === new Date().getDay() ? 'Hoy es el GV · Cargar la reunión' : 'Cargar una reunión'}
+        icono="checkbox-outline"
+        onPress={() => router.push({ pathname: '/reunion/[id]', params: { id: grupo.id } })}
+        style={{ marginTop: 12 }}
+      />
 
       <View style={{ marginTop: 12 }}>
         <AlertasFaltas grupoId={grupo.id} refreshKey={refreshKey} />
@@ -227,6 +240,13 @@ export function GrupoDetalle({
 
       <HojaModal visible={editandoDatos} onClose={() => setEditandoDatos(false)} titulo="Datos del grupo">
         <Text style={[s.textoFilaSec, { marginBottom: 12 }]}>Aparecen en el encabezado de la planilla mensual de asistencia.</Text>
+        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Día de reunión (para los recordatorios)</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
+          {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d, i) => (
+            <Chip key={d} texto={d} activo={diaReunion === i} onPress={() => setDiaReunion(diaReunion === i ? null : i)} />
+          ))}
+        </View>
+        <Campo etiqueta="Hora de reunión" placeholder="21:00" value={horaReunion} onChangeText={setHoraReunion} keyboardType="numbers-and-punctuation" />
         <Campo etiqueta="Día y horario" placeholder="Viernes 21:00 hs" value={datosGrupo.dia_horario} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, dia_horario: v })} />
         <Campo etiqueta="Barrio" placeholder="Villa del Río" value={datosGrupo.barrio} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, barrio: v })} />
         <Campo etiqueta="Dirección" placeholder="Cruz Palacios 109" value={datosGrupo.direccion} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, direccion: v })} />
@@ -242,7 +262,14 @@ export function GrupoDetalle({
           cargando={guardandoGrupo}
           onPress={async () => {
             setGuardandoGrupo(true);
-            const cambios = Object.fromEntries(Object.entries(datosGrupo).map(([k, v]) => [k, v.trim() || null]));
+            const hora = horaReunion.trim().replace('.', ':');
+            if (hora && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(hora)) {
+              Alert.alert('Hora inválida', 'Escribila como 21:00.');
+              return;
+            }
+            const cambios: Record<string, unknown> = Object.fromEntries(Object.entries(datosGrupo).map(([k, v]) => [k, v.trim() || null]));
+            cambios.dia_reunion = diaReunion;
+            cambios.hora_reunion = hora ? hora.padStart(5, '0') : null;
             const { error } = await supabase.from('groups').update(cambios).eq('id', grupo.id);
             setGuardandoGrupo(false);
             if (error) {
@@ -251,6 +278,7 @@ export function GrupoDetalle({
             }
             setEditandoDatos(false);
             cargar();
+            reprogramarPronto();
           }}
         />
       </HojaModal>
