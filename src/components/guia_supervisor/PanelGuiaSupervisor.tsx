@@ -8,7 +8,6 @@ import type { Moneda, Perfil } from '@/lib/types';
 import { formatoFecha, formatoMoneda, hoyISO, sumarDias } from '@/lib/utils';
 import { BarraProgreso, Boton, Card, Cargando, Pantalla, PasosConsolidacion, SeccionTitulo, TituloGrande, Vacio, s } from '@/components/ui';
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
-import { AlertasFaltas } from '@/components/asistencia/AlertasFaltas';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 
 interface GrupoPanel {
@@ -110,7 +109,6 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
         ) : (
           <>
             {/* ---------- Atención ---------- */}
-            <AlertasFaltas refreshKey={refreshKey} />
 
             {sinReunion.length > 0 || sinEmpezar > 0 ? (
               <Card style={{ paddingVertical: 4 }}>

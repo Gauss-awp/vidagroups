@@ -11,7 +11,6 @@ import { EventosTab } from './EventosTab';
 import { MiembrosTab } from './MiembrosTab';
 import { ConsolidacionGuia } from '../mision_joven/ConsolidacionGuia';
 import { AsistenciaTab } from '../asistencia/AsistenciaTab';
-import { AlertasFaltas } from '../asistencia/AlertasFaltas';
 import { CumplesSemana } from '../asistencia/CumplesSemana';
 import { Notas } from '../notas/Notas';
 import { HistorialLiderazgo } from '../notas/HistorialLiderazgo';
@@ -196,7 +195,6 @@ export function GrupoDetalle({
       />
 
       <View style={{ marginTop: 12 }}>
-        <AlertasFaltas grupoId={grupo.id} refreshKey={refreshKey} />
         <CumplesSemana grupoId={grupo.id} refreshKey={refreshKey} />
       </View>
 
