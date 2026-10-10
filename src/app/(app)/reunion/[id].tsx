@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +33,14 @@ export default function ModoReunion() {
   const [otro, setOtro] = useState<string | null>(null);
   const [datos, setDatos] = useState({ notas: '', ofrenda: '', material: '', compartio: '' });
   const [cargando, setCargando] = useState(true);
+  // Días con reunión cargada, para marcarlos en el calendario
+  const fechasConReunion = useCallback(
+    async (desde: string, hasta: string) => {
+      const { data } = await supabase.from('reuniones').select('fecha').eq('grupo_id', grupoId).gte('fecha', desde).lte('fecha', hasta);
+      return ((data ?? []) as { fecha: string }[]).map((r) => r.fecha);
+    },
+    [grupoId]
+  );
   const [guardando, setGuardando] = useState(false);
   const [sinRed, setSinRed] = useState(false);
 
@@ -174,7 +182,7 @@ export default function ModoReunion() {
         {paso === 1 ? (
           <>
             {encabezado(1, '¿Quién vino?')}
-            <SelectorFecha valor={fecha} onChange={setFecha} />
+            <SelectorFecha valor={fecha} onChange={setFecha} marcarFechas={fechasConReunion} />
             {hermanos.length === 0 ? (
               <Card>
                 <Text style={s.textoFilaSec}>Todavía no hay hermanos en este grupo. Agregalos en la pestaña Miembros.</Text>

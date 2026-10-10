@@ -214,24 +214,162 @@ export function Chip({
   );
 }
 
-export function SelectorFecha({ valor, onChange }: { valor: string; onChange: (iso: string) => void }) {
+const MESES_CAL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const DIAS_CAL = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const isoDe = (a: number, m: number, d: number) => `${a}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+/** Calendario de un mes para elegir un día. Los días con punto tienen algo cargado (por ejemplo, una reunión). */
+function Calendario({
+  valor,
+  onElegir,
+  marcarFechas,
+}: {
+  valor: string;
+  onElegir: (iso: string) => void;
+  marcarFechas?: (desde: string, hasta: string) => Promise<string[]>;
+}) {
+  const [anio, setAnio] = React.useState(Number(valor.slice(0, 4)));
+  const [mes, setMes] = React.useState(Number(valor.slice(5, 7)) - 1);
+  const [marcadas, setMarcadas] = React.useState<Set<string>>(new Set());
+  const hoy = hoyISO();
+
+  React.useEffect(() => {
+    if (!marcarFechas) return;
+    const ultimo = new Date(anio, mes + 1, 0).getDate();
+    marcarFechas(isoDe(anio, mes, 1), isoDe(anio, mes, ultimo))
+      .then((f) => setMarcadas(new Set(f)))
+      .catch(() => setMarcadas(new Set()));
+  }, [anio, mes, marcarFechas]);
+
+  const mover = (n: number) => {
+    const d = new Date(anio, mes + n, 1);
+    setAnio(d.getFullYear());
+    setMes(d.getMonth());
+  };
+
+  // La semana empieza el lunes
+  const primero = (new Date(anio, mes, 1).getDay() + 6) % 7;
+  const dias = new Date(anio, mes + 1, 0).getDate();
+  const celdas: (number | null)[] = [...Array(primero).fill(null), ...Array.from({ length: dias }, (_, i) => i + 1)];
+  while (celdas.length % 7) celdas.push(null);
+
+  return (
+    <View>
+      <View style={[s.fila, { justifyContent: 'space-between', marginBottom: 12 }]}>
+        <Pressable onPress={() => mover(-1)} hitSlop={12} accessibilityLabel="Mes anterior">
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
+        </Pressable>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
+          {MESES_CAL[mes]} {anio}
+        </Text>
+        <Pressable onPress={() => mover(1)} hitSlop={12} accessibilityLabel="Mes siguiente">
+          <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: 'row' }}>
+        {DIAS_CAL.map((d, i) => (
+          <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.textSec, fontSize: 12, fontWeight: '700', marginBottom: 6 }}>
+            {d}
+          </Text>
+        ))}
+      </View>
+      {Array.from({ length: celdas.length / 7 }, (_, fila) => (
+        <View key={fila} style={{ flexDirection: 'row' }}>
+          {celdas.slice(fila * 7, fila * 7 + 7).map((d, i) => {
+            if (!d) return <View key={i} style={{ flex: 1, height: 44 }} />;
+            const f = isoDe(anio, mes, d);
+            const elegido = f === valor;
+            const esHoy = f === hoy;
+            return (
+              <Pressable key={i} onPress={() => onElegir(f)} style={{ flex: 1, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: elegido ? colors.primary : 'transparent',
+                    borderWidth: esHoy && !elegido ? 1.5 : 0,
+                    borderColor: colors.primary,
+                  }}
+                >
+                  <Text style={{ color: elegido ? '#FFFFFF' : colors.text, fontWeight: elegido || esHoy ? '800' : '500' }}>{d}</Text>
+                </View>
+                {marcadas.has(f) ? (
+                  <View style={{ position: 'absolute', bottom: 3, width: 5, height: 5, borderRadius: 3, backgroundColor: elegido ? colors.primary : colors.success }} />
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
+      {marcarFechas ? (
+        <View style={[s.fila, { marginTop: 10 }]}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success, marginRight: 6 }} />
+          <Text style={s.textoFilaSec}>Días con reunión cargada</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+export function SelectorFecha({
+  valor,
+  onChange,
+  marcarFechas,
+}: {
+  valor: string;
+  onChange: (iso: string) => void;
+  /** Opcional: devuelve los días que se marcan con un punto en el calendario */
+  marcarFechas?: (desde: string, hasta: string) => Promise<string[]>;
+}) {
   const hoy = hoyISO();
   const esHoy = valor === hoy;
+  const [abierto, setAbierto] = React.useState(false);
   return (
-    <View style={s.selectorFecha}>
-      <Pressable onPress={() => onChange(sumarDias(valor, -1))} hitSlop={10} style={s.flechaFecha}>
-        <Ionicons name="chevron-back" size={22} color={colors.primary} />
-      </Pressable>
-      <Pressable onPress={() => onChange(hoy)} style={{ alignItems: 'center', flex: 1 }}>
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>
-          {esHoy ? 'Hoy' : diaCorto(valor)} {formatoFecha(valor)}
-        </Text>
-        {!esHoy ? <Text style={{ color: colors.primary, fontSize: 12, marginTop: 2 }}>Volver a hoy</Text> : null}
-      </Pressable>
-      <Pressable onPress={() => onChange(sumarDias(valor, 1))} hitSlop={10} style={s.flechaFecha}>
-        <Ionicons name="chevron-forward" size={22} color={colors.primary} />
-      </Pressable>
-    </View>
+    <>
+      <View style={s.selectorFecha}>
+        <Pressable onPress={() => onChange(sumarDias(valor, -1))} hitSlop={10} style={s.flechaFecha} accessibilityLabel="Día anterior">
+          <Ionicons name="chevron-back" size={22} color={colors.primary} />
+        </Pressable>
+        <Pressable onPress={() => setAbierto(true)} style={{ alignItems: 'center', flex: 1 }} accessibilityLabel="Elegir fecha en el calendario">
+          <View style={s.fila}>
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>
+              {esHoy ? 'Hoy' : diaCorto(valor)} {formatoFecha(valor)}
+            </Text>
+          </View>
+          {!esHoy ? (
+            <Pressable onPress={() => onChange(hoy)} hitSlop={8}>
+              <Text style={{ color: colors.primary, fontSize: 12, marginTop: 2 }}>Volver a hoy</Text>
+            </Pressable>
+          ) : null}
+        </Pressable>
+        <Pressable onPress={() => onChange(sumarDias(valor, 1))} hitSlop={10} style={s.flechaFecha} accessibilityLabel="Día siguiente">
+          <Ionicons name="chevron-forward" size={22} color={colors.primary} />
+        </Pressable>
+      </View>
+      <HojaModal visible={abierto} onClose={() => setAbierto(false)} titulo="Elegir fecha">
+        <Calendario
+          valor={valor}
+          marcarFechas={marcarFechas}
+          onElegir={(f) => {
+            onChange(f);
+            setAbierto(false);
+          }}
+        />
+        <Boton
+          titulo="Ir a hoy"
+          variante="secundario"
+          onPress={() => {
+            onChange(hoy);
+            setAbierto(false);
+          }}
+          style={{ marginTop: 14 }}
+        />
+      </HojaModal>
+    </>
   );
 }
 

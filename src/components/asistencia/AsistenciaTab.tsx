@@ -23,6 +23,14 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
   const [presentes, setPresentes] = useState<Record<string, boolean>>({});
   const [ultimas, setUltimas] = useState<{ fecha: string; presentes: number }[]>([]);
   const [cargando, setCargando] = useState(true);
+  // Días con reunión cargada, para marcarlos en el calendario
+  const fechasConReunion = useCallback(
+    async (desde: string, hasta: string) => {
+      const { data } = await supabase.from('reuniones').select('fecha').eq('grupo_id', grupoId).gte('fecha', desde).lte('fecha', hasta);
+      return ((data ?? []) as { fecha: string }[]).map((r) => r.fecha);
+    },
+    [grupoId]
+  );
   // Consolidación de la semana de cada ausente ("C" + motivo)
   const [consol, setConsol] = useState<Record<string, { consolidado: boolean; motivo: string | null }>>({});
   const [consolidando, setConsolidando] = useState<MiembroLite | null>(null);
@@ -305,7 +313,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
         </Card>
       ) : null}
 
-      <SelectorFecha valor={fecha} onChange={setFecha} />
+      <SelectorFecha valor={fecha} onChange={setFecha} marcarFechas={fechasConReunion} />
 
       {miembros.length === 0 ? (
         <Card>
