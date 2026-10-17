@@ -6,6 +6,7 @@ export const ROL_LABEL: Record<Rol, string> = {
   consolidacion: 'Consolidador',
   pastor: 'Pastor',
   apostol: 'Apóstol',
+  administrador: 'Administrador',
 };
 
 export const ROL_RANGO: Record<Rol, number> = {
@@ -14,6 +15,8 @@ export const ROL_RANGO: Record<Rol, number> = {
   consolidacion: 2,
   pastor: 3,
   apostol: 4,
+  // El Administrador no forma parte de la línea de supervisión
+  administrador: 0,
 };
 
 export const TIPO_EVENTO_LABEL: Record<TipoEvento, string> = {

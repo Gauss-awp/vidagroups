@@ -84,6 +84,19 @@ function proximasReuniones(g: GrupoAgenda, cuantas: number): Date[] {
 }
 
 let ultimoPerfil: string | null = null;
+
+/** Borra todos los recordatorios de VidaGroups agendados en el celular */
+export async function cancelarRecordatorios() {
+  ultimoPerfil = null;
+  try {
+    const agendadas = await Notifications.getAllScheduledNotificationsAsync();
+    for (const n of agendadas) {
+      if ((n.content.data as any)?.vg) await Notifications.cancelScheduledNotificationAsync(n.identifier);
+    }
+  } catch {
+    // nada
+  }
+}
 let temporizador: ReturnType<typeof setTimeout> | null = null;
 
 /** Reprograma unos segundos después (para no hacerlo en cada toque) */

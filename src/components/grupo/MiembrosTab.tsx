@@ -7,6 +7,7 @@ import { colorPorcentaje, colors } from '@/lib/theme';
 import type { Habito, Miembro, RegistroDiario } from '@/lib/types';
 import { MESES, cumpleProximo, formatoCumple, nombreCompleto, parseCumple, porcentaje, rangoMes } from '@/lib/utils';
 import { Avatar, BarraProgreso, Boton, Campo, Card, Cargando, HojaModal, SeccionTitulo, Stat, Vacio, s } from '@/components/ui';
+import { LogrosGrupo, type Racha } from './LogrosGrupo';
 
 interface AnalisisHabito {
   habito: Habito;
@@ -43,6 +44,7 @@ export function MiembrosTab({
   const router = useRouter();
   const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '', cumple: '' });
   const [guardando, setGuardando] = useState(false);
+  const [rachas, setRachas] = useState<Racha[]>([]);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -72,6 +74,7 @@ export function MiembrosTab({
       regs = (r.data ?? []) as RegistroDiario[];
     }
     setMiembros((m.data ?? []) as Miembro[]);
+    supabase.rpc('rachas_grupo', { p_grupo: grupoId }).then(({ data }) => setRachas((data ?? []) as Racha[]));
     setHabitos(hs);
     setRegistros(regs);
     setCargando(false);
@@ -192,6 +195,14 @@ export function MiembrosTab({
 
   return (
     <View>
+      <LogrosGrupo
+        grupoId={grupoId}
+        grupoNombre={grupoNombre}
+        rachas={rachas}
+        nombres={Object.fromEntries(miembros.map((x) => [x.id, nombreCompleto(x)]))}
+        refreshKey={refreshKey}
+      />
+
       <View style={[s.fila, { gap: 10, marginBottom: 12 }]}>
         <Boton titulo="Agregar miembro" icono="person-add" onPress={() => setModal(true)} style={{ flex: 1 }} />
         {analisis.length > 0 ? (
@@ -236,7 +247,17 @@ export function MiembrosTab({
                 <View style={s.fila}>
                   <Avatar nombre={nombreCompleto(a.miembro)} color={color} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={s.textoFila}>{nombreCompleto(a.miembro)}</Text>
+                    <View style={s.fila}>
+                      <Text style={[s.textoFila, { flexShrink: 1 }]}>{nombreCompleto(a.miembro)}</Text>
+                      {(rachas.find((r) => r.miembro_id === a.miembro.id)?.racha_actual ?? 0) >= 4 ? (
+                        <View style={[s.fila, { marginLeft: 6 }]}>
+                          <Ionicons name="flame" size={14} color={colors.warning} />
+                          <Text style={{ color: colors.warning, fontWeight: '800', fontSize: 12, marginLeft: 1 }}>
+                            {rachas.find((r) => r.miembro_id === a.miembro.id)?.racha_actual}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                     {a.miembro.rol_equipo ? (
                       <Text style={{ color: a.miembro.rol_equipo === 'guia' ? colors.primary : colors.teal, fontSize: 12, fontWeight: '700' }}>
                         {a.miembro.rol_equipo === 'guia' ? 'Guía' : 'Equipo'}

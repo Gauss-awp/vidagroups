@@ -33,6 +33,7 @@ export default function MiembroPantalla() {
   const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '', cumple: '', rol: null as 'guia' | 'equipo' | null });
   const [guardando, setGuardando] = useState(false);
   const [puedeNotas, setPuedeNotas] = useState(false);
+  const [racha, setRacha] = useState<{ racha_actual: number; mejor_racha: number } | null>(null);
 
   const cargar = useCallback(async () => {
     if (!id) return;
@@ -81,6 +82,8 @@ export default function MiembroPantalla() {
     });
     setPagos([...porEvento.values()]);
     setTarjeta(((tj.data ?? []) as Record<string, any>[])[0] ?? null);
+    const { data: rr } = await supabase.rpc('rachas_grupo', { p_grupo: mm.grupo_id });
+    setRacha(((rr ?? []) as { miembro_id: string; racha_actual: number; mejor_racha: number }[]).find((x) => x.miembro_id === id) ?? null);
     const { data: permiso } = await supabase.rpc('puede_ver_notas', { p_grupo: mm.grupo_id });
     setPuedeNotas(!!permiso);
   }, [id]);
@@ -182,6 +185,15 @@ export default function MiembroPantalla() {
             <Text style={s.textoFilaSec}>
               Vino a {vino} de {reuniones.length} reuniones en los últimos 6 meses
             </Text>
+            {racha && racha.mejor_racha > 0 ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <Ionicons name="flame" size={16} color={colors.warning} style={{ marginRight: 4 }} />
+                <Text style={{ color: colors.text, fontSize: 14 }}>
+                  {racha.racha_actual > 0 ? `Viene ${racha.racha_actual} ${racha.racha_actual === 1 ? 'reunión' : 'reuniones'} seguidas` : 'Faltó a la última reunión'}
+                  <Text style={{ color: colors.textSec }}> · su mejor racha: {racha.mejor_racha}</Text>
+                </Text>
+              </View>
+            ) : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
               {reuniones.slice(0, 12).map((r) => (
                 <View

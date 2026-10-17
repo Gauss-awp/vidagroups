@@ -15,6 +15,7 @@ const ROLES_DEV = [
   { rol: 'consolidacion', texto: 'Consolidador', color: '#555' },
   { rol: 'pastor', texto: 'Pastor', color: '#555' },
   { rol: 'apostol', texto: 'Apóstol', color: '#555' },
+  { rol: 'administrador', texto: 'Admin', color: '#555' },
 ]
 
 export function DevRoleSwitcher({ perfil }: any) {

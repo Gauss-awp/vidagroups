@@ -8,7 +8,7 @@ import { diaCorto, formatoFecha, hoyISO, nombreCompleto, porcentaje, semanaHasta
 import { Boton, Campo, Card, Cargando, Chip, HojaModal, SelectorFecha, SeccionTitulo, Vacio, s } from '@/components/ui';
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
 
-const SUGERENCIAS = ['Asistencia al grupo', 'Lectura bíblica', 'Oración', 'Ayuno', 'Asistencia al culto'];
+const SUGERENCIAS = ['Evangelizacion', 'Lectura bíblica', 'Ayuno', 'Asistencias a la reunion general'];
 
 export function HabitosTab({ grupoId, refreshKey }: { grupoId: string; refreshKey: number }) {
   const [fecha, setFecha] = useState(hoyISO());

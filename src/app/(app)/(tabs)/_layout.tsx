@@ -17,7 +17,9 @@ export default function TabsLayout() {
         ? 'Mis Guías'
         : perfil?.rol === 'consolidacion'
           ? 'Consolidación'
-          : 'Panel';
+          : perfil?.rol === 'administrador'
+            ? 'Administración'
+            : 'Panel';
 
   return (
     <Tabs

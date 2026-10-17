@@ -75,6 +75,7 @@ const coloresRol = (): Record<Rol, string> => ({
   guia_supervisor: colors.teal,
   consolidacion: colors.primary,
   guia: colors.success,
+  administrador: colors.textSec,
 });
 
 export const ROL_COLOR: Record<Rol, string> = coloresRol();

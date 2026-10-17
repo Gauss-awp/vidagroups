@@ -170,6 +170,8 @@ export default function PerfilPantalla() {
           </Text>
         </Card>
 
+        {perfil?.rol === 'guia' ? (
+          <>
         <SeccionTitulo titulo="Recordatorios" />
         <Card>
           <View style={[s.fila, { justifyContent: 'space-between' }]}>
@@ -188,6 +190,8 @@ export default function PerfilPantalla() {
           </View>
           <Text style={[s.textoFilaSec, { marginTop: 12 }]}>Usan el día y la hora de reunión cargados en "Datos del grupo".</Text>
         </Card>
+          </>
+        ) : null}
 
         <SeccionTitulo titulo="Apariencia" />
         <Card>

@@ -1,4 +1,4 @@
-export type Rol = 'guia' | 'guia_supervisor' | 'consolidacion' | 'pastor' | 'apostol';
+export type Rol = 'guia' | 'guia_supervisor' | 'consolidacion' | 'pastor' | 'apostol' | 'administrador';
 export type EstadoPerfil = 'pendiente' | 'activo' | 'inactivo';
 
 export interface Red {
@@ -18,6 +18,8 @@ export interface Perfil {
   red_id: string | null;
   estado: EstadoPerfil;
   telefono?: string | null;
+  ultimo_acceso?: string | null;
+  app_version?: string | null;
   creado_en: string;
 }
 

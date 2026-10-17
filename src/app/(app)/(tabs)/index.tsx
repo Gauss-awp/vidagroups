@@ -4,6 +4,7 @@ import { BordeSuperiorContext, Cargando } from '@/components/ui';
 import { InicioGuia } from '@/components/inicio/InicioGuia';
 import { InicioSupervisor } from '@/components/inicio/InicioSupervisor';
 import { PanelGeneral } from '@/components/inicio/PanelGeneral';
+import { PanelAdministrador } from '@/components/admin/PanelAdministrador';
 import { PanelGuiaSupervisor } from '@/components/guia_supervisor/PanelGuiaSupervisor';
 import { DevRoleSwitcher, esCuentaDev } from '@/components/DevRoleSwitcher';
 
@@ -17,6 +18,8 @@ export default function Inicio() {
         return <InicioGuia key={perfil.rol} perfil={perfil} />;
       case 'guia_supervisor':
         return <PanelGuiaSupervisor key={perfil.rol} perfil={perfil} />;
+      case 'administrador':
+        return <PanelAdministrador key={perfil.rol} perfil={perfil} />;
       case 'consolidacion':
         return <InicioSupervisor key={perfil.rol} perfil={perfil} />;
       default:
