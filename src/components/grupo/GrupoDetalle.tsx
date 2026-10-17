@@ -173,7 +173,8 @@ export function GrupoDetalle({
             {[(grupo as any).dia_horario, (grupo as any).barrio, (grupo as any).direccion].filter(Boolean).join(' · ')}
           </Text>
         ) : null}
-        {grupo.descripcion? (
+        {/* La descripción vieja solo se muestra si el grupo todavía no tiene cargados sus datos (día, barrio, dirección) */}
+        {grupo.descripcion && !((grupo as any).dia_horario || (grupo as any).barrio || (grupo as any).direccion) ? (
           <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 12, lineHeight: 21 }}>{grupo.descripcion}</Text>
         ) : null}
       </Card>
