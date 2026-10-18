@@ -126,7 +126,12 @@ export async function reprogramar(perfilId: string) {
     if (!(await pedirPermiso())) return;
 
     // Sus grupos (o los guardados, si no hay señal)
-    const { data, error } = await supabase.from('groups').select('id, nombre, dia_reunion, hora_reunion').eq('guia_id', perfilId);
+    const { data: co } = await supabase.from('grupo_guias').select('grupo_id').eq('guia_id', perfilId);
+    const idsCo = ((co ?? []) as { grupo_id: string }[]).map((x) => x.grupo_id);
+    const { data, error } = await supabase
+      .from('groups')
+      .select('id, nombre, dia_reunion, hora_reunion')
+      .or(idsCo.length ? `guia_id.eq.${perfilId},id.in.(${idsCo.join(',')})` : `guia_id.eq.${perfilId}`);
     const grupos = ((error ? await leerCache<GrupoAgenda[]>(`grupos:${perfilId}`) : data) ?? []) as GrupoAgenda[];
     if (!grupos.length) return;
     const ids = grupos.map((g) => g.id);

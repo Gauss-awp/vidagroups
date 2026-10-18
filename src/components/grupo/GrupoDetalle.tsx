@@ -48,6 +48,7 @@ export function GrupoDetalle({
   const { perfil } = useAuth();
   const [puedeNotas, setPuedeNotas] = useState(false);
   const [verHistorial, setVerHistorial] = useState(false);
+  const [nombresGuias, setNombresGuias] = useState<string[]>([]);
   const [editandoDatos, setEditandoDatos] = useState(false);
   const [datosGrupo, setDatosGrupo] = useState({ dia_horario: '', barrio: '', direccion: '', lider_supervisor: '' });
   const [guardandoGrupo, setGuardandoGrupo] = useState(false);
@@ -81,6 +82,9 @@ export function GrupoDetalle({
     const { data: p } = await supabase.from('profiles').select('*').eq('id', g.guia_id).maybeSingle();
     setGuia((p as Perfil | null)?? null);
     guardarCache(`grupo:${grupoId}`, { grupo: g, guia: (p as Perfil | null) ?? null });
+
+    const { data: gs } = await supabase.rpc('guias_del_grupo', { p_grupo: g.id });
+    setNombresGuias(((gs ?? []) as { nombre: string; principal: boolean }[]).sort((x, y) => Number(y.principal) - Number(x.principal)).map((x) => x.nombre));
 
     // Notas: solo guía y Guía Supervisor del grupo
     const { data: permiso } = await supabase.rpc('puede_ver_notas', { p_grupo: g.id });
@@ -144,7 +148,9 @@ export function GrupoDetalle({
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{grupo.nombre}</Text>
-            <Text style={s.textoFilaSec}>Guía: {guia? nombreCompleto(guia) : '—'}</Text>
+            <Text style={s.textoFilaSec}>
+              {nombresGuias.length > 1 ? `Guías: ${nombresGuias.join(' y ')}` : `Guía: ${guia ? nombreCompleto(guia) : '—'}`}
+            </Text>
             <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
               <Pressable onPress={() => setVerHistorial(true)} hitSlop={8}>
                 <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Historial de guías</Text>

@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Card, Boton, s } from '@/components/ui';
 import { SupervisoresDelGrupo } from './SupervisoresDelGrupo';
+import { GuiasDelGrupo } from './GuiasDelGrupo';
 import { alerta } from '@/lib/alerta';
 
 export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: string }) {
@@ -80,6 +81,7 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
             {isOpen && (
               <View style={{ padding:12, gap:8 }}>
                 <Boton titulo="Cambiar Guía" variante="secundario" onPress={()=>{setGrupoSel(g); setModalGuia(true)}} />
+                <GuiasDelGrupo grupoId={g.id} redId={redId} principalId={g.guia_id} />
                 <SupervisoresDelGrupo grupoId={g.id} redId={redId} principalId={g.supervisor_id ?? null} />
                 <View style={{ maxHeight: 320 }}>
                   <ScrollView showsVerticalScrollIndicator={false}>

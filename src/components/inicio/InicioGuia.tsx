@@ -15,7 +15,13 @@ export function InicioGuia({ perfil }: { perfil: Perfil }) {
   const [cargando, setCargando] = useState(true);
 
   const cargar = useCallback(async () => {
-    const { data, error } = await supabase.from('groups').select('*').eq('guia_id', perfil.id).order('creado_en');
+    const { data: co } = await supabase.from('grupo_guias').select('grupo_id').eq('guia_id', perfil.id);
+    const idsCo = ((co ?? []) as { grupo_id: string }[]).map((x) => x.grupo_id);
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*')
+      .or(idsCo.length ? `guia_id.eq.${perfil.id},id.in.(${idsCo.join(',')})` : `guia_id.eq.${perfil.id}`)
+      .order('creado_en');
     let lista = (data ?? []) as Grupo[];
     if (error) {
       if (esErrorDeRed(error)) lista = (await leerCache<Grupo[]>(`grupos:${perfil.id}`)) ?? [];

@@ -186,7 +186,7 @@ export function EquipoDesdePlanilla({ redId, redNombre, onCambio }: { redId: str
           Correo · Nombre · Rol · Correo del supervisor · Grupo que guía · Consolidador (SI/NO) · Correo del 2º supervisor (opcional)
         </Text>
         <Text style={[s.textoFilaSec, { marginBottom: 12 }]}>
-          Rol: Guía, Guía Supervisor o Consolidador. Si el grupo no existe, se crea. Si ya existe con otro guía, pasa a esta persona.
+          Rol: Guía, Guía Supervisor o Consolidador. Si el grupo no existe, se crea. Si dos personas de la planilla tienen el mismo grupo, la primera queda como guía y la otra como segundo guía.
         </Text>
         <Campo placeholder="Pegá acá las filas de la planilla" value={texto} onChangeText={setTexto} multiline style={{ minHeight: 70, maxHeight: 90, fontSize: 12 }} />
         {filas.length ? (

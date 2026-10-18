@@ -56,6 +56,7 @@ interface GrupoAdmin {
   miembros: number;
   ultima_reunion: string | null;
   reuniones_4_semanas: number;
+  coguias: string[];
 }
 interface Responsable {
   red_id: string;
@@ -526,6 +527,16 @@ function Grupos({ grupos, cuentas, onCambio }: { grupos: GrupoAdmin[]; cuentas: 
     }
   };
 
+  const coguia = async (perfilId: string, agregar: boolean) => {
+    if (!editando) return;
+    const { error } = await supabase.rpc('admin_coguia', { p_grupo: editando.id, p_perfil: perfilId, p_agregar: agregar });
+    if (error) alerta('No se pudo guardar', error.message);
+    else {
+      setEditando(null);
+      onCambio();
+    }
+  };
+
   const segundo = async (perfilId: string, agregar: boolean) => {
     if (!editando) return;
     const { error } = await supabase.rpc('admin_segundo_supervisor', { p_grupo: editando.id, p_perfil: perfilId, p_agregar: agregar });
@@ -556,7 +567,7 @@ function Grupos({ grupos, cuentas, onCambio }: { grupos: GrupoAdmin[]; cuentas: 
                 <View style={{ flex: 1 }}>
                   <Text style={s.textoFila}>{g.nombre}</Text>
                   <Text style={s.textoFilaSec}>
-                    {g.red} · Guía: {g.guia ?? '—'}
+                    {g.red} · {g.coguias?.length ? `Guías: ${[g.guia, ...g.coguias].filter(Boolean).join(' y ')}` : `Guía: ${g.guia ?? '—'}`}
                   </Text>
                   <Text style={s.textoFilaSec}>
                     Supervisión: {[g.supervisor, ...g.segundos].filter(Boolean).join(' y ') || '—'}
@@ -581,6 +592,15 @@ function Grupos({ grupos, cuentas, onCambio }: { grupos: GrupoAdmin[]; cuentas: 
               {candidatosGuia.map((c) => (
                 <Chip key={c.id} texto={nombreDe(c)} activo={c.id === editando.guia_id} onPress={() => c.id !== editando.guia_id && cambiarGuia(c.id)} />
               ))}
+            </View>
+            <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Segundo guía (tocá para agregar o quitar)</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 }}>
+              {candidatosGuia
+                .filter((c) => c.id !== editando.guia_id)
+                .map((c) => {
+                  const esta = (editando.coguias ?? []).includes(nombreDe(c));
+                  return <Chip key={c.id} texto={nombreDe(c)} activo={esta} onPress={() => coguia(c.id, !esta)} />;
+                })}
             </View>
             <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>
               Supervisor principal: {editando.supervisor ?? '—'} (es el supervisor del guía; se cambia desde Cuentas)
