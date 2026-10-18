@@ -29,6 +29,8 @@ export interface MiembroPlanilla {
   rol_equipo: RolEquipo;
   desde: string; // fecha en que se sumó (YYYY-MM-DD)
   alejado: boolean;
+  /** Si se quitó del grupo: hasta qué día estuvo (YYYY-MM-DD) */
+  hasta?: string | null;
   /** Cambios de rol con su fecha; si no hay, se usa rol_equipo para todos los meses */
   roles?: { rol: RolEquipo; desde: string }[];
 }
@@ -95,7 +97,7 @@ export function hojaAsistenciaConFormato(
     const delMes = reuniones.filter((r) => r.fecha.startsWith(prefijo)).sort((a, b) => a.fecha.localeCompare(b.fecha)).slice(0, 5);
     // El rol de cada uno en ESTE mes: azul o celeste solo desde que es parte del equipo
     const conRol = miembros
-      .filter((m) => m.desde <= finMes)
+      .filter((m) => m.desde <= finMes && (!m.hasta || m.hasta >= `${prefijo}-01`))
       .map((m) => ({ ...m, rol_equipo: rolEnFecha(m, finMes) }));
     const peso = (m: MiembroPlanilla) => (m.rol_equipo === 'guia' ? 0 : m.rol_equipo === 'equipo' ? 1 : m.alejado ? 3 : 2);
     const lista = conRol.sort((a, b) => peso(a) - peso(b) || a.nombre.localeCompare(b.nombre));
@@ -145,7 +147,7 @@ export function hojaAsistenciaConFormato(
         set(`B${fila}`, m.nombre, { font: { bold: true, color: { rgb: COLOR_NOMBRE[tipo] } } });
         delMes.forEach((r, i) => {
           const a = r.asistencias.find((x) => x.miembro_id === m.id);
-          const valor = m.desde > r.fecha ? '-' : a?.presente ? 'P' : 'A';
+          const valor = m.desde > r.fecha || (m.hasta && r.fecha > m.hasta) ? '-' : a?.presente ? 'P' : 'A';
           set(`${COL_ASIST[i]}${fila}`, valor);
           // "C" con el motivo como comentario: consolidación de la semana o "Ya lo contacté"
           const siguiente = delMes[i + 1]?.fecha ?? `${r.fecha.slice(0, 8)}99`;

@@ -189,12 +189,34 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
           <View style={{backgroundColor:colors.card, borderTopLeftRadius:20, borderTopRightRadius:20, padding:20, maxHeight: '90%'}}>
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
               <Text style={{ color: colors.text, fontWeight:'800', fontSize:18, marginBottom:12}}>Editar tarjeta</Text>
-              <TextInput value={seleccionada?.nombre} onChangeText={v=>setSeleccionada({...seleccionada, nombre:v})} placeholder="Nombre" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10}} />
-              <TextInput value={seleccionada?.telefono} onChangeText={v=>setSeleccionada({...seleccionada, telefono:v})} placeholder="Tel" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10}} />
-              <TextInput value={seleccionada?.zona} onChangeText={v=>setSeleccionada({...seleccionada, zona:v})} placeholder="Zona" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10}} />
+              <TextInput value={seleccionada?.nombre} onChangeText={v=>setSeleccionada({...seleccionada, nombre:v})} placeholder="Nombre" placeholderTextColor={colors.textTer} style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10, color: colors.text}} />
+              <TextInput value={seleccionada?.telefono} onChangeText={v=>setSeleccionada({...seleccionada, telefono:v})} placeholder="Tel" placeholderTextColor={colors.textTer} style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10, color: colors.text}} />
+              <TextInput value={seleccionada?.zona} onChangeText={v=>setSeleccionada({...seleccionada, zona:v})} placeholder="Zona" placeholderTextColor={colors.textTer} style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10, color: colors.text}} />
               <TextInput value={seleccionada?.linea_lider ?? ''} onChangeText={v=>setSeleccionada({...seleccionada, linea_lider:v})} placeholder="Línea - Líder (ej: MICA Y SANTI)" placeholderTextColor={colors.textTer} style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:10, color: colors.text}} />
-              <TextInput value={seleccionada?.gv_asignado} onChangeText={v=>setSeleccionada({...seleccionada, gv_asignado:v})} placeholder="GV asignado" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:15}} />
-              <TextInput value={seleccionada?.observacion} onChangeText={v=>setSeleccionada({...seleccionada, observacion:v})} placeholder="Observación" style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:15}} />
+              <Text style={{ color: colors.textSec, fontSize: 13, marginBottom: 6 }}>Grupo de vida</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 15 }} keyboardShouldPersistTaps="handled">
+                <Pressable
+                  onPress={() => setSeleccionada({ ...seleccionada, gv_asignado: null })}
+                  style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, marginRight: 6, backgroundColor: !seleccionada?.gv_asignado ? colors.primary : colors.cardAlt }}
+                >
+                  <Text style={{ color: !seleccionada?.gv_asignado ? '#FFFFFF' : colors.text, fontWeight: '600' }}>Sin asignar</Text>
+                </Pressable>
+                {todosLosGrupos
+                  .filter((g) => !seleccionada?.red_id || !(g as any).red_id || (g as any).red_id === seleccionada.red_id)
+                  .map((g) => {
+                    const activo = seleccionada?.gv_asignado === g.nombre;
+                    return (
+                      <Pressable
+                        key={g.id}
+                        onPress={() => setSeleccionada({ ...seleccionada, gv_asignado: g.nombre })}
+                        style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, marginRight: 6, backgroundColor: activo ? colors.primary : colors.cardAlt }}
+                      >
+                        <Text style={{ color: activo ? '#FFFFFF' : colors.text, fontWeight: '600' }}>{g.nombre}</Text>
+                      </Pressable>
+                    );
+                  })}
+              </ScrollView>
+              <TextInput value={seleccionada?.observacion} onChangeText={v=>setSeleccionada({...seleccionada, observacion:v})} placeholder="Observación" placeholderTextColor={colors.textTer} style={{borderWidth:1, borderColor:colors.border, borderRadius:10, padding:12, marginBottom:15, color: colors.text}} />
 
               {[
                 {k:'fonovisita', l:'Fonovisita'},

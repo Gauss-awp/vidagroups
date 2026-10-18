@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, ScrollView, Text, View } from 'react-native';
+import { Dimensions, Platform, ScrollView, Text, View } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
 import { colors, radius } from '@/lib/theme';
 import { abreviarNumero } from '@/lib/utils';
@@ -52,6 +52,11 @@ function GraficoBarras({
         <Text style={{ color: colors.textSec, fontSize: 14 }}>{textoVacio}</Text>
       </View>
     );
+  }
+
+  // En la web, la librería de gráficos falla: se dibujan las barras a mano
+  if (Platform.OS === 'web') {
+    return <BarrasSimples etiquetas={etiquetas} valores={valores} rgb={rgb} prefijo={prefijo} sufijo={sufijo} />;
   }
 
   const ancho = Math.max(ANCHO_BASE, etiquetas.length * 64);
@@ -108,4 +113,37 @@ export function GraficoHabitos(props: DatosGrafico) {
 
 export function GraficoRecaudacion(props: DatosGrafico) {
   return <GraficoBarras {...props} rgb="10, 132, 255" prefijo="$" textoVacio="Todavía no hay pagos registrados" />;
+}
+
+/** Barras dibujadas con vistas comunes (se usa en la web) */
+function BarrasSimples({ etiquetas, valores, rgb, prefijo, sufijo }: DatosGrafico & { rgb: string; prefijo: string; sufijo: string }) {
+  const max = Math.max(...valores, 1);
+  const ALTO = 160;
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16, flexGrow: 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', flexGrow: 1, gap: 8 }}>
+        {valores.map((v, i) => (
+          <View key={i} style={{ alignItems: 'center', minWidth: 44, flex: 1 }}>
+            <Text style={{ color: colors.textSec, fontSize: 11, marginBottom: 4 }}>
+              {prefijo}
+              {abreviarNumero(v)}
+              {sufijo}
+            </Text>
+            <View
+              style={{
+                width: '70%',
+                height: Math.max(3, (v / max) * ALTO),
+                backgroundColor: `rgb(${rgb})`,
+                borderTopLeftRadius: 6,
+                borderTopRightRadius: 6,
+              }}
+            />
+            <Text style={{ color: colors.textSec, fontSize: 10, marginTop: 6 }} numberOfLines={1}>
+              {recortar(etiquetas[i] ?? '')}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
 }

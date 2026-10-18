@@ -57,7 +57,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       if (error || !g) throw new Error(error?.message ?? 'No se encontró el grupo');
       const [sup, mi, re, ult] = await Promise.all([
         g.supervisor_id ? supabase.from('profiles').select('nombre, apellido').eq('id', g.supervisor_id).maybeSingle() : Promise.resolve({ data: null }),
-        supabase.from('miembros_grupo').select('id, nombre, apellido, rol_equipo, creado_en').eq('grupo_id', grupoId).eq('activo', true),
+        supabase.from('miembros_grupo').select('id, nombre, apellido, rol_equipo, creado_en, activo, baja_en').eq('grupo_id', grupoId),
         supabase
           .from('reuniones')
           .select('id, fecha, notas, ofrenda, material, compartio, asistencias(miembro_id, presente, consolidado, motivo)')
@@ -67,7 +67,9 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
           .order('fecha'),
         supabase.from('reuniones').select('fecha, asistencias(miembro_id, presente)').eq('grupo_id', grupoId).order('fecha', { ascending: false }).limit(FALTAS_ALEJADO),
       ]);
-      const miembrosRaw = (mi.data ?? []) as { id: string; nombre: string; apellido: string | null; rol_equipo: RolEquipo; creado_en: string }[];
+      // Activos, y los que se quitaron pero estuvieron (para no perder su historial)
+      const miembrosRaw = ((mi.data ?? []) as { id: string; nombre: string; apellido: string | null; rol_equipo: RolEquipo; creado_en: string; activo: boolean; baja_en: string | null }[])
+        .filter((m) => m.activo || m.baja_en);
 
       // En rojo: los que faltaron a todas las últimas reuniones (siguen en la lista)
       const ultimas = (ult.data ?? []) as { fecha: string; asistencias: { miembro_id: string; presente: boolean }[] }[];
@@ -106,7 +108,8 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
           nombre: `${m.nombre} ${m.apellido ?? ''}`.trim(),
           rol_equipo: m.rol_equipo,
           desde: m.creado_en.slice(0, 10),
-          alejado: alejado(m.id, m.creado_en),
+          alejado: m.activo && alejado(m.id, m.creado_en),
+          hasta: m.activo ? null : (m.baja_en ?? '').slice(0, 10) || null,
           roles: rolesDe(m.id),
         })),
         ((re.data ?? []) as any[]).map((r) => ({ ...r, asistencias: r.asistencias ?? [] })),
