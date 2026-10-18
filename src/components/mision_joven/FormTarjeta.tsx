@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Alert, Text, TextInput, View, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {Text, TextInput, View, Pressable, ScrollView, KeyboardAvoidingView, Platform} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Boton, Card } from '@/components/ui';
 import { colors } from '@/lib/theme';
+import { alerta } from '@/lib/alerta';
 
 const estiloInput = () => ({
   borderWidth: 1,
@@ -38,7 +39,7 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
   }, [gv, listaGVs]);
 
   const guardar = async () => {
-    if (!nombre) return Alert.alert('Falta nombre');
+    if (!nombre) return alerta('Falta nombre');
     setCargando(true);
     const { error } = await supabase.from('tarjetas_consolidacion').insert({
       nombre, telefono, edad: edad? Number(edad) : null, zona,
@@ -47,7 +48,7 @@ export function FormTarjeta({ grupos = [], onCreada, onClose }: any) {
       estado: 'nueva',
     });
     setCargando(false);
-    if (error) Alert.alert('Error', error.message);
+    if (error) alerta('Error', error.message);
     else { onCreada?.(); onClose?.(); setNombre(''); setTelefono(''); setEdad(''); setZona(''); setGv(''); setLinea(''); }
   };
 

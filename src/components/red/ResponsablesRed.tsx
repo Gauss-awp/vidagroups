@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { ROL_COLOR, colors } from '@/lib/theme';
@@ -7,6 +7,7 @@ import type { Perfil } from '@/lib/types';
 import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, Badge, Boton, Campo, Card, HojaModal, SeccionTitulo, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 type Tipo = 'encargados' | 'pastores' | 'consolidadores';
 
@@ -74,7 +75,7 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
     const tabla = TABLA[agregando];
     const { error } = await supabase.from(tabla).insert({ red_id: redId, perfil_id: persona.id });
     if (error) {
-      Alert.alert('No se pudo agregar', error.message);
+      alerta('No se pudo agregar', error.message);
       return;
     }
     setAgregando(null);
@@ -85,14 +86,14 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
   const quitar = (tipo: Tipo, persona: Perfil) => {
     const tabla = TABLA[tipo];
     const que = NOMBRE[tipo];
-    Alert.alert('Quitar', `¿Quitar a ${nombreCompleto(persona)} como ${que}? Su rol no cambia.`, [
+    alerta('Quitar', `¿Quitar a ${nombreCompleto(persona)} como ${que}? Su rol no cambia.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Quitar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from(tabla).delete().eq('red_id', redId).eq('perfil_id', persona.id);
-          if (error) Alert.alert('No se pudo quitar', error.message);
+          if (error) alerta('No se pudo quitar', error.message);
           else {
             cargar();
             onCambio?.();

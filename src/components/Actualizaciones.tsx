@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Alert, AppState } from 'react-native';
+import {AppState} from 'react-native';
 import * as Updates from 'expo-updates';
+import { alerta } from '@/lib/alerta';
 
 /**
  * Busca actualizaciones (EAS Update) al abrir la app y al volver a ella.
@@ -22,7 +23,7 @@ export function Actualizaciones() {
         if (r.isAvailable) {
           await Updates.fetchUpdateAsync();
           avisada.current = true;
-          Alert.alert('Hay una versión nueva', 'VidaGroups se actualizó con mejoras y arreglos. ¿Reiniciar ahora?', [
+          alerta('Hay una versión nueva', 'VidaGroups se actualizó con mejoras y arreglos. ¿Reiniciar ahora?', [
             { text: 'Más tarde', style: 'cancel' },
             { text: 'Reiniciar', onPress: () => Updates.reloadAsync() },
           ]);

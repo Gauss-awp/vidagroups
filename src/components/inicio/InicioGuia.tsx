@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import {ScrollView, View} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import type { Grupo, Perfil } from '@/lib/types';
 import { Cargando, Chip, Pantalla, TituloGrande } from '@/components/ui';
@@ -7,6 +7,7 @@ import { GrupoDetalle } from '@/components/grupo/GrupoDetalle';
 import { CrearGrupo } from '@/components/grupo/CrearGrupo';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
+import { alerta } from '@/lib/alerta';
 
 export function InicioGuia({ perfil }: { perfil: Perfil }) {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
@@ -18,7 +19,7 @@ export function InicioGuia({ perfil }: { perfil: Perfil }) {
     let lista = (data ?? []) as Grupo[];
     if (error) {
       if (esErrorDeRed(error)) lista = (await leerCache<Grupo[]>(`grupos:${perfil.id}`)) ?? [];
-      else Alert.alert('Error', error.message);
+      else alerta('Error', error.message);
     } else {
       guardarCache(`grupos:${perfil.id}`, lista);
     }

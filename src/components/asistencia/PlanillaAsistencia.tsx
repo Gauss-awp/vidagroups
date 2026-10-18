@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as XLSX from 'xlsx-js-style';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from '@/lib/supabase';
+import { compartirArchivo, leerArchivoElegido } from '@/lib/archivos';
 import { colors } from '@/lib/theme';
 import { MESES } from '@/lib/utils';
 import { FALTAS_ALEJADO, hojaAsistenciaConFormato, leerPlanillaAsistencia, type PlanillaLeida, type RolEquipo } from '@/lib/asistenciaExcel';
 import { Boton, Card, Chip, HojaModal, s } from '@/components/ui';
 import { candidatosParecidos } from '@/lib/parecidos';
 import { formatoFecha } from '@/lib/utils';
+import { alerta } from '@/lib/alerta';
 
 const clave = (t: string) =>
   t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -116,19 +116,11 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       XLSX.utils.book_append_sheet(libro, hoja, 'ASITENCIA GV');
       const base64 = XLSX.write(libro, { type: 'base64', bookType: 'xlsx' });
 
-      const archivo = new File(Paths.cache, `Asistencia_${g.nombre.replace(/[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ]+/g, '_')}_${anio}.xlsx`);
-      if (archivo.exists) archivo.delete();
-      archivo.create();
-      archivo.write(base64, { encoding: 'base64' });
       setTrabajando(false);
-      await Sharing.shareAsync(archivo.uri, {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        UTI: 'org.openxmlformats.spreadsheetml.sheet',
-        dialogTitle: `Planilla de asistencia ${anio}`,
-      });
+      await compartirArchivo(base64, `Asistencia_${g.nombre.replace(/[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ]+/g, '_')}_${anio}.xlsx`, `Planilla de asistencia ${anio}`);
     } catch (e) {
       setTrabajando(false);
-      Alert.alert('No se pudo exportar', e instanceof Error ? e.message : String(e));
+      alerta('No se pudo exportar', e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -141,8 +133,8 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
     if (r.canceled || !r.assets?.length) return;
     setTrabajando(true);
     try {
-      const base64 = await new File(r.assets[0].uri).base64();
-      const libro = XLSX.read(base64, { type: 'base64' });
+      const { datos, tipo } = await leerArchivoElegido(r.assets[0]);
+      const libro = XLSX.read(datos, { type: tipo });
       const nombreHoja =
         libro.SheetNames.find((n: string) => {
           const ws = libro.Sheets[n];
@@ -151,7 +143,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       const planilla = leerPlanillaAsistencia(XLSX, libro.Sheets[nombreHoja], anio);
       if (planilla.meses.length === 0) {
         setTrabajando(false);
-        Alert.alert('No se encontraron reuniones', 'La planilla no tiene meses con fechas cargadas en la fila "Equipo de Trabajo".');
+        alerta('No se encontraron reuniones', 'La planilla no tiene meses con fechas cargadas en la fila "Equipo de Trabajo".');
         return;
       }
       // Lo que ya hay en la app, para avisar los choques
@@ -233,7 +225,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         planilla,
       });
     } catch (e) {
-      Alert.alert('No se pudo leer el archivo', e instanceof Error ? e.message : String(e));
+      alerta('No se pudo leer el archivo', e instanceof Error ? e.message : String(e));
     }
     setTrabajando(false);
   };
@@ -352,12 +344,12 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       if (Object.keys(cambios).length) await supabase.from('groups').update(cambios).eq('id', grupoId);
 
       setTrabajando(false);
-      Alert.alert('Planilla importada', `Se cargaron ${resumen.reuniones} reuniones y ${resumen.asistencias} asistencias${aCrear.length ? `, y ${aCrear.length} hermanos nuevos` : ''}.`);
+      alerta('Planilla importada', `Se cargaron ${resumen.reuniones} reuniones y ${resumen.asistencias} asistencias${aCrear.length ? `, y ${aCrear.length} hermanos nuevos` : ''}.`);
       setResumen(null);
       onImportado?.();
     } catch (e) {
       setTrabajando(false);
-      Alert.alert('La importación se cortó', `${e instanceof Error ? e.message : String(e)}\n\nLo que ya se cargó queda guardado; si importás de nuevo, se actualiza sin duplicar.`);
+      alerta('La importación se cortó', `${e instanceof Error ? e.message : String(e)}\n\nLo que ya se cargó queda guardado; si importás de nuevo, se actualiza sin duplicar.`);
     }
   };
 

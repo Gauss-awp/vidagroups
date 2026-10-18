@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
+import {RefreshControl, ScrollView, Text, View} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -13,6 +13,7 @@ import { EquipoDesdePlanilla } from '@/components/red/EquipoDesdePlanilla';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
 import { GestionGrupos } from '@/components/mision_joven/GestionGrupos';
 import { AsignarSupervisores } from '@/components/mision_joven/AsignarSupervisores';
+import { alerta } from '@/lib/alerta';
 
 /** Panel del Encargado de Red (también lo usan Pastores y el Apóstol). */
 export default function PanelRed() {
@@ -56,14 +57,14 @@ export default function PanelRed() {
 
   const crearRed = async () => {
     if (!nombreRed.trim()) {
-      Alert.alert('Falta el nombre', 'Escribí el nombre de la red.');
+      alerta('Falta el nombre', 'Escribí el nombre de la red.');
       return;
     }
     setCreando(true);
     const { error } = await supabase.from('redes').insert({ nombre: nombreRed.trim() });
     setCreando(false);
     if (error) {
-      Alert.alert('No se pudo crear la red', error.message.includes('duplicate') ? 'Ya existe una red con ese nombre.' : error.message);
+      alerta('No se pudo crear la red', error.message.includes('duplicate') ? 'Ya existe una red con ese nombre.' : error.message);
       return;
     }
     setNombreRed('');

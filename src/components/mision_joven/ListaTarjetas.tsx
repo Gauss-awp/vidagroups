@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Text, View, Pressable, Modal, TextInput, Alert } from 'react-native';
+import {Text, View, Pressable, Modal, TextInput} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Card, PasosConsolidacion } from '@/components/ui';
 import { colors } from '@/lib/theme';
+import { alerta } from '@/lib/alerta';
 
 export function ListaTarjetas({ refreshKey }: { refreshKey?: number }) {
   const [tarjetas, setTarjetas] = useState<any[]>([]);
@@ -32,12 +33,12 @@ export function ListaTarjetas({ refreshKey }: { refreshKey?: number }) {
       zona: seleccionada.zona,
       gv_asignado: seleccionada.gv_asignado,
     }).eq('id', seleccionada.id);
-    if(error) Alert.alert("Error", error.message);
+    if(error) alerta("Error", error.message);
     else { setModal(false); cargar(); }
   };
 
   const borrar = () => {
-    Alert.alert("¿Borrar?", `¿Borrar a ${seleccionada.nombre}?`, [
+    alerta("¿Borrar?", `¿Borrar a ${seleccionada.nombre}?`, [
       { text: "Cancelar", style: "cancel" },
       { text: "Borrar", style: "destructive", onPress: async () => {
         await supabase.from('tarjetas_consolidacion').delete().eq('id', seleccionada.id);

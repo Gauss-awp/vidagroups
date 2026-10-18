@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Text, TouchableOpacity, View } from 'react-native';
+import {Animated, Text, TouchableOpacity, View} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Badge, Boton, Card, Cargando, Vacio } from '@/components/ui';
 import { Alcance, FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
 import ModalPagoGuia from '../guia/ModalPagoGuia';
+import { alerta } from '@/lib/alerta';
 
 interface MiembroLite {
   id: string;
@@ -48,7 +49,7 @@ export function EventosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
       supabase.from('eventos').select('*').or(filtro).order('fecha_evento', { ascending: true, nullsFirst: false }),
       supabase.from('miembros_grupo').select('id, nombre, apellido').eq('grupo_id', grupoId).eq('activo', true).order('nombre'),
     ]);
-    if (ev.error) Alert.alert('Error al cargar eventos', ev.error.message);
+    if (ev.error) alerta('Error al cargar eventos', ev.error.message);
     const listaEventos = (ev.data ?? []) as Evento[];
     const listaMiembros = (mi.data ?? []) as MiembroLite[];
 
@@ -98,7 +99,7 @@ export function EventosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
     });
     setGuardandoPago(false);
     if (error) {
-      Alert.alert('No se pudo registrar el pago', error.message);
+      alerta('No se pudo registrar el pago', error.message);
       return;
     }
     const costo = Number(eventoSel.costo_total) || 0;

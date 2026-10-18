@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import {Text, View} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import type { Evento, Moneda, TipoEvento } from '@/lib/types';
 import { MONEDA_LABEL, TIPO_EVENTO_LABEL, hoyISO, parseMonto } from '@/lib/utils';
 import { Boton, Campo, Chip, HojaModal, SelectorFecha, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 export const ICONO_EVENTO: Record<TipoEvento, 'flame' | 'bonfire' | 'calendar'> = {
   encuentro: 'flame',
@@ -75,11 +76,11 @@ export function FormEvento({
   const guardar = async () => {
     const monto = costo.trim() === '' ? 0 : parseMonto(costo);
     if (!nombre.trim()) {
-      Alert.alert('Falta el nombre', 'Escribí el nombre del evento.');
+      alerta('Falta el nombre', 'Escribí el nombre del evento.');
       return;
     }
     if (isNaN(monto) || monto < 0) {
-      Alert.alert('Costo inválido', 'Escribí un número, por ejemplo 45000.');
+      alerta('Costo inválido', 'Escribí un número, por ejemplo 45000.');
       return;
     }
     const datos = {
@@ -106,7 +107,7 @@ export function FormEvento({
     }
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo guardar el evento', error.message);
+      alerta('No se pudo guardar el evento', error.message);
       return;
     }
     onClose();

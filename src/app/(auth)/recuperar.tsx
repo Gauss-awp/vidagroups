@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text } from 'react-native';
+import {KeyboardAvoidingView, Platform, Pressable, ScrollView, Text} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { traducirError } from '@/lib/utils';
 import { Boton, Campo, Pantalla } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 /**
  * Recuperar contraseña con un código de 6 dígitos que llega por correo.
@@ -21,14 +22,14 @@ export default function Recuperar() {
 
   const enviarCodigo = async () => {
     if (!email.trim()) {
-      Alert.alert('Falta el correo', 'Escribí el correo con el que te registraste.');
+      alerta('Falta el correo', 'Escribí el correo con el que te registraste.');
       return;
     }
     setCargando(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
     setCargando(false);
     if (error) {
-      Alert.alert('No se pudo enviar el código', traducirError(error.message));
+      alerta('No se pudo enviar el código', traducirError(error.message));
       return;
     }
     setPaso(2);
@@ -36,11 +37,11 @@ export default function Recuperar() {
 
   const cambiarClave = async () => {
     if (codigo.trim().length < 6) {
-      Alert.alert('Código incompleto', 'Escribí el código de 6 dígitos que te llegó por correo.');
+      alerta('Código incompleto', 'Escribí el código de 6 dígitos que te llegó por correo.');
       return;
     }
     if (clave.length < 8) {
-      Alert.alert('Contraseña corta', 'La contraseña nueva tiene que tener al menos 8 caracteres.');
+      alerta('Contraseña corta', 'La contraseña nueva tiene que tener al menos 8 caracteres.');
       return;
     }
     setCargando(true);
@@ -51,17 +52,17 @@ export default function Recuperar() {
     });
     if (errCodigo) {
       setCargando(false);
-      Alert.alert('Código incorrecto o vencido', 'Revisá el código o pedí uno nuevo.');
+      alerta('Código incorrecto o vencido', 'Revisá el código o pedí uno nuevo.');
       return;
     }
     const { error } = await supabase.auth.updateUser({ password: clave });
     setCargando(false);
     if (error) {
-      Alert.alert('No se pudo cambiar la contraseña', traducirError(error.message));
+      alerta('No se pudo cambiar la contraseña', traducirError(error.message));
       return;
     }
     // Ya quedó con la sesión iniciada: el layout la lleva al inicio
-    Alert.alert('Listo', 'Tu contraseña se cambió.');
+    alerta('Listo', 'Tu contraseña se cambió.');
   };
 
   return (

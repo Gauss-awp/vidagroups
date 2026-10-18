@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
@@ -8,6 +8,7 @@ import { Boton, Campo, Card, Cargando, HojaModal, SelectorFecha, Vacio, s } from
 import { PlanillaAsistencia } from './PlanillaAsistencia';
 import { reprogramarPronto } from '@/lib/recordatorios';
 import { encolar, esErrorDeRed, escucharPendientes, guardarCache, leerCache, pendientesDe, sincronizar } from '@/lib/sinConexion';
+import { alerta } from '@/lib/alerta';
 
 interface MiembroLite {
   id: string;
@@ -103,7 +104,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       await cargarSinRed();
       return;
     }
-    if (m.error) Alert.alert('Error', m.error.message);
+    if (m.error) alerta('Error', m.error.message);
     setSinRed(false);
     setMiembros((m.data ?? []) as MiembroLite[]);
     const id = (r.data?.id as string | undefined) ?? null;
@@ -177,7 +178,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
         setSinRed(true);
         return 'sin-red';
       }
-      Alert.alert('No se pudo crear la reunión', error.message);
+      alerta('No se pudo crear la reunión', error.message);
       return null;
     }
     setReunionId(data.id);
@@ -209,7 +210,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
     if (error && esErrorDeRed(error)) {
       await guardarEnCelular(cambios);
     } else if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       cargar();
     }
   };
@@ -228,7 +229,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
     if (id === 'sin-red' || (error && esErrorDeRed(error))) {
       await guardarEnCelular([{ miembro_id: consolidando.id, presente: false, ...valor }]);
     } else if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       return;
     }
     setConsol((prev) => ({ ...prev, [consolidando.id]: valor }));
@@ -241,7 +242,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
     if (!id) return;
     const ofrenda = datos.ofrenda.trim() ? Number(datos.ofrenda.replace(/\./g, '').replace(',', '.')) : null;
     if (ofrenda !== null && isNaN(ofrenda)) {
-      Alert.alert('Ofrenda inválida', 'Escribí solo el número, por ejemplo 12000.');
+      alerta('Ofrenda inválida', 'Escribí solo el número, por ejemplo 12000.');
       return;
     }
     const cambios = {
@@ -258,25 +259,25 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       setSinRed(true);
       if (!reunionId) setReunionId('local');
       await encolar({ tipo: 'datos_reunion', grupo_id: grupoId, fecha, datos: cambios });
-      Alert.alert('Guardado en el celular', 'No hay señal. Los datos se envían solos cuando vuelva la conexión.');
-    } else if (error) Alert.alert('No se pudo guardar', error.message);
-    else Alert.alert('Listo', 'Datos de la reunión guardados.');
+      alerta('Guardado en el celular', 'No hay señal. Los datos se envían solos cuando vuelva la conexión.');
+    } else if (error) alerta('No se pudo guardar', error.message);
+    else alerta('Listo', 'Datos de la reunión guardados.');
   };
 
   const borrarReunion = () => {
     if (!reunionId) return;
     if (sinRed || reunionId === 'local') {
-      Alert.alert('Sin conexión', 'Para borrar una reunión necesitás señal. Probá de nuevo cuando vuelva la conexión.');
+      alerta('Sin conexión', 'Para borrar una reunión necesitás señal. Probá de nuevo cuando vuelva la conexión.');
       return;
     }
-    Alert.alert('Borrar reunión', `¿Borrar la reunión del ${formatoFecha(fecha)}? Se pierde la asistencia de ese día.`, [
+    alerta('Borrar reunión', `¿Borrar la reunión del ${formatoFecha(fecha)}? Se pierde la asistencia de ese día.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Borrar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from('reuniones').delete().eq('id', reunionId);
-          if (error) Alert.alert('No se pudo borrar', error.message);
+          if (error) alerta('No se pudo borrar', error.message);
           else cargar();
         },
       },

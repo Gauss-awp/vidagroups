@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {Pressable, ScrollView, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { formatoFecha } from '@/lib/utils';
 import { Boton, Campo, Card, Chip, Vacio, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 interface Nota {
   id: string;
@@ -53,7 +54,7 @@ export function Notas({ grupoId, miembroId, refreshKey = 0 }: { grupoId: string;
     const { error } = await supabase.from('notas_pastorales').insert({ grupo_id: grupoId, miembro_id: sobre, texto: texto.trim() });
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo guardar la nota', error.message);
+      alerta('No se pudo guardar la nota', error.message);
       return;
     }
     setTexto('');
@@ -62,14 +63,14 @@ export function Notas({ grupoId, miembroId, refreshKey = 0 }: { grupoId: string;
   };
 
   const borrar = (n: Nota) =>
-    Alert.alert('Borrar nota', '¿Borrar esta nota?', [
+    alerta('Borrar nota', '¿Borrar esta nota?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Borrar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from('notas_pastorales').delete().eq('id', n.id);
-          if (error) Alert.alert('No se pudo borrar', error.message);
+          if (error) alerta('No se pudo borrar', error.message);
           else cargar();
         },
       },

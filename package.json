@@ -41,7 +41,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "publicar:pruebas": "node scripts/publicar.mjs pruebas",
-    "publicar:produccion": "node scripts/publicar.mjs produccion"
+    "publicar:produccion": "node scripts/publicar.mjs produccion",
+    "publicar-web:pruebas": "node scripts/publicar-web.mjs pruebas",
+    "publicar-web:produccion": "node scripts/publicar-web.mjs produccion"
   },
   "private": true
 }

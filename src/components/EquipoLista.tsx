@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -7,6 +7,7 @@ import { ROL_COLOR, colors } from '@/lib/theme';
 import type { Perfil } from '@/lib/types';
 import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
 import { Avatar, Badge, Card, Cargando, Vacio, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 interface GrupoResumen {
   id: string;
@@ -35,7 +36,7 @@ export function EquipoLista({
     (async () => {
       setCargando(true);
       const { data, error } = await supabase.from('profiles').select('*').eq('supervisor_id', liderId).order('nombre');
-      if (error) Alert.alert('Error', error.message);
+      if (error) alerta('Error', error.message);
       const lista = (data ?? []) as Perfil[];
       let gs: GrupoResumen[] = [];
       if (lista.length) {
@@ -44,7 +45,7 @@ export function EquipoLista({
           .select('id, nombre, guia_id, miembros_grupo(id, activo)')
           .in('guia_id', lista.map((p) => p.id))
           .order('nombre');
-        if (r.error) Alert.alert('Error', r.error.message);
+        if (r.error) alerta('Error', r.error.message);
         gs = (r.data ?? []).map((g: { id: string; nombre: string; guia_id: string; miembros_grupo: { activo: boolean }[] | null }) => ({
           id: g.id,
           nombre: g.nombre,

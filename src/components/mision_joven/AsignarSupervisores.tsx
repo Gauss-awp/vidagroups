@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Text, View, TouchableOpacity, Alert } from 'react-native';
+import {Text, View, TouchableOpacity} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { SeccionTitulo, Cargando } from '@/components/ui';
 import { colors } from '@/lib/theme';
+import { alerta } from '@/lib/alerta';
 
 export function AsignarSupervisores({ redId, redNombre }: { redId: string; redNombre: string }) {
   const [guias, setGuias] = useState<any[]>([]);
@@ -26,10 +27,10 @@ export function AsignarSupervisores({ redId, redNombre }: { redId: string; redNo
   useEffect(() => { cargar(); }, [redId]);
 
   const asignar = async () => {
-    if (!selGuia || !selSup) return Alert.alert('Falta', 'Elegí guía y supervisor');
+    if (!selGuia || !selSup) return alerta('Falta', 'Elegí guía y supervisor');
     const { error } = await supabase.rpc('asignar_guia', { p_guia: selGuia, p_sup: selSup });
-    if (error) Alert.alert('Error', error.message);
-    else { Alert.alert('Listo', 'Guía asignado a supervisor'); setSelGuia(null); setSelSup(null); cargar(); }
+    if (error) alerta('Error', error.message);
+    else { alerta('Listo', 'Guía asignado a supervisor'); setSelGuia(null); setSelSup(null); cargar(); }
   };
 
   if (loading) return <Cargando texto="Cargando..." />;

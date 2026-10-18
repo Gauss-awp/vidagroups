@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import {Pressable, RefreshControl, ScrollView, Text, View} from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +21,7 @@ import {
   s,
 } from '@/components/ui';
 import { FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
+import { alerta } from '@/lib/alerta';
 
 type MiembroConGrupo = Miembro & { grupo: { nombre: string } | null };
 
@@ -84,7 +85,7 @@ export default function EventoPantalla() {
       consultaMiembros,
       supabase.from('pagos_evento').select('*').eq('evento_id', id).order('fecha_pago', { ascending: false }),
     ]);
-    if (m.error || p.error) Alert.alert('Error', (m.error ?? p.error)?.message ?? '');
+    if (m.error || p.error) alerta('Error', (m.error ?? p.error)?.message ?? '');
 
     const lista = (m.data ?? []) as MiembroConGrupo[];
     const ids = new Set(lista.map((x) => x.id));
@@ -144,11 +145,11 @@ export default function EventoPantalla() {
   const registrarPago = async () => {
     const valor = parseMonto(monto);
     if (!miembroPago) {
-      Alert.alert('Falta el miembro', 'Elegí a quién corresponde el pago.');
+      alerta('Falta el miembro', 'Elegí a quién corresponde el pago.');
       return;
     }
     if (isNaN(valor) || valor <= 0) {
-      Alert.alert('Monto inválido', 'Escribí un monto mayor a cero, por ejemplo 15000.');
+      alerta('Monto inválido', 'Escribí un monto mayor a cero, por ejemplo 15000.');
       return;
     }
     setGuardando(true);
@@ -163,7 +164,7 @@ export default function EventoPantalla() {
     });
     setGuardando(false);
     if (err) {
-      Alert.alert('No se pudo registrar el pago', err.message);
+      alerta('No se pudo registrar el pago', err.message);
       return;
     }
     setModalPago(false);
@@ -171,14 +172,14 @@ export default function EventoPantalla() {
   };
 
   const eliminarPago = (p: Pago) => {
-    Alert.alert('Eliminar pago', `¿Eliminar el pago de ${formatoMoneda(Number(p.monto_pagado), moneda)} del ${formatoFecha(p.fecha_pago)}?`, [
+    alerta('Eliminar pago', `¿Eliminar el pago de ${formatoMoneda(Number(p.monto_pagado), moneda)} del ${formatoFecha(p.fecha_pago)}?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
         style: 'destructive',
         onPress: async () => {
           const { error: err } = await supabase.from('pagos_evento').delete().eq('id', p.id);
-          if (err) Alert.alert('No se pudo eliminar', err.message);
+          if (err) alerta('No se pudo eliminar', err.message);
           else cargar();
         },
       },

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Switch, TextInput, Alert } from 'react-native';
+import {View, Text, ScrollView, Switch, TextInput} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Card, SelectorPilares } from '@/components/ui';
 import { colors } from '@/lib/theme';
+import { alerta } from '@/lib/alerta';
 
 export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: string }) {
   const [tarjetas, setTarjetas] = useState<any[]>([]);
@@ -25,7 +26,7 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
     setTarjetas(prev => prev.map(x => x.id === t.id? {...x, [campo]: nuevoValor} : x));
 
     const { error } = await supabase.from('tarjetas_consolidacion').update({ [campo]: nuevoValor }).eq('id', t.id);
-    if(error) return Alert.alert('Error', error.message);
+    if(error) return alerta('Error', error.message);
 
     // LÓGICA NUEVA: Si es Comenzó GV
     if(campo === 'comenzo_gv' && grupoId){
@@ -75,7 +76,7 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
             onCambio={async (c) => {
               setTarjetas((prev) => prev.map((x) => (x.id === t.id ? { ...x, ...c } : x)));
               const { error } = await supabase.from('tarjetas_consolidacion').update(c).eq('id', t.id);
-              if (error) Alert.alert('Error', error.message);
+              if (error) alerta('Error', error.message);
             }}
           />
           <View style={{flexDirection: 'row', justifyContent: 'space-between', marginTop:8}}>

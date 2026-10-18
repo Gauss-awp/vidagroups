@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Text } from 'react-native';
+import {Text} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Boton, Campo, Card } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 export function CrearGrupo({ guiaId, onCreado }: { guiaId: string; onCreado: () => void }) {
   const [nombre, setNombre] = useState('');
@@ -11,7 +12,7 @@ export function CrearGrupo({ guiaId, onCreado }: { guiaId: string; onCreado: () 
 
   const crear = async () => {
     if (!nombre.trim()) {
-      Alert.alert('Falta el nombre', 'Escribí el nombre de tu grupo de vida.');
+      alerta('Falta el nombre', 'Escribí el nombre de tu grupo de vida.');
       return;
     }
     setGuardando(true);
@@ -22,7 +23,7 @@ export function CrearGrupo({ guiaId, onCreado }: { guiaId: string; onCreado: () 
     });
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo crear el grupo', error.message);
+      alerta('No se pudo crear el grupo', error.message);
       return;
     }
     onCreado();

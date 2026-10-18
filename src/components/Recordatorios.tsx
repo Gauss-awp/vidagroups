@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { cancelarRecordatorios, reprogramar } from '@/lib/recordatorios';
@@ -7,6 +7,7 @@ import { cancelarRecordatorios, reprogramar } from '@/lib/recordatorios';
 /** Arma los recordatorios del guía al abrir la app y al volver a ella; al tocar uno, abre lo que corresponde. */
 export function Recordatorios({ perfilId, rol }: { perfilId: string; rol: string }) {
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     // Los recordatorios son solo para los guías; si alguien deja de serlo, se borran los que tenía
     if (rol !== 'guia') {
       cancelarRecordatorios();

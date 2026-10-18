@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {Pressable, ScrollView, Text, View} from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import { formatoFecha, hoyISO } from '@/lib/utils';
 import { encolar, esErrorDeRed, leerCache } from '@/lib/sinConexion';
 import { reprogramarPronto } from '@/lib/recordatorios';
 import { Boton, Campo, Card, Cargando, SelectorFecha, Vacio, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 interface Hermano {
   id: string;
@@ -98,7 +99,7 @@ export default function ModoReunion() {
   const terminar = async () => {
     const ofrenda = datos.ofrenda.trim() ? Number(datos.ofrenda.replace(/\./g, '').replace(',', '.')) : null;
     if (ofrenda !== null && isNaN(ofrenda)) {
-      Alert.alert('Ofrenda inválida', 'Escribí solo el número, por ejemplo 12000.');
+      alerta('Ofrenda inválida', 'Escribí solo el número, por ejemplo 12000.');
       return;
     }
     const filas = hermanos.map((h) => ({
@@ -143,7 +144,7 @@ export default function ModoReunion() {
         await guardarEnCelular();
         setPaso(4);
       } else {
-        Alert.alert('No se pudo guardar', e instanceof Error ? e.message : String((e as any)?.message ?? e));
+        alerta('No se pudo guardar', e instanceof Error ? e.message : String((e as any)?.message ?? e));
       }
     }
     setGuardando(false);

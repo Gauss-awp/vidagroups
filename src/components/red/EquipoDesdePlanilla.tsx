@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Boton, Campo, Card, HojaModal, SeccionTitulo, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 type RolEquipo = 'guia' | 'guia_supervisor' | 'consolidacion';
 
@@ -102,16 +103,16 @@ export function EquipoDesdePlanilla({ redId, redNombre, onCambio }: { redId: str
       .upsert(filas.map((f) => ({ ...f, red_id: redId, aplicado_en: null, perfil_id: null })), { onConflict: 'red_id,email' });
     if (error) {
       setTrabajando(false);
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       return;
     }
     const { data, error: e2 } = await supabase.rpc('aplicar_preaprobaciones', { p_red: redId });
     setTrabajando(false);
     if (e2) {
-      Alert.alert('Se guardó la planilla, pero no se pudo aprobar', e2.message);
+      alerta('Se guardó la planilla, pero no se pudo aprobar', e2.message);
     } else {
       const r = data as { aplicados: number; esperando: number };
-      Alert.alert(
+      alerta(
         'Equipo cargado',
         `${r.aplicados} ${r.aplicados === 1 ? 'persona quedó aprobada' : 'personas quedaron aprobadas'} ahora.` +
           (r.esperando ? ` ${r.esperando} ${r.esperando === 1 ? 'queda aprobada sola' : 'quedan aprobadas solas'} apenas se registren con ese correo.` : '')
@@ -124,7 +125,7 @@ export function EquipoDesdePlanilla({ redId, redNombre, onCambio }: { redId: str
   };
 
   const borrar = (p: Preaprobacion) =>
-    Alert.alert('Quitar de la planilla', `¿Quitar a ${p.email}? Si todavía no se registró, ya no va a quedar aprobado solo.`, [
+    alerta('Quitar de la planilla', `¿Quitar a ${p.email}? Si todavía no se registró, ya no va a quedar aprobado solo.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Quitar',

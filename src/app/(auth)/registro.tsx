@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -7,6 +7,7 @@ import { colors } from '@/lib/theme';
 import type { Red } from '@/lib/types';
 import { traducirError } from '@/lib/utils';
 import { Boton, Campo, Chip, Pantalla, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 export default function Registro() {
   const router = useRouter();
@@ -23,19 +24,19 @@ export default function Registro() {
 
   const registrar = async () => {
     if (!form.nombre.trim() || !form.email.trim() || !form.password) {
-      Alert.alert('Faltan datos', 'Completá nombre, correo y contraseña.');
+      alerta('Faltan datos', 'Completá nombre, correo y contraseña.');
       return;
     }
     if (!redId) {
-      Alert.alert('Falta tu red', 'Elegí la red a la que pertenecés.');
+      alerta('Falta tu red', 'Elegí la red a la que pertenecés.');
       return;
     }
     if (form.password.length < 8) {
-      Alert.alert('Contraseña corta', 'La contraseña tiene que tener al menos 8 caracteres.');
+      alerta('Contraseña corta', 'La contraseña tiene que tener al menos 8 caracteres.');
       return;
     }
     if (form.password !== form.repetir) {
-      Alert.alert('Las contraseñas no coinciden', 'Escribí la misma contraseña en los dos campos.');
+      alerta('Las contraseñas no coinciden', 'Escribí la misma contraseña en los dos campos.');
       return;
     }
     setCargando(true);
@@ -46,11 +47,11 @@ export default function Registro() {
     });
     setCargando(false);
     if (error) {
-      Alert.alert('No se pudo crear la cuenta', traducirError(error.message));
+      alerta('No se pudo crear la cuenta', traducirError(error.message));
       return;
     }
     if (!data.session) {
-      Alert.alert('Cuenta creada', 'Te enviamos un correo para confirmar tu cuenta. Después ingresá con tu correo y contraseña.', [
+      alerta('Cuenta creada', 'Te enviamos un correo para confirmar tu cuenta. Después ingresá con tu correo y contraseña.', [
         { text: 'Entendido', onPress: () => router.replace('/login') },
       ]);
     }

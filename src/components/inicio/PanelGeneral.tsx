@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Share, Text, View } from 'react-native';
+import {Pressable, RefreshControl, ScrollView, Share, Text, View} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,7 @@ import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
 import { FormEvento } from '@/components/eventos/FormEvento';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { SupervisoresPastoral } from './SupervisoresPastoral';
+import { alerta } from '@/lib/alerta';
 
 interface Semana {
   semana: string;
@@ -77,7 +78,7 @@ export function PanelGeneral({ perfil }: { perfil: Perfil }) {
   const cargar = useCallback(async () => {
     const { data, error } = await supabase.rpc('panel_pastoral');
     if (error) {
-      Alert.alert('No se pudo cargar el panel', error.message);
+      alerta('No se pudo cargar el panel', error.message);
       return;
     }
     setDatos(data as DatosPanel);

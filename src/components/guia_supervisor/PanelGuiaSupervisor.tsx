@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, Share, Text, View } from 'react-native';
+import {Linking, Pressable, RefreshControl, ScrollView, Share, Text, View} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -9,6 +9,7 @@ import { formatoFecha, formatoMoneda, hoyISO, sumarDias } from '@/lib/utils';
 import { BarraProgreso, Boton, Card, Cargando, Pantalla, PasosConsolidacion, SeccionTitulo, TituloGrande, Vacio, s } from '@/components/ui';
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
+import { alerta } from '@/lib/alerta';
 
 interface GrupoPanel {
   id: string;
@@ -47,7 +48,7 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
   const cargar = useCallback(async () => {
     const { data, error } = await supabase.rpc('panel_supervisor');
     if (error) {
-      Alert.alert('No se pudo cargar el panel', error.message);
+      alerta('No se pudo cargar el panel', error.message);
       return;
     }
     setDatos(data as DatosSupervisor);

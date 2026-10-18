@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {Pressable, ScrollView, Text, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AMBIENTE, supabase } from '@/lib/supabase';
 import * as Updates from 'expo-updates';
@@ -12,6 +12,7 @@ import { ModoTema, useTema } from '@/context/TemaContext';
 import { Switch } from 'react-native';
 import { guardarPreferencias, leerPreferencias, pedirPermiso, reprogramar, type PreferenciasRecordatorios } from '@/lib/recordatorios';
 import { Avatar, Badge, Boton, Campo, Card, Cargando, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 export default function PerfilPantalla() {
   const { perfil, redesAdmin, refrescarPerfil, cerrarSesion } = useAuth();
@@ -25,7 +26,7 @@ export default function PerfilPantalla() {
     setRec(nuevo);
     await guardarPreferencias(nuevo);
     if (valor && !(await pedirPermiso(true))) {
-      Alert.alert('Notificaciones desactivadas', 'Para recibir recordatorios, permití las notificaciones de VidaGroups en los ajustes del celular.');
+      alerta('Notificaciones desactivadas', 'Para recibir recordatorios, permití las notificaciones de VidaGroups en los ajustes del celular.');
     }
     if (perfil) reprogramar(perfil.id);
   };
@@ -81,7 +82,7 @@ export default function PerfilPantalla() {
 
   const guardar = async () => {
     if (!nombre.trim()) {
-      Alert.alert('Falta el nombre', 'El nombre no puede quedar vacío.');
+      alerta('Falta el nombre', 'El nombre no puede quedar vacío.');
       return;
     }
     setGuardando(true);
@@ -91,15 +92,15 @@ export default function PerfilPantalla() {
      .eq('id', perfil.id);
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       return;
     }
     await refrescarPerfil();
-    Alert.alert('Cambios guardados');
+    alerta('Cambios guardados');
   };
 
   const eliminarCuenta = () => {
-    Alert.alert(
+    alerta(
       'Eliminar mi cuenta',
       'Vas a borrar tu usuario de VidaGroups. Esta acción no se puede deshacer.',
       [
@@ -108,7 +109,7 @@ export default function PerfilPantalla() {
           text: 'Continuar',
           style: 'destructive',
           onPress: () =>
-            Alert.alert('¿Seguro?', 'Confirmá que querés eliminar tu cuenta para siempre.', [
+            alerta('¿Seguro?', 'Confirmá que querés eliminar tu cuenta para siempre.', [
               { text: 'No', style: 'cancel' },
               {
                 text: 'Sí, eliminar',
@@ -118,7 +119,7 @@ export default function PerfilPantalla() {
                   const { error } = await supabase.rpc('eliminar_mi_cuenta');
                   setEliminando(false);
                   if (error) {
-                    Alert.alert('No se pudo eliminar la cuenta', error.message);
+                    alerta('No se pudo eliminar la cuenta', error.message);
                     return;
                   }
                   await cerrarSesion();
@@ -131,7 +132,7 @@ export default function PerfilPantalla() {
   };
 
   const salir = () => {
-    Alert.alert('Cerrar sesión', '¿Querés salir de VidaGroups?', [
+    alerta('Cerrar sesión', '¿Querés salir de VidaGroups?', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Cerrar sesión', style: 'destructive', onPress: cerrarSesion },
     ]);
@@ -170,7 +171,7 @@ export default function PerfilPantalla() {
           </Text>
         </Card>
 
-        {perfil?.rol === 'guia' ? (
+        {perfil?.rol === 'guia' && Platform.OS !== 'web' ? (
           <>
         <SeccionTitulo titulo="Recordatorios" />
         <Card>

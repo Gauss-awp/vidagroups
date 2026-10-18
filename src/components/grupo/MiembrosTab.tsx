@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, Share, Text, View } from 'react-native';
+import {Pressable, Share, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import type { Habito, Miembro, RegistroDiario } from '@/lib/types';
 import { MESES, cumpleProximo, formatoCumple, nombreCompleto, parseCumple, porcentaje, rangoMes } from '@/lib/utils';
 import { Avatar, BarraProgreso, Boton, Campo, Card, Cargando, HojaModal, SeccionTitulo, Stat, Vacio, s } from '@/components/ui';
 import { LogrosGrupo, type Racha } from './LogrosGrupo';
+import { alerta } from '@/lib/alerta';
 
 interface AnalisisHabito {
   habito: Habito;
@@ -60,7 +61,7 @@ export function MiembrosTab({
         .lte('fecha', fin),
     ]);
     setReuniones((re.data ?? []) as any);
-    if (m.error || h.error) Alert.alert('Error', (m.error ?? h.error)?.message ?? '');
+    if (m.error || h.error) alerta('Error', (m.error ?? h.error)?.message ?? '');
     const hs = (h.data ?? []) as Habito[];
     let regs: RegistroDiario[] = [];
     if (hs.length > 0) {
@@ -70,7 +71,7 @@ export function MiembrosTab({
         .in('habito_id', hs.map((x) => x.id))
         .gte('fecha', inicio)
         .lte('fecha', fin);
-      if (r.error) Alert.alert('Error', r.error.message);
+      if (r.error) alerta('Error', r.error.message);
       regs = (r.data ?? []) as RegistroDiario[];
     }
     setMiembros((m.data ?? []) as Miembro[]);
@@ -146,18 +147,18 @@ export function MiembrosTab({
     try {
       await Share.share({ message: lineas.join('\n') });
     } catch (e) {
-      Alert.alert('No se pudo compartir', e instanceof Error ? e.message : String(e));
+      alerta('No se pudo compartir', e instanceof Error ? e.message : String(e));
     }
   };
 
   const agregar = async () => {
     if (!form.nombre.trim()) {
-      Alert.alert('Falta el nombre', 'Escribí al menos el nombre del miembro.');
+      alerta('Falta el nombre', 'Escribí al menos el nombre del miembro.');
       return;
     }
     const cumple = form.cumple.trim() ? parseCumple(form.cumple) : null;
     if (form.cumple.trim() && !cumple) {
-      Alert.alert('Cumpleaños inválido', 'Escribilo como día/mes, por ejemplo 25/12, o con el año: 25/12/1998.');
+      alerta('Cumpleaños inválido', 'Escribilo como día/mes, por ejemplo 25/12, o con el año: 25/12/1998.');
       return;
     }
     setGuardando(true);
@@ -170,7 +171,7 @@ export function MiembrosTab({
     });
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo agregar', error.message);
+      alerta('No se pudo agregar', error.message);
       return;
     }
     setForm({ nombre: '', apellido: '', telefono: '', cumple: '' });
@@ -179,14 +180,14 @@ export function MiembrosTab({
   };
 
   const quitar = (m: Miembro) => {
-    Alert.alert('Quitar del grupo', `¿Quitar a ${nombreCompleto(m)} del grupo? Su historial se conserva.`, [
+    alerta('Quitar del grupo', `¿Quitar a ${nombreCompleto(m)} del grupo? Su historial se conserva.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Quitar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from('miembros_grupo').update({ activo: false }).eq('id', m.id);
-          if (error) Alert.alert('No se pudo quitar', error.message);
+          if (error) alerta('No se pudo quitar', error.message);
           else cargar();
         },
       },

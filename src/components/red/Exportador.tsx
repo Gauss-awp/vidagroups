@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Alert } from 'react-native';
 import * as XLSX from 'xlsx-js-style';
-import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { supabase } from '@/lib/supabase';
+import { compartirArchivo } from '@/lib/archivos';
 import { formatoCumple, formatoFecha, hoyISO, porcentaje, sumarDias } from '@/lib/utils';
 import { Boton } from '@/components/ui';
 import { hojaTarjetasConFormato } from '@/lib/tarjetasExcel';
+import { alerta } from '@/lib/alerta';
 
 
 /**
@@ -74,7 +73,7 @@ export function Exportador({ redId, redNombre, soloTarjetas = false }: { redId: 
 
       if ((soloTarjetas || filasMiembros.length === 0) && filasTarjetas.length === 0) {
         setTrabajando(false);
-        Alert.alert('No hay datos', `Todavía no hay miembros ni tarjetas en ${redNombre}.`);
+        alerta('No hay datos', `Todavía no hay miembros ni tarjetas en ${redNombre}.`);
         return;
       }
 
@@ -90,29 +89,16 @@ export function Exportador({ redId, redNombre, soloTarjetas = false }: { redId: 
       const base64 = XLSX.write(libro, { type: 'base64', bookType: 'xlsx' });
 
       const nombreArchivo = `${soloTarjetas ? 'Tarjetas_de_consolidacion' : 'VidaGroups'}_${redNombre.replace(/[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ]+/g, '_')}_${hoyISO()}.xlsx`;
-      const archivo = new File(Paths.cache, nombreArchivo);
-      if (archivo.exists) archivo.delete();
-      archivo.create();
-      archivo.write(base64, { encoding: 'base64' });
-
       setTrabajando(false);
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert('No se puede compartir', 'Este dispositivo no permite compartir archivos.');
-        return;
-      }
-      await Sharing.shareAsync(archivo.uri, {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        UTI: 'org.openxmlformats.spreadsheetml.sheet',
-        dialogTitle: `Exportar ${redNombre}`,
-      });
+      await compartirArchivo(base64, nombreArchivo, `Exportar ${redNombre}`);
     } catch (e) {
       setTrabajando(false);
-      Alert.alert('No se pudo exportar', e instanceof Error ? e.message : String(e));
+      alerta('No se pudo exportar', e instanceof Error ? e.message : String(e));
     }
   };
 
   const confirmar = () =>
-    Alert.alert(
+    alerta(
       'Exportar a Excel',
       soloTarjetas
         ? `Se genera el Excel de tarjetas de consolidación de ${redNombre}, con el mismo formato de la planilla. Tiene datos personales: compartilo solo con quien corresponda.`

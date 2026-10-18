@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import {Linking, Pressable, ScrollView, Text, View} from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import type { Miembro, Moneda } from '@/lib/types';
 import { MESES, formatoCumple, formatoFecha, formatoMoneda, nombreCompleto, parseCumple, porcentaje, sumarDias, hoyISO } from '@/lib/utils';
 import { Avatar, Boton, Campo, Card, Cargando, Chip, HojaModal, PasosConsolidacion, SeccionTitulo, Vacio, s } from '@/components/ui';
 import { Notas } from '@/components/notas/Notas';
+import { alerta } from '@/lib/alerta';
 
 interface Reunion {
   id: string;
@@ -122,12 +123,12 @@ export default function MiembroPantalla() {
 
   const guardar = async () => {
     if (!form.nombre.trim()) {
-      Alert.alert('Falta el nombre', 'El nombre no puede quedar vacío.');
+      alerta('Falta el nombre', 'El nombre no puede quedar vacío.');
       return;
     }
     const cumple = form.cumple.trim() ? parseCumple(form.cumple) : null;
     if (form.cumple.trim() && !cumple) {
-      Alert.alert('Cumpleaños inválido', 'Escribilo como día/mes, por ejemplo 25/12, o con el año: 25/12/1998.');
+      alerta('Cumpleaños inválido', 'Escribilo como día/mes, por ejemplo 25/12, o con el año: 25/12/1998.');
       return;
     }
     setGuardando(true);
@@ -137,7 +138,7 @@ export default function MiembroPantalla() {
       .eq('id', miembro.id);
     setGuardando(false);
     if (err) {
-      Alert.alert('No se pudo guardar', err.message);
+      alerta('No se pudo guardar', err.message);
       return;
     }
     setEditando(false);

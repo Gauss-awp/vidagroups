@@ -24,7 +24,12 @@
       "versionCode": 3
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro",
+      "name": "VidaGroups",
+      "shortName": "VidaGroups",
+      "lang": "es"
     },
     "plugins": [
       "expo-router",

@@ -19,7 +19,9 @@ export interface PreferenciasRecordatorios {
 const CLAVE_PREF = 'vg_recordatorios';
 const CANAL = 'recordatorios';
 
-Notifications.setNotificationHandler({
+const enWeb = Platform.OS === 'web';
+
+if (!enWeb) Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
@@ -43,6 +45,7 @@ export async function guardarPreferencias(p: PreferenciasRecordatorios) {
 
 /** Pide permiso para notificar (una sola vez, o cuando la persona activa un recordatorio) */
 export async function pedirPermiso(forzar = false): Promise<boolean> {
+  if (enWeb) return false;
   const actual = await Notifications.getPermissionsAsync();
   if (actual.granted) return true;
   const yaPedido = await AsyncStorage.getItem('vg_permiso_notif_pedido');
@@ -87,6 +90,7 @@ let ultimoPerfil: string | null = null;
 
 /** Borra todos los recordatorios de VidaGroups agendados en el celular */
 export async function cancelarRecordatorios() {
+  if (enWeb) return;
   ultimoPerfil = null;
   try {
     const agendadas = await Notifications.getAllScheduledNotificationsAsync();
@@ -101,6 +105,7 @@ let temporizador: ReturnType<typeof setTimeout> | null = null;
 
 /** Reprograma unos segundos después (para no hacerlo en cada toque) */
 export function reprogramarPronto() {
+  if (enWeb) return;
   if (!ultimoPerfil) return;
   if (temporizador) clearTimeout(temporizador);
   const id = ultimoPerfil;
@@ -109,6 +114,7 @@ export function reprogramarPronto() {
 
 /** Borra los recordatorios agendados y los vuelve a armar con lo que hay cargado */
 export async function reprogramar(perfilId: string) {
+  if (enWeb) return;
   ultimoPerfil = perfilId;
   try {
     const pref = await leerPreferencias();

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, Text, View, Pressable } from 'react-native';
+import {RefreshControl, ScrollView, Text, View, Pressable} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
@@ -19,6 +19,7 @@ import { router } from 'expo-router';
 import { reprogramarPronto } from '@/lib/recordatorios';
 import { formatoFecha } from '@/lib/utils';
 import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
+import { alerta } from '@/lib/alerta';
 
 // Acortamos el label largo para que entre bien
 const TABS = [
@@ -263,7 +264,7 @@ export function GrupoDetalle({
             setGuardandoGrupo(true);
             const hora = horaReunion.trim().replace('.', ':');
             if (hora && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(hora)) {
-              Alert.alert('Hora inválida', 'Escribila como 21:00.');
+              alerta('Hora inválida', 'Escribila como 21:00.');
               return;
             }
             const cambios: Record<string, unknown> = Object.fromEntries(Object.entries(datosGrupo).map(([k, v]) => [k, v.trim() || null]));
@@ -272,7 +273,7 @@ export function GrupoDetalle({
             const { error } = await supabase.from('groups').update(cambios).eq('id', grupo.id);
             setGuardandoGrupo(false);
             if (error) {
-              Alert.alert('No se pudo guardar', error.message);
+              alerta('No se pudo guardar', error.message);
               return;
             }
             setEditandoDatos(false);

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { ROL_COLOR, colors } from '@/lib/theme';
@@ -7,6 +7,7 @@ import type { Perfil, Rol } from '@/lib/types';
 import { ROL_LABEL, nombreCompleto } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, Boton, Card, Chip, HojaModal, SeccionTitulo, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 /** Personas registradas en la red que esperan que les asignen un rol. */
 export function Aprobaciones({ redId, onCambio }: { redId: string; onCambio?: () => void }) {
@@ -59,7 +60,7 @@ export function Aprobaciones({ redId, onCambio }: { redId: string; onCambio?: ()
       .eq('id', elegido.id);
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo aprobar', error.message);
+      alerta('No se pudo aprobar', error.message);
       return;
     }
     setElegido(null);
@@ -68,14 +69,14 @@ export function Aprobaciones({ redId, onCambio }: { redId: string; onCambio?: ()
   };
 
   const rechazar = (p: Perfil) => {
-    Alert.alert('Rechazar cuenta', `¿Rechazar a ${nombreCompleto(p)}? No va a poder ver nada en la app.`, [
+    alerta('Rechazar cuenta', `¿Rechazar a ${nombreCompleto(p)}? No va a poder ver nada en la app.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Rechazar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from('profiles').update({ estado: 'inactivo' }).eq('id', p.id);
-          if (error) Alert.alert('No se pudo rechazar', error.message);
+          if (error) alerta('No se pudo rechazar', error.message);
           else cargar();
         },
       },

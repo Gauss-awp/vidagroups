@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import {Pressable, RefreshControl, ScrollView, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { ROL_COLOR, colors } from '@/lib/theme';
@@ -21,6 +21,7 @@ import {
   Vacio,
   s,
 } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 const ROLES: Rol[] = ['apostol', 'pastor', 'guia_supervisor', 'consolidacion', 'guia'];
 
@@ -40,7 +41,7 @@ export default function AdministrarIglesia() {
 
   const cargar = useCallback(async () => {
     const { data, error } = await supabase.from('profiles').select('*').order('nombre');
-    if (error) Alert.alert('Error', error.message);
+    if (error) alerta('Error', error.message);
     setUsuarios((data ?? []) as Perfil[]);
     setCargando(false);
   }, []);
@@ -84,11 +85,11 @@ export default function AdministrarIglesia() {
 
   const abrir = (u: Perfil) => {
     if (perfil.rol === 'pastor' && (u.rol === 'apostol' || u.rol === 'pastor')) {
-      Alert.alert('Sin permiso', 'Solo el Apóstol puede modificar a Pastores y Apóstoles.');
+      alerta('Sin permiso', 'Solo el Apóstol puede modificar a Pastores y Apóstoles.');
       return;
     }
     if (perfil.rol === 'pastor' && u.id === perfil.id) {
-      Alert.alert('Sin permiso', 'No podés cambiar tu propio rol ni tu superior.');
+      alerta('Sin permiso', 'No podés cambiar tu propio rol ni tu superior.');
       return;
     }
     setEditando(u);
@@ -113,7 +114,7 @@ export default function AdministrarIglesia() {
       .eq('id', editando.id);
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       return;
     }
     if (editando.id === perfil.id) await refrescarPerfil();

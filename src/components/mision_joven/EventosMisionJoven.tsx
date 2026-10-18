@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import {Text, TouchableOpacity, View} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import type { Evento } from '@/lib/types';
 import { formatoFecha, formatoMoneda } from '@/lib/utils';
 import { BarraProgreso, Card, Cargando, s } from '@/components/ui';
 import { Alcance, FormEvento, ICONO_EVENTO } from '@/components/eventos/FormEvento';
+import { alerta } from '@/lib/alerta';
 
 interface ResumenGrupo {
   grupoId: string;
@@ -35,7 +36,7 @@ export default function EventosMisionJoven({ redId, puedeGeneral = false }: { re
       .is('grupo_id', null)
       .or(`red_id.eq.${redId},red_id.is.null`)
       .order('fecha_evento', { ascending: true, nullsFirst: false });
-    if (error) Alert.alert('Error al cargar eventos', error.message);
+    if (error) alerta('Error al cargar eventos', error.message);
     setEventos((data ?? []) as Evento[]);
     setCargando(false);
   }, [redId]);
@@ -46,14 +47,14 @@ export default function EventosMisionJoven({ redId, puedeGeneral = false }: { re
   }, [load]);
 
   const borrar = (ev: Evento) => {
-    Alert.alert('Borrar evento', `¿Borrar "${ev.nombre}"? Se borran también todos sus pagos.`, [
+    alerta('Borrar evento', `¿Borrar "${ev.nombre}"? Se borran también todos sus pagos.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Borrar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from('eventos').delete().eq('id', ev.id);
-          if (error) Alert.alert('No se pudo borrar', error.message);
+          if (error) alerta('No se pudo borrar', error.message);
           else load();
         },
       },

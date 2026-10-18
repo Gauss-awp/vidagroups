@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
+import {Pressable, RefreshControl, ScrollView, Text, TextInput, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors, ROL_COLOR } from '@/lib/theme';
@@ -7,6 +7,7 @@ import type { Perfil, Rol } from '@/lib/types';
 import { ROL_LABEL, ROL_RANGO, formatoFecha } from '@/lib/utils';
 import { Boton, Card, Cargando, Chip, HojaModal, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
 import { EquipoDesdePlanilla } from '@/components/red/EquipoDesdePlanilla';
+import { alerta } from '@/lib/alerta';
 
 // ---------- Tipos de lo que devuelven las funciones del Administrador ----------
 interface ResumenAdmin {
@@ -76,8 +77,28 @@ interface Red {
   id: string;
   nombre: string;
 }
+interface ErrorApp {
+  id: number;
+  perfil_id: string | null;
+  version: string | null;
+  plataforma: string | null;
+  pantalla: string | null;
+  mensaje: string;
+  detalle: string | null;
+  fatal: boolean;
+  creado_en: string;
+}
+interface Aviso {
+  id: string;
+  titulo: string;
+  mensaje: string | null;
+  rol: string | null;
+  red_id: string | null;
+  desde: string;
+  hasta: string;
+}
 
-type Seccion = 'salud' | 'cuentas' | 'grupos' | 'responsables' | 'equipo' | 'cambios';
+type Seccion = 'salud' | 'errores' | 'avisos' | 'cuentas' | 'grupos' | 'responsables' | 'equipo' | 'cambios';
 
 const nombreDe = (c: { nombre: string | null; apellido?: string | null; email: string }) =>
   `${c.nombre ?? ''} ${c.apellido ?? ''}`.trim() || c.email;
@@ -110,19 +131,25 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
   const [responsables, setResponsables] = useState<Responsable[]>([]);
   const [cambios, setCambios] = useState<CambioRol[]>([]);
   const [redes, setRedes] = useState<Red[]>([]);
+  const [errores, setErrores] = useState<ErrorApp[]>([]);
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    const [r, c, g, rs, cb, rd] = await Promise.all([
+    const [r, c, g, rs, cb, rd, er, av] = await Promise.all([
       supabase.rpc('admin_resumen'),
       supabase.rpc('admin_cuentas'),
       supabase.rpc('admin_grupos'),
       supabase.rpc('admin_responsables'),
       supabase.rpc('admin_cambios_roles'),
       supabase.from('redes').select('id, nombre').order('nombre'),
+      supabase.from('errores_app').select('*').order('creado_en', { ascending: false }).limit(100),
+      supabase.from('avisos').select('id, titulo, mensaje, rol, red_id, desde, hasta').order('creado_en', { ascending: false }),
     ]);
+    setErrores((er.data ?? []) as ErrorApp[]);
+    setAvisos((av.data ?? []) as Aviso[]);
     if (r.error) {
       setError(r.error.message);
     } else {
@@ -151,6 +178,8 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
 
   const pestañas: { id: Seccion; texto: string; aviso?: number }[] = [
     { id: 'salud', texto: 'Salud' },
+    { id: 'errores', texto: 'Errores', aviso: errores.filter((e) => Date.now() - new Date(e.creado_en).getTime() < 7 * 86400000).length },
+    { id: 'avisos', texto: 'Avisos' },
     { id: 'cuentas', texto: 'Cuentas', aviso: resumen?.pendientes },
     { id: 'grupos', texto: 'Grupos' },
     { id: 'responsables', texto: 'Responsables' },
@@ -195,6 +224,8 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
         </ScrollView>
 
         {seccion === 'salud' && resumen ? <Salud r={resumen} /> : null}
+        {seccion === 'errores' ? <Errores errores={errores} cuentas={cuentas} onCambio={cargar} /> : null}
+        {seccion === 'avisos' ? <Avisos avisos={avisos} redes={redes} onCambio={cargar} /> : null}
         {seccion === 'cuentas' ? <Cuentas cuentas={cuentas} redes={redes} yo={perfil.id} onCambio={cargar} /> : null}
         {seccion === 'grupos' ? <Grupos grupos={grupos} cuentas={cuentas} onCambio={cargar} /> : null}
         {seccion === 'responsables' ? <Responsables redes={redes} lista={responsables} cuentas={cuentas} onCambio={cargar} /> : null}
@@ -347,7 +378,7 @@ function Cuentas({ cuentas, redes, yo, onCambio }: { cuentas: Cuenta[]; redes: R
     });
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       return;
     }
     setEditando(null);
@@ -356,14 +387,14 @@ function Cuentas({ cuentas, redes, yo, onCambio }: { cuentas: Cuenta[]; redes: R
 
   const eliminar = () => {
     if (!editando) return;
-    Alert.alert('Eliminar cuenta', `¿Eliminar la cuenta de ${nombreDe(editando)}? No se puede deshacer.`, [
+    alerta('Eliminar cuenta', `¿Eliminar la cuenta de ${nombreDe(editando)}? No se puede deshacer.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.rpc('admin_eliminar_cuenta', { p_id: editando.id });
-          if (error) Alert.alert('No se pudo eliminar', error.message);
+          if (error) alerta('No se pudo eliminar', error.message);
           else {
             setEditando(null);
             onCambio();
@@ -488,7 +519,7 @@ function Grupos({ grupos, cuentas, onCambio }: { grupos: GrupoAdmin[]; cuentas: 
   const cambiarGuia = async (perfilId: string) => {
     if (!editando) return;
     const { error } = await supabase.rpc('admin_cambiar_guia', { p_grupo: editando.id, p_perfil: perfilId });
-    if (error) Alert.alert('No se pudo cambiar', error.message);
+    if (error) alerta('No se pudo cambiar', error.message);
     else {
       setEditando(null);
       onCambio();
@@ -498,7 +529,7 @@ function Grupos({ grupos, cuentas, onCambio }: { grupos: GrupoAdmin[]; cuentas: 
   const segundo = async (perfilId: string, agregar: boolean) => {
     if (!editando) return;
     const { error } = await supabase.rpc('admin_segundo_supervisor', { p_grupo: editando.id, p_perfil: perfilId, p_agregar: agregar });
-    if (error) Alert.alert('No se pudo guardar', error.message);
+    if (error) alerta('No se pudo guardar', error.message);
     else {
       setEditando(null);
       onCambio();
@@ -578,7 +609,7 @@ function Responsables({ redes, lista, cuentas, onCambio }: { redes: Red[]; lista
 
   const cambiar = async (red: string, perfil: string, tipo: Responsable['tipo'], agregar: boolean) => {
     const { error } = await supabase.rpc('admin_responsable', { p_red: red, p_perfil: perfil, p_tipo: tipo, p_agregar: agregar });
-    if (error) Alert.alert('No se pudo guardar', error.message);
+    if (error) alerta('No se pudo guardar', error.message);
     else {
       setAgregando(null);
       onCambio();
@@ -702,5 +733,220 @@ function Cambios({ cambios }: { cambios: CambioRol[] }) {
         </View>
       ))}
     </Card>
+  );
+}
+
+// =====================================================================
+// Errores de la app
+// =====================================================================
+function Errores({ errores, cuentas, onCambio }: { errores: ErrorApp[]; cuentas: Cuenta[]; onCambio: () => void }) {
+  const [abierto, setAbierto] = useState<number | null>(null);
+  const quien = (id: string | null) => {
+    if (!id) return 'Sin sesión';
+    const c = cuentas.find((x) => x.id === id);
+    return c ? nombreDe(c) : 'Cuenta borrada';
+  };
+
+  const borrarViejos = () =>
+    alerta('Limpiar errores', '¿Borrar los errores de hace más de 30 días?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: async () => {
+          const limite = new Date(Date.now() - 30 * 86400000).toISOString();
+          const { error } = await supabase.from('errores_app').delete().lt('creado_en', limite);
+          if (error) alerta('No se pudo borrar', error.message);
+          else onCambio();
+        },
+      },
+    ]);
+
+  if (!errores.length) {
+    return (
+      <Card>
+        <View style={s.fila}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} style={{ marginRight: 8 }} />
+          <Text style={{ color: colors.success, fontWeight: '700' }}>No hay errores registrados</Text>
+        </View>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <Text style={[s.textoFilaSec, { marginBottom: 8 }]}>
+        Los últimos {errores.length} errores. Tocá uno para ver el detalle técnico.
+      </Text>
+      {errores.map((e) => (
+        <Card key={e.id} onPress={() => setAbierto(abierto === e.id ? null : e.id)}>
+          <View style={s.fila}>
+            <Ionicons
+              name={e.fatal ? 'close-circle' : 'warning-outline'}
+              size={18}
+              color={e.fatal ? colors.danger : colors.warning}
+              style={{ marginRight: 8, alignSelf: 'flex-start', marginTop: 2 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }} numberOfLines={abierto === e.id ? undefined : 2}>
+                {e.mensaje}
+              </Text>
+              <Text style={[s.textoFilaSec, { fontSize: 12, marginTop: 2 }]}>
+                {new Date(e.creado_en).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })} · {quien(e.perfil_id)}
+              </Text>
+              <Text style={[s.textoFilaSec, { fontSize: 12 }]}>
+                {[e.pantalla, e.plataforma, e.version].filter(Boolean).join(' · ')}
+              </Text>
+              {abierto === e.id && e.detalle ? (
+                <Text style={{ color: colors.textSec, fontSize: 11, marginTop: 8, fontFamily: 'monospace' }}>{e.detalle}</Text>
+              ) : null}
+            </View>
+          </View>
+        </Card>
+      ))}
+      <Boton titulo="Borrar los de más de 30 días" variante="texto" onPress={borrarViejos} />
+    </>
+  );
+}
+
+// =====================================================================
+// Avisos generales
+// =====================================================================
+const DESTINOS: { rol: string | null; texto: string }[] = [
+  { rol: null, texto: 'Todos' },
+  { rol: 'guia', texto: 'Guías' },
+  { rol: 'guia_supervisor', texto: 'Guías Supervisores' },
+  { rol: 'consolidacion', texto: 'Consolidadores' },
+  { rol: 'pastor', texto: 'Pastores' },
+];
+const DURACIONES = [
+  { dias: 1, texto: '1 día' },
+  { dias: 3, texto: '3 días' },
+  { dias: 7, texto: '1 semana' },
+  { dias: 30, texto: '1 mes' },
+];
+
+function Avisos({ avisos, redes, onCambio }: { avisos: Aviso[]; redes: Red[]; onCambio: () => void }) {
+  const [creando, setCreando] = useState(false);
+  const [form, setForm] = useState<{ titulo: string; mensaje: string; rol: string | null; red: string | null; dias: number }>({
+    titulo: '',
+    mensaje: '',
+    rol: null,
+    red: null,
+    dias: 7,
+  });
+  const [guardando, setGuardando] = useState(false);
+  const ahora = Date.now();
+
+  const publicar = async () => {
+    if (!form.titulo.trim()) {
+      alerta('Falta el título', 'Escribí un título corto para el aviso.');
+      return;
+    }
+    setGuardando(true);
+    const { error } = await supabase.from('avisos').insert({
+      titulo: form.titulo.trim(),
+      mensaje: form.mensaje.trim() || null,
+      rol: form.rol,
+      red_id: form.red,
+      hasta: new Date(ahora + form.dias * 86400000).toISOString(),
+    });
+    setGuardando(false);
+    if (error) {
+      alerta('No se pudo publicar', error.message);
+      return;
+    }
+    setCreando(false);
+    setForm({ titulo: '', mensaje: '', rol: null, red: null, dias: 7 });
+    onCambio();
+  };
+
+  const borrar = (a: Aviso) =>
+    alerta('Borrar aviso', `¿Borrar "${a.titulo}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.from('avisos').delete().eq('id', a.id);
+          if (error) alerta('No se pudo borrar', error.message);
+          else onCambio();
+        },
+      },
+    ]);
+
+  return (
+    <>
+      <Text style={[s.textoFilaSec, { marginBottom: 10 }]}>
+        Aparecen abajo en la pantalla de inicio de quien corresponda, hasta que lo cierre o hasta que venza.
+      </Text>
+      <Boton titulo="Nuevo aviso" icono="megaphone-outline" onPress={() => setCreando(true)} style={{ marginBottom: 12 }} />
+      {avisos.length === 0 ? (
+        <Card>
+          <Text style={s.textoFilaSec}>Todavía no publicaste avisos.</Text>
+        </Card>
+      ) : (
+        avisos.map((a) => {
+          const vigente = new Date(a.desde).getTime() <= ahora && new Date(a.hasta).getTime() > ahora;
+          return (
+            <Card key={a.id}>
+              <View style={s.fila}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.textoFila}>{a.titulo}</Text>
+                  {a.mensaje ? <Text style={s.textoFilaSec}>{a.mensaje}</Text> : null}
+                  <Text style={{ color: vigente ? colors.success : colors.textTer, fontSize: 12, marginTop: 4, fontWeight: '600' }}>
+                    {vigente ? 'Vigente' : 'Vencido'} · para {DESTINOS.find((d) => d.rol === a.rol)?.texto ?? a.rol}
+                    {a.red_id ? ` de ${redes.find((r) => r.id === a.red_id)?.nombre ?? 'una red'}` : ''} · hasta el{' '}
+                    {formatoFecha(a.hasta.slice(0, 10))}
+                  </Text>
+                </View>
+                <Pressable onPress={() => borrar(a)} hitSlop={10}>
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                </Pressable>
+              </View>
+            </Card>
+          );
+        })
+      )}
+
+      <HojaModal visible={creando} onClose={() => setCreando(false)} titulo="Nuevo aviso">
+        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Título</Text>
+        <TextInput
+          value={form.titulo}
+          onChangeText={(v) => setForm({ ...form, titulo: v })}
+          placeholder="Ej: Instalen la versión nueva"
+          placeholderTextColor={colors.textTer}
+          style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, color: colors.text, marginBottom: 10 }}
+        />
+        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Mensaje (opcional)</Text>
+        <TextInput
+          value={form.mensaje}
+          onChangeText={(v) => setForm({ ...form, mensaje: v })}
+          placeholder="Ej: Entrá a este link desde el celular…"
+          placeholderTextColor={colors.textTer}
+          multiline
+          style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, color: colors.text, marginBottom: 10, minHeight: 70 }}
+        />
+        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Para quién</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
+          {DESTINOS.map((d) => (
+            <Chip key={d.texto} texto={d.texto} activo={form.rol === d.rol} onPress={() => setForm({ ...form, rol: d.rol })} />
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 }}>
+          <Chip texto="Todas las redes" activo={!form.red} onPress={() => setForm({ ...form, red: null })} />
+          {redes.map((r) => (
+            <Chip key={r.id} texto={r.nombre} activo={form.red === r.id} onPress={() => setForm({ ...form, red: r.id })} />
+          ))}
+        </View>
+        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Durante</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 }}>
+          {DURACIONES.map((d) => (
+            <Chip key={d.dias} texto={d.texto} activo={form.dias === d.dias} onPress={() => setForm({ ...form, dias: d.dias })} />
+          ))}
+        </View>
+        <Boton titulo="Publicar" icono="send" onPress={publicar} cargando={guardando} />
+      </HojaModal>
+    </>
   );
 }

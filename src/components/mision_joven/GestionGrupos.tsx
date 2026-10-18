@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Text, View, ScrollView, Modal, Pressable } from 'react-native';
+import {Text, View, ScrollView, Modal, Pressable} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Card, Boton, s } from '@/components/ui';
 import { SupervisoresDelGrupo } from './SupervisoresDelGrupo';
+import { alerta } from '@/lib/alerta';
 
 export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: string }) {
   const [grupos, setGrupos] = useState<any[]>([]);
@@ -37,16 +38,16 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
 
   const cambiarGuia = async (grupoId:string, nuevoGuiaId:string|null) => {
     const { error } = await supabase.from('groups').update({ guia_id: nuevoGuiaId }).eq('id', grupoId);
-    if(error) return Alert.alert('Error', error.message);
+    if(error) return alerta('Error', error.message);
     setModalGuia(false); cargar();
   };
 
   const eliminarMiembro = (m:any) => {
-    Alert.alert('¿Sacar?', `¿Sacar a ${getNombre(m)} del GV?`,[
+    alerta('¿Sacar?', `¿Sacar a ${getNombre(m)} del GV?`,[
       {text:'Cancelar', style:'cancel'},
       {text:'Sacar', style:'destructive', onPress: async ()=>{
         const {error} = await supabase.from('miembros_grupo').update({activo:false}).eq('id', m.id);
-        if(error) return Alert.alert('Error', error.message);
+        if(error) return alerta('Error', error.message);
         cargar();
       }}
     ]);
@@ -54,7 +55,7 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
 
   const moverMiembro = async (m:any, nuevoGrupoId:string) => {
     const {error} = await supabase.from('miembros_grupo').update({grupo_id: nuevoGrupoId}).eq('id', m.id);
-    if(error) return Alert.alert('Error', error.message);
+    if(error) return alerta('Error', error.message);
     setModalMover(null); cargar();
   };
 

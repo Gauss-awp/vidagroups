@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {Pressable, ScrollView, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Chip, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 interface PerfilLite {
   id: string;
@@ -44,7 +45,7 @@ export function SupervisoresDelGrupo({ grupoId, redId, principalId }: { grupoId:
   const agregar = async (p: PerfilLite) => {
     const { error } = await supabase.from('grupo_supervisores').insert({ grupo_id: grupoId, perfil_id: p.id });
     if (error) {
-      Alert.alert('No se pudo agregar', error.message);
+      alerta('No se pudo agregar', error.message);
       return;
     }
     setEligiendo(false);
@@ -52,14 +53,14 @@ export function SupervisoresDelGrupo({ grupoId, redId, principalId }: { grupoId:
   };
 
   const quitar = (p: PerfilLite) =>
-    Alert.alert('Quitar supervisor', `¿Quitar a ${nombreDe(p)} como segundo supervisor de este grupo?`, [
+    alerta('Quitar supervisor', `¿Quitar a ${nombreDe(p)} como segundo supervisor de este grupo?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Quitar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from('grupo_supervisores').delete().eq('grupo_id', grupoId).eq('perfil_id', p.id);
-          if (error) Alert.alert('No se pudo quitar', error.message);
+          if (error) alerta('No se pudo quitar', error.message);
           else cargar();
         },
       },

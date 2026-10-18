@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import {Pressable, ScrollView, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
@@ -7,6 +7,7 @@ import type { Habito, Miembro, RegistroDiario } from '@/lib/types';
 import { diaCorto, formatoFecha, hoyISO, nombreCompleto, porcentaje, semanaHasta } from '@/lib/utils';
 import { Boton, Campo, Card, Cargando, Chip, HojaModal, SelectorFecha, SeccionTitulo, Vacio, s } from '@/components/ui';
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
+import { alerta } from '@/lib/alerta';
 
 const SUGERENCIAS = ['Evangelizacion', 'Lectura bíblica', 'Ayuno', 'Asistencias a la reunion general'];
 
@@ -35,7 +36,7 @@ export function HabitosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
       .gte('fecha', dias[0])
       .lte('fecha', dias[6]);
     if (error) {
-      Alert.alert('Error al cargar registros', error.message);
+      alerta('Error al cargar registros', error.message);
       return;
     }
     setRegistros((data ?? []) as RegistroDiario[]);
@@ -47,7 +48,7 @@ export function HabitosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
       supabase.from('habitos').select('*').eq('grupo_id', grupoId).order('creado_en'),
       supabase.from('miembros_grupo').select('*').eq('grupo_id', grupoId).eq('activo', true).order('nombre'),
     ]);
-    if (h.error || m.error) Alert.alert('Error', (h.error ?? m.error)?.message ?? '');
+    if (h.error || m.error) alerta('Error', (h.error ?? m.error)?.message ?? '');
     const hs = (h.data ?? []) as Habito[];
     setHabitos(hs);
     setMiembros((m.data ?? []) as Miembro[]);
@@ -107,7 +108,7 @@ export function HabitosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
       .from('registros_diarios')
       .upsert({ habito_id: habitoSel, miembro_id: miembroId, fecha, completado: nuevo }, { onConflict: 'habito_id,miembro_id,fecha' });
     if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       cargarRegistros(habitos, fecha);
     }
   };
@@ -122,7 +123,7 @@ export function HabitosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
       { onConflict: 'habito_id,miembro_id,fecha' }
     );
     if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       cargarRegistros(habitos, fecha);
     }
   };
@@ -130,14 +131,14 @@ export function HabitosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
   const crearHabito = async (nombre: string) => {
     const limpio = nombre.trim();
     if (!limpio) {
-      Alert.alert('Falta el nombre', 'Escribí el nombre del hábito.');
+      alerta('Falta el nombre', 'Escribí el nombre del hábito.');
       return;
     }
     setGuardando(true);
     const { data, error } = await supabase.from('habitos').insert({ grupo_id: grupoId, nombre: limpio }).select().single();
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo crear el hábito', error.message);
+      alerta('No se pudo crear el hábito', error.message);
       return;
     }
     setNuevoHabito('');
@@ -148,14 +149,14 @@ export function HabitosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
   };
 
   const eliminarHabito = (h: Habito) => {
-    Alert.alert('Eliminar hábito', `¿Eliminar "${h.nombre}" y todos sus registros?`, [
+    alerta('Eliminar hábito', `¿Eliminar "${h.nombre}" y todos sus registros?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
         style: 'destructive',
         onPress: async () => {
           const { error } = await supabase.from('habitos').delete().eq('id', h.id);
-          if (error) Alert.alert('No se pudo eliminar', error.message);
+          if (error) alerta('No se pudo eliminar', error.message);
           else cargarTodo();
         },
       },

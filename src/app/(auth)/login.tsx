@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, Image } from 'react-native';
+import {KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, Image} from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { traducirError } from '@/lib/utils';
 import { Boton, Campo, Pantalla } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,13 +16,13 @@ export default function Login() {
 
   const ingresar = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Faltan datos', 'Escribí tu correo y tu contraseña.');
+      alerta('Faltan datos', 'Escribí tu correo y tu contraseña.');
       return;
     }
     setCargando(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     setCargando(false);
-    if (error) Alert.alert('No pudiste ingresar', traducirError(error.message));
+    if (error) alerta('No pudiste ingresar', traducirError(error.message));
   };
 
   return (

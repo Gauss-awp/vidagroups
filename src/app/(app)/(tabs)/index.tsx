@@ -5,6 +5,7 @@ import { InicioGuia } from '@/components/inicio/InicioGuia';
 import { InicioSupervisor } from '@/components/inicio/InicioSupervisor';
 import { PanelGeneral } from '@/components/inicio/PanelGeneral';
 import { PanelAdministrador } from '@/components/admin/PanelAdministrador';
+import { AvisosBanner } from '@/components/AvisosBanner';
 import { PanelGuiaSupervisor } from '@/components/guia_supervisor/PanelGuiaSupervisor';
 import { DevRoleSwitcher, esCuentaDev } from '@/components/DevRoleSwitcher';
 
@@ -32,6 +33,7 @@ export default function Inicio() {
       <DevRoleSwitcher perfil={perfil} />
       {/* Si se ve el modo dev, ya ocupa el margen de arriba: la pantalla no lo repite */}
       <BordeSuperiorContext.Provider value={!esCuentaDev(perfil.email)}>{contenido()}</BordeSuperiorContext.Provider>
+      <AvisosBanner />
     </View>
   );
 }

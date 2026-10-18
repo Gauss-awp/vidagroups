@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import {Linking, Pressable, Text, View} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { formatoFecha } from '@/lib/utils';
 import { Boton, Campo, Card, HojaModal } from '@/components/ui';
 import { Deslizable } from '@/components/Deslizable';
+import { alerta } from '@/lib/alerta';
 
 interface Alerta {
   miembro_id: string;
@@ -73,7 +74,7 @@ export function AlertasFaltas({
       .select('id')
       .single();
     if (error) {
-      Alert.alert('No se pudo ocultar', error.message);
+      alerta('No se pudo ocultar', error.message);
       cargar();
       return;
     }
@@ -100,7 +101,7 @@ export function AlertasFaltas({
     });
     setGuardando(false);
     if (error) {
-      Alert.alert('No se pudo guardar', error.message);
+      alerta('No se pudo guardar', error.message);
       return;
     }
     setContactando(null);

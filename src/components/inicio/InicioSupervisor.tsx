@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View, TouchableOpacity, KeyboardAvoidingView, Platform, Pressable, Modal, TextInput, Alert, Switch } from 'react-native';
+import {RefreshControl, ScrollView, Text, View, TouchableOpacity, KeyboardAvoidingView, Platform, Pressable, Modal, TextInput, Switch} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
@@ -9,6 +9,7 @@ import { EquipoLista } from '@/components/EquipoLista';
 import { FormTarjeta } from '@/components/mision_joven/FormTarjeta';
 import { useAuth } from '@/context/AuthContext';
 import { Exportador } from '@/components/red/Exportador';
+import { alerta } from '@/lib/alerta';
 
 export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
   const { redesConsolida } = useAuth();
@@ -48,14 +49,14 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
 
   const asignarGV = async (tarjetaId: string, grupoId: string) => {
     const { error } = await supabase.from('tarjetas_consolidacion').update({ grupo_id: grupoId }).eq('id', tarjetaId);
-    if (error) Alert.alert('Error', error.message);
+    if (error) alerta('Error', error.message);
     else cargarTodo();
   };
 
   const cambiarEstado = async (completada: boolean) => {
     const { error } = await supabase.from('tarjetas_consolidacion')
       .update({ estado: completada ? 'completada' : 'nueva' }).eq('id', seleccionada.id);
-    if (error) Alert.alert('Error', error.message);
+    if (error) alerta('Error', error.message);
     else { setModal(false); cargarTodo(); }
   };
 
@@ -81,12 +82,12 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
       encuentro: seleccionada.encuentro,
       observacion: seleccionada.observacion,
     }).eq('id', seleccionada.id);
-    if(error) Alert.alert("Error", error.message);
+    if(error) alerta("Error", error.message);
     else { setModal(false); cargarTodo(); }
   };
 
   const borrar = () => {
-    Alert.alert("¿Borrar?", `¿Borrar a ${seleccionada.nombre}?`, [
+    alerta("¿Borrar?", `¿Borrar a ${seleccionada.nombre}?`, [
       { text: "Cancelar", style: "cancel" },
       { text: "Borrar", style: "destructive", onPress: async () => {
         await supabase.from('tarjetas_consolidacion').delete().eq('id', seleccionada.id);

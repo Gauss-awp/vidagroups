@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import {Text, View} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { hoyISO, parseCumple } from '@/lib/utils';
 import { esEncabezadoTarjetas, filaATarjeta, normalizarFilaTarjeta } from '@/lib/tarjetasExcel';
 import { Boton, Campo, Card, Chip, HojaModal, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 type Modo = 'miembros' | 'tarjetas';
 
@@ -81,7 +82,7 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
   const revisar = async () => {
     const filas = filasDelModo(texto);
     if (pareceOtraHoja) {
-      Alert.alert(
+      alerta(
         'Parece la hoja equivocada',
         modo === 'tarjetas'
           ? 'Lo que pegaste tiene correos en la segunda columna: parece la hoja Miembros. Elegí "Grupos y miembros" arriba.'
@@ -90,7 +91,7 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
       return;
     }
     if (filas.length === 0) {
-      Alert.alert('No hay datos', 'Pegá las filas copiadas de la planilla.');
+      alerta('No hay datos', 'Pegá las filas copiadas de la planilla.');
       return;
     }
     setTrabajando(true);
@@ -231,12 +232,12 @@ export function Importador({ redId, redNombre, onImportado }: { redId: string; r
         modo === 'miembros'
           ? `Se cargaron ${plan.gruposNuevos.length} grupos nuevos y ${plan.miembros.length} miembros.`
           : `Se cargaron ${plan.tarjetas.length} tarjetas.`;
-      Alert.alert('Importación lista', resumen);
+      alerta('Importación lista', resumen);
       cerrar();
       onImportado?.();
     } catch (e) {
       setTrabajando(false);
-      Alert.alert('La importación se cortó', `${e instanceof Error ? e.message : String(e)}\n\nLo que ya se cargó queda guardado; si volvés a importar, lo repetido se saltea.`);
+      alerta('La importación se cortó', `${e instanceof Error ? e.message : String(e)}\n\nLo que ya se cargó queda guardado; si volvés a importar, lo repetido se saltea.`);
     }
   };
 

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Share, Text, View } from 'react-native';
+import {Pressable, RefreshControl, ScrollView, Share, Text, View} from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colorPorcentaje, colors } from '@/lib/theme';
 import { MESES } from '@/lib/utils';
 import { Boton, Card, Cargando, Chip, Stat, Vacio, s } from '@/components/ui';
+import { alerta } from '@/lib/alerta';
 
 interface FilaReporte {
   grupo_id: string;
@@ -40,7 +41,7 @@ export default function Reporte() {
 
   const cargar = useCallback(async () => {
     const { data, error } = await supabase.rpc('reporte_mensual', { p_anio: mes.anio, p_mes: mes.mes + 1 });
-    if (error) Alert.alert('No se pudo cargar el reporte', error.message);
+    if (error) alerta('No se pudo cargar el reporte', error.message);
     setFilas((data ?? []) as FilaReporte[]);
     setCargando(false);
   }, [mes]);
