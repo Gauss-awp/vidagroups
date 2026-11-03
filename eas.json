@@ -22,9 +22,9 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_AMBIENTE": "produccion",
-        "EXPO_PUBLIC_SUPABASE_URL_PRODUCCION": "https://ltwdgiuatwcacrutgpiw.supabase.co/rest/v1/",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY_PRODUCCION": "sb_publishable_8JuPZLHy5ISTtF-foiMSjQ_WZIcXWAi"
+       "EXPO_PUBLIC_AMBIENTE": "produccion",
+       "EXPO_PUBLIC_SUPABASE_URL_PRODUCCION": "https://ltwdgiuatwcacrutgpiw.supabase.co",
+       "EXPO_PUBLIC_SUPABASE_KEY_PRODUCCION": "sb_publishable_8JuPZLHy5ISTtF-foiMSjQ_WZIcXWAi"
       },
       "channel": "produccion"
     }
