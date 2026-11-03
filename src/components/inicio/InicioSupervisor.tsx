@@ -31,8 +31,6 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
     // FIX: Pedimos 1000 grupos sin filtrar por guia_id
     const { data: todosData, error: errG } = await supabase.from('groups').select('*').limit(1000).order('nombre');
     
-    console.log('DEBUG GROUPS:', todosData?.length, 'error:', errG);
-    console.log('DEBUG TARJETAS:', tarjetasData?.length);
 
     setTarjetas(tarjetasData || []);
     setMisGrupos((todosData ?? []) as Grupo[]); // para consolidación misGrupos = todos

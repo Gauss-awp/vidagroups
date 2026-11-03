@@ -87,6 +87,13 @@ function proximasReuniones(g: GrupoAgenda, cuantas: number): Date[] {
 }
 
 let ultimoPerfil: string | null = null;
+let ultimaVez = 0;
+
+/** Reprograma solo si pasaron más de 6 horas desde la última vez */
+export function reprogramarSiHaceFalta(perfilId: string) {
+  if (Date.now() - ultimaVez < 6 * 3600 * 1000 && ultimoPerfil === perfilId) return;
+  reprogramar(perfilId);
+}
 
 /** Borra todos los recordatorios de VidaGroups agendados en el celular */
 export async function cancelarRecordatorios() {
@@ -116,6 +123,7 @@ export function reprogramarPronto() {
 export async function reprogramar(perfilId: string) {
   if (enWeb) return;
   ultimoPerfil = perfilId;
+  ultimaVez = Date.now();
   try {
     const pref = await leerPreferencias();
     const agendadas = await Notifications.getAllScheduledNotificationsAsync();

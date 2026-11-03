@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import { router } from 'expo-router';
 import * as Notifications from 'expo-notifications';
-import { cancelarRecordatorios, reprogramar } from '@/lib/recordatorios';
+import { cancelarRecordatorios, reprogramarSiHaceFalta } from '@/lib/recordatorios';
 
 /** Arma los recordatorios del guía al abrir la app y al volver a ella; al tocar uno, abre lo que corresponde. */
 export function Recordatorios({ perfilId, rol }: { perfilId: string; rol: string }) {
@@ -13,9 +13,9 @@ export function Recordatorios({ perfilId, rol }: { perfilId: string; rol: string
       cancelarRecordatorios();
       return;
     }
-    reprogramar(perfilId);
+    reprogramarSiHaceFalta(perfilId);
     const sub = AppState.addEventListener('change', (e) => {
-      if (e === 'active') reprogramar(perfilId);
+      if (e === 'active') reprogramarSiHaceFalta(perfilId);
     });
     const toque = Notifications.addNotificationResponseReceivedListener((r) => {
       const d = r.notification.request.content.data as { vg?: boolean; tipo?: string; grupoId?: string };

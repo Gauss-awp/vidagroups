@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {ScrollView, View} from 'react-native';
+import {ScrollView, View, Text } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { colors } from '@/lib/theme';
 import type { Grupo, Perfil } from '@/lib/types';
-import { Cargando, Chip, Pantalla, TituloGrande } from '@/components/ui';
+import { Cargando, Chip, Pantalla, TituloGrande, Card } from '@/components/ui';
 import { GrupoDetalle } from '@/components/grupo/GrupoDetalle';
 import { CrearGrupo } from '@/components/grupo/CrearGrupo';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
@@ -47,6 +48,14 @@ export function InicioGuia({ perfil }: { perfil: Perfil }) {
       <Pantalla>
         <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
           <TituloGrande titulo="Mi Grupo" subtitulo={saludo} />
+          <Card style={{ backgroundColor: colors.primaryBg }}>
+            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>Todavía no tenés un grupo</Text>
+            <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>
+              Si tu grupo ya existe y lo guiás junto con otra persona, no lo crees de nuevo: pedile a ella (o a los encargados) que te sume desde
+              "Equipo" en el grupo. Cuando te sumen, cerrá y abrí la app.
+            </Text>
+            <Text style={{ color: colors.textSec, fontSize: 14, lineHeight: 20, marginTop: 8 }}>Si sos quien abre el grupo, crealo acá abajo.</Text>
+          </Card>
           <CrearGrupo guiaId={perfil.id} onCreado={cargar} />
         </ScrollView>
       </Pantalla>

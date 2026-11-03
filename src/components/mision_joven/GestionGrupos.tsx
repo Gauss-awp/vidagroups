@@ -3,8 +3,7 @@ import {Text, View, ScrollView, Modal, Pressable} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Card, Boton, s } from '@/components/ui';
-import { SupervisoresDelGrupo } from './SupervisoresDelGrupo';
-import { GuiasDelGrupo } from './GuiasDelGrupo';
+import { EquipoDelGrupo } from '@/components/grupo/EquipoDelGrupo';
 import { alerta } from '@/lib/alerta';
 
 export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: string }) {
@@ -80,9 +79,10 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
             </Pressable>
             {isOpen && (
               <View style={{ padding:12, gap:8 }}>
-                <Boton titulo="Cambiar Guía" variante="secundario" onPress={()=>{setGrupoSel(g); setModalGuia(true)}} />
-                <GuiasDelGrupo grupoId={g.id} redId={redId} principalId={g.guia_id} />
-                <SupervisoresDelGrupo grupoId={g.id} redId={redId} principalId={g.supervisor_id ?? null} />
+                <View style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12 }}>
+                  <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 10 }}>Equipo del grupo</Text>
+                  <EquipoDelGrupo grupoId={g.id} onCambio={cargar} />
+                </View>
                 <View style={{ maxHeight: 320 }}>
                   <ScrollView showsVerticalScrollIndicator={false}>
                     {miembrosDelGrupo.map((m:any)=>(

@@ -23,9 +23,12 @@ const MOTIVOS = ['Enfermo', 'Trabajo', 'Estudio', 'Viaje', 'Familia'];
  * y guardar todo junto al final. Si no hay señal, queda en el celular y se envía después.
  */
 export default function ModoReunion() {
-  const { id: grupoId } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; fecha?: string; paso?: string }>();
+  const grupoId = params.id;
   const [paso, setPaso] = useState<1 | 2 | 3 | 4>(1);
-  const [fecha, setFecha] = useState(hoyISO());
+  const [fecha, setFecha] = useState(params.fecha && /^\d{4}-\d{2}-\d{2}$/.test(params.fecha) ? params.fecha : hoyISO());
+  const [existe, setExiste] = useState(false);
+  const [irAPaso2, setIrAPaso2] = useState(params.paso === '2');
   const [grupoNombre, setGrupoNombre] = useState('');
   const [hermanos, setHermanos] = useState<Hermano[]>([]);
   const [vino, setVino] = useState<Record<string, boolean>>({});
@@ -52,7 +55,7 @@ export default function ModoReunion() {
       setCargando(true);
       const [g, m, r] = await Promise.all([
         supabase.from('groups').select('nombre').eq('id', grupoId).maybeSingle(),
-        supabase.from('miembros_grupo').select('id, nombre, apellido, creado_en').eq('grupo_id', grupoId).eq('activo', true).order('nombre'),
+        supabase.from('miembros_grupo').select('id, nombre, apellido, creado_en, activo, baja_en').eq('grupo_id', grupoId).order('nombre'),
         supabase
           .from('reuniones')
           .select('notas, ofrenda, material, compartio, asistencias(miembro_id, presente, consolidado, motivo)')
@@ -71,8 +74,14 @@ export default function ModoReunion() {
       }
       setSinRed(false);
       setGrupoNombre((g.data as { nombre: string } | null)?.nombre ?? '');
-      setHermanos(((m.data ?? []) as (Hermano & { creado_en: string })[]).filter((x) => x.creado_en.slice(0, 10) <= fecha));
+      // Los que estaban en el grupo ese día (incluye a los que se quitaron después)
+      setHermanos(
+        ((m.data ?? []) as (Hermano & { creado_en: string; activo: boolean; baja_en: string | null })[]).filter(
+          (x) => x.creado_en.slice(0, 10) <= fecha && (x.activo || (!!x.baja_en && x.baja_en.slice(0, 10) >= fecha))
+        )
+      );
       const re = r.data as any;
+      setExiste(!!re);
       const v: Record<string, boolean> = {};
       const mo: Record<string, string> = {};
       (re?.asistencias ?? []).forEach((a: any) => {
@@ -87,9 +96,30 @@ export default function ModoReunion() {
         material: re?.material ?? '',
         compartio: re?.compartio ?? '',
       });
+      // Si se abrió para completar consolidaciones, va directo al paso 2
+      if (irAPaso2 && (re?.asistencias ?? []).some((a: any) => !a.presente)) setPaso(2);
+      setIrAPaso2(false);
       setCargando(false);
     })();
   }, [grupoId, fecha]);
+
+  const borrarReunion = () =>
+    alerta('No hubo reunión', `¿Borrar la reunión del ${formatoFecha(fecha)} con toda su asistencia?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.from('reuniones').delete().eq('grupo_id', grupoId).eq('fecha', fecha);
+          if (error) {
+            alerta(esErrorDeRed(error) ? 'Sin conexión' : 'No se pudo borrar', esErrorDeRed(error) ? 'Para borrar una reunión necesitás señal.' : error.message);
+            return;
+          }
+          reprogramarPronto();
+          router.back();
+        },
+      },
+    ]);
 
   const ausentes = hermanos.filter((h) => !vino[h.id]);
   const presentes = hermanos.length - ausentes.length;
@@ -233,6 +263,11 @@ export default function ModoReunion() {
               deshabilitado={hermanos.length === 0}
               style={{ marginTop: 18 }}
             />
+            {existe && !sinRed ? (
+              <Pressable onPress={borrarReunion} style={{ marginTop: 16, alignSelf: 'center' }}>
+                <Text style={{ color: colors.danger, fontWeight: '600' }}>No hubo reunión este día (borrar)</Text>
+              </Pressable>
+            ) : null}
           </>
         ) : null}
 

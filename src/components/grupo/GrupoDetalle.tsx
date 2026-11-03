@@ -10,7 +10,8 @@ import { HabitosTab } from './HabitosTab';
 import { EventosTab } from './EventosTab';
 import { MiembrosTab } from './MiembrosTab';
 import { ConsolidacionGuia } from '../mision_joven/ConsolidacionGuia';
-import { AsistenciaTab } from '../asistencia/AsistenciaTab';
+import { ReunionesTab } from '../asistencia/ReunionesTab';
+import { EquipoDelGrupo } from './EquipoDelGrupo';
 import { CumplesSemana } from '../asistencia/CumplesSemana';
 import { Notas } from '../notas/Notas';
 import { HistorialLiderazgo } from '../notas/HistorialLiderazgo';
@@ -19,11 +20,12 @@ import { router } from 'expo-router';
 import { reprogramarPronto } from '@/lib/recordatorios';
 import { formatoFecha } from '@/lib/utils';
 import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
+import { medirCarga } from '@/lib/reporteErrores';
 import { alerta } from '@/lib/alerta';
 
 // Acortamos el label largo para que entre bien
 const TABS = [
-  { id: 4, label: 'Asistencia' },
+  { id: 4, label: 'Reuniones' },
   { id: 0, label: 'Hábitos' },
   { id: 1, label: 'Eventos' },
   { id: 2, label: 'Miembros' },
@@ -48,6 +50,7 @@ export function GrupoDetalle({
   const { perfil } = useAuth();
   const [puedeNotas, setPuedeNotas] = useState(false);
   const [verHistorial, setVerHistorial] = useState(false);
+  const [verEquipo, setVerEquipo] = useState(false);
   const [nombresGuias, setNombresGuias] = useState<string[]>([]);
   const [editandoDatos, setEditandoDatos] = useState(false);
   const [datosGrupo, setDatosGrupo] = useState({ dia_horario: '', barrio: '', direccion: '', lider_supervisor: '' });
@@ -59,6 +62,7 @@ export function GrupoDetalle({
   onCargadoRef.current = onCargado;
 
   const cargar = useCallback(async () => {
+    const inicioCarga = Date.now();
     const { data, error: err } = await supabase.from('groups').select('*').eq('id', grupoId).maybeSingle();
     if (err && esErrorDeRed(err)) {
       // Sin señal: el grupo y su guía, como quedaron guardados
@@ -79,16 +83,17 @@ export function GrupoDetalle({
     setError(null);
     setGrupo(g);
     onCargadoRef.current?.(g);
-    const { data: p } = await supabase.from('profiles').select('*').eq('id', g.guia_id).maybeSingle();
+    // Todo lo demás del encabezado, en paralelo
+    const [{ data: p }, { data: gs }, { data: permiso }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', g.guia_id).maybeSingle(),
+      supabase.rpc('guias_del_grupo', { p_grupo: g.id }),
+      supabase.rpc('puede_ver_notas', { p_grupo: g.id }), // Notas: solo guías y supervisores del grupo
+    ]);
     setGuia((p as Perfil | null)?? null);
     guardarCache(`grupo:${grupoId}`, { grupo: g, guia: (p as Perfil | null) ?? null });
-
-    const { data: gs } = await supabase.rpc('guias_del_grupo', { p_grupo: g.id });
     setNombresGuias(((gs ?? []) as { nombre: string; principal: boolean }[]).sort((x, y) => Number(y.principal) - Number(x.principal)).map((x) => x.nombre));
-
-    // Notas: solo guía y Guía Supervisor del grupo
-    const { data: permiso } = await supabase.rpc('puede_ver_notas', { p_grupo: g.id });
     setPuedeNotas(!!permiso);
+    medirCarga('Grupo', inicioCarga);
 
     // Aviso de traspaso: si recibiste el grupo en los últimos 60 días
     if (perfil && g.guia_id === perfil.id) {
@@ -152,8 +157,11 @@ export function GrupoDetalle({
               {nombresGuias.length > 1 ? `Guías: ${nombresGuias.join(' y ')}` : `Guía: ${guia ? nombreCompleto(guia) : '—'}`}
             </Text>
             <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
+              <Pressable onPress={() => setVerEquipo(true)} hitSlop={8}>
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Equipo</Text>
+              </Pressable>
               <Pressable onPress={() => setVerHistorial(true)} hitSlop={8}>
-                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Historial de guías</Text>
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Historial</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -177,7 +185,15 @@ export function GrupoDetalle({
         </View>
         {(grupo as any).dia_horario || (grupo as any).barrio || (grupo as any).direccion ? (
           <Text style={{ color: colors.textSec, fontSize: 14, marginTop: 12, lineHeight: 20 }}>
-            {[(grupo as any).dia_horario, (grupo as any).barrio, (grupo as any).direccion].filter(Boolean).join(' · ')}
+            {[
+              (grupo as any).dia_reunion !== null && (grupo as any).dia_reunion !== undefined
+                ? `${['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][(grupo as any).dia_reunion]}${(grupo as any).hora_reunion ? ` ${(grupo as any).hora_reunion} hs` : ''}`
+                : (grupo as any).dia_horario,
+              (grupo as any).barrio,
+              (grupo as any).direccion,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
         ) : null}
         {/* La descripción vieja solo se muestra si el grupo todavía no tiene cargados sus datos (día, barrio, dirección) */}
@@ -235,7 +251,7 @@ export function GrupoDetalle({
         })}
       </ScrollView>
 
-      {tab === 4 ? <AsistenciaTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
+      {tab === 4 ? <ReunionesTab grupoId={grupo.id} grupoNombre={grupo.nombre} refreshKey={refreshKey} /> : null}
       {tab === 0? <HabitosTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 1? <EventosTab grupoId={grupo.id} refreshKey={refreshKey} /> : null}
       {tab === 2? <MiembrosTab grupoId={grupo.id} grupoNombre={grupo.nombre} refreshKey={refreshKey} /> : null}
@@ -244,16 +260,22 @@ export function GrupoDetalle({
 
       <HistorialLiderazgo grupoId={grupo.id} visible={verHistorial} onClose={() => setVerHistorial(false)} />
 
+      <HojaModal visible={verEquipo} onClose={() => setVerEquipo(false)} titulo="Equipo del grupo">
+        <Text style={[s.textoFilaSec, { marginBottom: 12 }]}>
+          Quiénes guían y quiénes supervisan este grupo. Si sos el guía principal, desde acá sumás a tu segundo guía (tiene que estar registrado y aprobado).
+        </Text>
+        <EquipoDelGrupo grupoId={grupo.id} onCambio={cargar} />
+      </HojaModal>
+
       <HojaModal visible={editandoDatos} onClose={() => setEditandoDatos(false)} titulo="Datos del grupo">
         <Text style={[s.textoFilaSec, { marginBottom: 12 }]}>Aparecen en el encabezado de la planilla mensual de asistencia.</Text>
-        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Día de reunión (para los recordatorios)</Text>
+        <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Día de reunión</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
           {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d, i) => (
             <Chip key={d} texto={d} activo={diaReunion === i} onPress={() => setDiaReunion(diaReunion === i ? null : i)} />
           ))}
         </View>
         <Campo etiqueta="Hora de reunión" placeholder="21:00" value={horaReunion} onChangeText={setHoraReunion} keyboardType="numbers-and-punctuation" />
-        <Campo etiqueta="Día y horario" placeholder="Viernes 21:00 hs" value={datosGrupo.dia_horario} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, dia_horario: v })} />
         <Campo etiqueta="Barrio" placeholder="Villa del Río" value={datosGrupo.barrio} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, barrio: v })} />
         <Campo etiqueta="Dirección" placeholder="Cruz Palacios 109" value={datosGrupo.direccion} onChangeText={(v) => setDatosGrupo({ ...datosGrupo, direccion: v })} />
         <Campo
@@ -275,6 +297,10 @@ export function GrupoDetalle({
             }
             const cambios: Record<string, unknown> = Object.fromEntries(Object.entries(datosGrupo).map(([k, v]) => [k, v.trim() || null]));
             cambios.dia_reunion = diaReunion;
+            // El texto de la planilla ("Viernes 21:00 hs") se arma solo con el día y la hora
+            if (diaReunion !== null) {
+              cambios.dia_horario = `${['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][diaReunion]}${hora ? ` ${hora.padStart(5, '0')} hs` : ''}`;
+            }
             cambios.hora_reunion = hora ? hora.padStart(5, '0') : null;
             const { error } = await supabase.from('groups').update(cambios).eq('id', grupo.id);
             setGuardandoGrupo(false);

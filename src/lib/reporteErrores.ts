@@ -102,3 +102,14 @@ export function instalarCapturaErrores() {
     });
   }
 }
+
+/**
+ * Medición de velocidad: si una pantalla tarda más de 3 segundos en cargar,
+ * queda anotado en el registro (sección Errores del Administrador) como "Lento".
+ */
+export function medirCarga(pantalla: string, inicio: number) {
+  const ms = Date.now() - inicio;
+  if (ms < 3000) return;
+  const tramo = ms >= 10000 ? 'más de 10 s' : ms >= 6000 ? 'más de 6 s' : 'más de 3 s';
+  reportarError(new Error(`${pantalla} tardó ${tramo} en cargar`), { contexto: 'lento' });
+}

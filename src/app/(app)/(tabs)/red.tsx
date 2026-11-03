@@ -12,7 +12,6 @@ import { Exportador } from '@/components/red/Exportador';
 import { EquipoDesdePlanilla } from '@/components/red/EquipoDesdePlanilla';
 import { PanelBalance } from '@/components/mision_joven/PanelBalance';
 import { GestionGrupos } from '@/components/mision_joven/GestionGrupos';
-import { AsignarSupervisores } from '@/components/mision_joven/AsignarSupervisores';
 import { alerta } from '@/lib/alerta';
 
 /** Panel del Encargado de Red (también lo usan Pastores y el Apóstol). */
@@ -106,7 +105,6 @@ export default function PanelRed() {
 
         <GestionGrupos key={`gg-${refreshKey}`} redId={red.id} redNombre={red.nombre} />
 
-        <AsignarSupervisores key={`as-${refreshKey}`} redId={red.id} redNombre={red.nombre} />
 
         <EquipoDesdePlanilla key={`eq-${refreshKey}`} redId={red.id} redNombre={red.nombre} onCambio={() => setRefreshKey((k) => k + 1)} />
 

@@ -7,6 +7,7 @@ import type { Perfil, Rol } from '@/lib/types';
 import { ROL_LABEL, ROL_RANGO, formatoFecha } from '@/lib/utils';
 import { Boton, Card, Cargando, Chip, HojaModal, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
 import { EquipoDesdePlanilla } from '@/components/red/EquipoDesdePlanilla';
+import { EquipoDelGrupo } from '@/components/grupo/EquipoDelGrupo';
 import { alerta } from '@/lib/alerta';
 
 // ---------- Tipos de lo que devuelven las funciones del Administrador ----------
@@ -585,37 +586,7 @@ function Grupos({ grupos, cuentas, onCambio }: { grupos: GrupoAdmin[]; cuentas: 
       )}
 
       <HojaModal visible={!!editando} onClose={() => setEditando(null)} titulo={editando?.nombre ?? ''}>
-        {editando ? (
-          <>
-            <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Guía (tocá para cambiarlo)</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 }}>
-              {candidatosGuia.map((c) => (
-                <Chip key={c.id} texto={nombreDe(c)} activo={c.id === editando.guia_id} onPress={() => c.id !== editando.guia_id && cambiarGuia(c.id)} />
-              ))}
-            </View>
-            <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Segundo guía (tocá para agregar o quitar)</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 14 }}>
-              {candidatosGuia
-                .filter((c) => c.id !== editando.guia_id)
-                .map((c) => {
-                  const esta = (editando.coguias ?? []).includes(nombreDe(c));
-                  return <Chip key={c.id} texto={nombreDe(c)} activo={esta} onPress={() => coguia(c.id, !esta)} />;
-                })}
-            </View>
-            <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>
-              Supervisor principal: {editando.supervisor ?? '—'} (es el supervisor del guía; se cambia desde Cuentas)
-            </Text>
-            <Text style={[s.textoFilaSec, { marginBottom: 6, marginTop: 8 }]}>Segundo supervisor (tocá para agregar o quitar)</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {supervisoresRed
-                .filter((c) => nombreDe(c) !== editando.supervisor)
-                .map((c) => {
-                  const esta = editando.segundos.includes(nombreDe(c));
-                  return <Chip key={c.id} texto={nombreDe(c)} activo={esta} onPress={() => segundo(c.id, !esta)} />;
-                })}
-            </View>
-          </>
-        ) : null}
+        {editando ? <EquipoDelGrupo grupoId={editando.id} onCambio={onCambio} /> : null}
       </HojaModal>
     </>
   );
