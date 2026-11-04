@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { colorPorcentaje, colors } from '@/lib/theme';
 import type { Moneda, Perfil } from '@/lib/types';
 import { formatoFecha, formatoMoneda, hoyISO, sumarDias } from '@/lib/utils';
+import { CrearGrupoConGuias } from '@/components/grupo/CrearGrupoConGuias';
 import { BarraProgreso, Boton, Card, Cargando, Pantalla, PasosConsolidacion, SeccionTitulo, TituloGrande, Vacio, s } from '@/components/ui';
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
@@ -40,6 +41,7 @@ const abrirWhatsApp = (tel: string, texto?: string) => {
 
 /** Panel del Guía Supervisor: a qué guía acompañar esta semana. */
 export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
+  const [creando, setCreando] = useState(false);
   const router = useRouter();
   const [datos, setDatos] = useState<DatosSupervisor | null>(null);
   const [refrescando, setRefrescando] = useState(false);
@@ -98,13 +100,24 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.textSec} />}
       >
         <TituloGrande titulo="Mis Guías ✓" subtitulo={`Hola, ${perfil.nombre || 'Supervisor'}`} />
+        {perfil.rol === 'guia_supervisor' ? (
+          <Boton titulo="Crear un grupo" icono="add-circle-outline" variante="secundario" onPress={() => setCreando(true)} style={{ marginBottom: 12 }} />
+        ) : null}
+        <CrearGrupoConGuias
+          visible={creando}
+          onClose={() => setCreando(false)}
+          onCreado={(id) => {
+            cargar();
+            router.push({ pathname: '/grupo/[id]', params: { id } });
+          }}
+        />
 
         {datos.grupos.length === 0 ? (
           <Card>
             <Vacio
               icono="people-circle-outline"
               titulo="Todavía no tenés guías a cargo"
-              texto="El encargado de tu red te los asigna desde Mi Red."
+              texto="Creá un grupo con el botón de arriba, o pedile al encargado de tu red que te asigne grupos."
             />
           </Card>
         ) : (

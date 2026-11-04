@@ -41,7 +41,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['guia', 'guia_supervisor'],
     titulo: 'Guío el grupo con otra persona, ¿cómo la sumo?',
     texto:
-      'Uno de los dos crea el grupo (el guía principal). El otro se registra y espera a que lo aprueben.\n\nDespués, el guía principal entra al grupo → "Equipo" → en "Guías" toca "Agregar" y elige a su compañero. Cuando lo sumen, el otro cierra y abre la app y ya ve el grupo.\n\nSi sos el segundo guía, no crees el grupo de nuevo.',
+      'Los guías de cada grupo los asigna su Guía Supervisor (o los encargados de la red), desde el grupo → "Equipo" → "Agregar".\n\nSi sos el segundo guía: registrate, esperá que te aprueben y pedile a tu Guía Supervisor que te sume. No crees el grupo de nuevo.',
   },
   {
     roles: ['guia', 'guia_supervisor'],
@@ -73,6 +73,18 @@ export const AYUDA: ItemAyuda[] = [
     titulo: '¿Qué veo en "Mis Guías"?',
     texto:
       'Los grupos que supervisás: cómo viene la asistencia, quién tiene faltas, los cumpleaños de la semana y las personas nuevas en consolidación.\n\nTocando un grupo entrás a verlo completo, y si el guía no pudo, podés cargar la reunión vos.',
+  },
+
+  {
+    roles: ['guia_supervisor'],
+    titulo: '¿Cómo creo un grupo nuevo?',
+    texto:
+      'En "Mis Guías" tocá "Crear un grupo". Poné el nombre, elegí al guía principal y, si son dos, al segundo guía (pueden ya guiar otro grupo). Opcional: el día y la hora.\n\nVos quedás como supervisor del grupo. Los guías tienen que estar registrados y aprobados.',
+  },
+  {
+    roles: ['guia_supervisor'],
+    titulo: '¿Cómo cambio o sumo un guía a un grupo que superviso?',
+    texto: 'Entrá al grupo → "Equipo". En "Guías" tocá "Agregar" para sumar, la ✕ para quitar, y la ⭐ para elegir al principal.',
   },
 
   // ------------------------- Consolidación -------------------------

@@ -262,7 +262,7 @@ export function GrupoDetalle({
 
       <HojaModal visible={verEquipo} onClose={() => setVerEquipo(false)} titulo="Equipo del grupo">
         <Text style={[s.textoFilaSec, { marginBottom: 12 }]}>
-          Quiénes guían y quiénes supervisan este grupo. Si sos el guía principal, desde acá sumás a tu segundo guía (tiene que estar registrado y aprobado).
+          Quiénes guían y quiénes supervisan este grupo. Los guías los asigna el Guía Supervisor del grupo o los encargados de la red.
         </Text>
         <EquipoDelGrupo grupoId={grupo.id} onCambio={cargar} />
       </HojaModal>

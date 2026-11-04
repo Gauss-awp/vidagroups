@@ -4,9 +4,11 @@ import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import { Card, Boton, s } from '@/components/ui';
 import { EquipoDelGrupo } from '@/components/grupo/EquipoDelGrupo';
+import { CrearGrupoConGuias } from '@/components/grupo/CrearGrupoConGuias';
 import { alerta } from '@/lib/alerta';
 
 export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: string }) {
+  const [creandoGrupo, setCreandoGrupo] = useState(false);
   const [grupos, setGrupos] = useState<any[]>([]);
   const [miembros, setMiembros] = useState<any[]>([]);
   const [perfiles, setPerfiles] = useState<any[]>([]);
@@ -62,6 +64,8 @@ export function GestionGrupos({ redId, redNombre }: { redId: string; redNombre: 
   return (
     <View style={{ marginTop: 12, gap: 8 }}>
       <Text style={{ color: colors.text,  fontSize: 16, fontWeight: '800' }}>Gestionar GVs - {redNombre}</Text>
+      <Boton titulo="Crear un grupo" icono="add-circle-outline" variante="secundario" onPress={() => setCreandoGrupo(true)} />
+      <CrearGrupoConGuias visible={creandoGrupo} onClose={() => setCreandoGrupo(false)} onCreado={() => cargar()} redId={redId} />
       {grupos.map(g=>{
         const miembrosDelGrupo = miembros.filter(x=>x.grupo_id===g.id);
         const isOpen = abierto===g.id;

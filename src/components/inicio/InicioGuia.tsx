@@ -51,8 +51,7 @@ export function InicioGuia({ perfil }: { perfil: Perfil }) {
           <Card style={{ backgroundColor: colors.primaryBg }}>
             <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>Todavía no tenés un grupo</Text>
             <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>
-              Si tu grupo ya existe y lo guiás junto con otra persona, no lo crees de nuevo: pedile a ella (o a los encargados) que te sume desde
-              "Equipo" en el grupo. Cuando te sumen, cerrá y abrí la app.
+              Si tu grupo ya existe (por ejemplo, lo guiás con otra persona), no lo crees de nuevo: pedile a tu Guía Supervisor o a los encargados que te sumen. Cuando te sumen, cerrá y abrí la app.
             </Text>
             <Text style={{ color: colors.textSec, fontSize: 14, lineHeight: 20, marginTop: 8 }}>Si sos quien abre el grupo, crealo acá abajo.</Text>
           </Card>
