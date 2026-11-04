@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {Pressable, ScrollView, Text, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { AMBIENTE, supabase } from '@/lib/supabase';
 import * as Updates from 'expo-updates';
 import Constants from 'expo-constants';
@@ -193,6 +194,26 @@ export default function PerfilPantalla() {
         </Card>
           </>
         ) : null}
+
+        <SeccionTitulo titulo="Ayuda" />
+        <Card onPress={() => router.push('/ayuda')}>
+          <View style={[s.fila, { justifyContent: 'space-between' }]}>
+            <View style={[s.fila, { flex: 1 }]}>
+              <Ionicons name="help-buoy-outline" size={20} color={colors.primary} style={{ marginRight: 10 }} />
+              <Text style={s.textoFila}>Cómo usar la app</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTer} />
+          </View>
+        </Card>
+        <Card onPress={() => router.push({ pathname: '/ayuda', params: { escribir: '1' } })}>
+          <View style={[s.fila, { justifyContent: 'space-between' }]}>
+            <View style={[s.fila, { flex: 1 }]}>
+              <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.primary} style={{ marginRight: 10 }} />
+              <Text style={s.textoFila}>Reportar un problema o sugerencia</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTer} />
+          </View>
+        </Card>
 
         <SeccionTitulo titulo="Apariencia" />
         <Card>

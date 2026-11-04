@@ -53,6 +53,7 @@ export default function AppLayout() {
       <Stack.Screen name="miembro/[id]" options={{ title: 'Hermano' }} />
       <Stack.Screen name="reunion/[id]" options={{ title: 'Cargar reunión' }} />
       <Stack.Screen name="resumen/[id]" options={{ title: 'Resumen del año' }} />
+      <Stack.Screen name="ayuda" options={{ title: 'Ayuda' }} />
     </Stack>
     </>
   );

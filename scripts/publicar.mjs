@@ -52,5 +52,10 @@ if (canal === 'produccion') {
 rl.close();
 
 console.log(`\nPublicando en el canal "${canal}"...\n`);
-execSync(`npx eas-cli@latest update --channel ${canal} --platform android --message "${mensaje.replace(/"/g, "'")}"`, { stdio: 'inherit' });
+// --environment evita la pregunta "Select environment" (que en Git Bash no deja elegir con las flechas)
+const entornoEas = canal === 'produccion' ? 'production' : 'preview';
+execSync(
+  `npx eas-cli@latest update --channel ${canal} --environment ${entornoEas} --platform android --non-interactive --message "${mensaje.replace(/"/g, "'")}"`,
+  { stdio: 'inherit' }
+);
 console.log('\n✅ Listo. Los celulares la descargan la próxima vez que abren la app.\n');

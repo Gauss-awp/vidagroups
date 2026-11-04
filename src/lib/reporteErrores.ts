@@ -14,8 +14,21 @@ const CLAVE = 'vg_errores_pendientes';
 let pantallaActual = '';
 const recientes = new Map<string, number>();
 
+let pantallaAntesDeAyuda = '';
+
 export function fijarPantalla(ruta: string) {
   pantallaActual = ruta;
+  if (!ruta.startsWith('/ayuda')) pantallaAntesDeAyuda = ruta;
+}
+
+/** Pantalla donde estaba la persona antes de abrir la Ayuda (para los mensajes de soporte) */
+export function pantallaDeOrigen(): string {
+  return pantallaAntesDeAyuda;
+}
+
+/** Versión de la app, para los mensajes de soporte */
+export function versionApp(): string {
+  return version();
 }
 
 function version(): string {

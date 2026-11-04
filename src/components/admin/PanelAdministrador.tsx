@@ -79,6 +79,20 @@ interface Red {
   id: string;
   nombre: string;
 }
+interface MensajeAyuda {
+  id: string;
+  nombre: string | null;
+  email: string | null;
+  rol: string | null;
+  tipo: 'problema' | 'sugerencia' | 'pregunta';
+  mensaje: string;
+  pantalla: string | null;
+  version: string | null;
+  plataforma: string | null;
+  estado: 'nuevo' | 'visto' | 'resuelto';
+  respuesta: string | null;
+  creado_en: string;
+}
 interface ErrorApp {
   id: number;
   perfil_id: string | null;
@@ -100,7 +114,7 @@ interface Aviso {
   hasta: string;
 }
 
-type Seccion = 'salud' | 'errores' | 'avisos' | 'cuentas' | 'grupos' | 'responsables' | 'equipo' | 'cambios';
+type Seccion = 'salud' | 'mensajes' | 'errores' | 'avisos' | 'cuentas' | 'grupos' | 'responsables' | 'equipo' | 'cambios';
 
 const nombreDe = (c: { nombre: string | null; apellido?: string | null; email: string }) =>
   `${c.nombre ?? ''} ${c.apellido ?? ''}`.trim() || c.email;
@@ -134,13 +148,14 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
   const [cambios, setCambios] = useState<CambioRol[]>([]);
   const [redes, setRedes] = useState<Red[]>([]);
   const [errores, setErrores] = useState<ErrorApp[]>([]);
+  const [mensajes, setMensajes] = useState<MensajeAyuda[]>([]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    const [r, c, g, rs, cb, rd, er, av] = await Promise.all([
+    const [r, c, g, rs, cb, rd, er, av, ms] = await Promise.all([
       supabase.rpc('admin_resumen'),
       supabase.rpc('admin_cuentas'),
       supabase.rpc('admin_grupos'),
@@ -149,7 +164,9 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
       supabase.from('redes').select('id, nombre').order('nombre'),
       supabase.from('errores_app').select('*').order('creado_en', { ascending: false }).limit(100),
       supabase.from('avisos').select('id, titulo, mensaje, rol, red_id, desde, hasta').order('creado_en', { ascending: false }),
+      supabase.rpc('admin_mensajes'),
     ]);
+    setMensajes((ms.data ?? []) as MensajeAyuda[]);
     setErrores((er.data ?? []) as ErrorApp[]);
     setAvisos((av.data ?? []) as Aviso[]);
     if (r.error) {
@@ -180,6 +197,7 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
 
   const pestañas: { id: Seccion; texto: string; aviso?: number }[] = [
     { id: 'salud', texto: 'Salud' },
+    { id: 'mensajes', texto: 'Mensajes', aviso: mensajes.filter((m) => m.estado === 'nuevo').length },
     { id: 'errores', texto: 'Errores', aviso: errores.filter((e) => Date.now() - new Date(e.creado_en).getTime() < 7 * 86400000).length },
     { id: 'avisos', texto: 'Avisos' },
     { id: 'cuentas', texto: 'Cuentas', aviso: resumen?.pendientes },
@@ -226,6 +244,7 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
         </ScrollView>
 
         {seccion === 'salud' && resumen ? <Salud r={resumen} /> : null}
+        {seccion === 'mensajes' ? <Mensajes mensajes={mensajes} onCambio={cargar} /> : null}
         {seccion === 'errores' ? <Errores errores={errores} cuentas={cuentas} onCambio={cargar} /> : null}
         {seccion === 'avisos' ? <Avisos avisos={avisos} redes={redes} onCambio={cargar} /> : null}
         {seccion === 'cuentas' ? <Cuentas cuentas={cuentas} redes={redes} yo={perfil.id} onCambio={cargar} /> : null}
@@ -937,6 +956,124 @@ function Avisos({ avisos, redes, onCambio }: { avisos: Aviso[]; redes: Red[]; on
           ))}
         </View>
         <Boton titulo="Publicar" icono="send" onPress={publicar} cargando={guardando} />
+      </HojaModal>
+    </>
+  );
+}
+
+// =====================================================================
+// Mensajes de ayuda (problemas, dudas e ideas de los usuarios)
+// =====================================================================
+const TIPO_MENSAJE: Record<MensajeAyuda['tipo'], { texto: string; icono: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
+  problema: { texto: 'Problema', icono: 'bug-outline', color: colors.danger },
+  pregunta: { texto: 'Duda', icono: 'help-circle-outline', color: colors.primary },
+  sugerencia: { texto: 'Idea', icono: 'bulb-outline', color: colors.warning },
+};
+
+function Mensajes({ mensajes, onCambio }: { mensajes: MensajeAyuda[]; onCambio: () => void }) {
+  const [abierto, setAbierto] = useState<MensajeAyuda | null>(null);
+  const [respuesta, setRespuesta] = useState('');
+  const [guardando, setGuardando] = useState(false);
+
+  const abrir = async (m: MensajeAyuda) => {
+    setAbierto(m);
+    setRespuesta(m.respuesta ?? '');
+    if (m.estado === 'nuevo') {
+      await supabase.from('mensajes_ayuda').update({ estado: 'visto' }).eq('id', m.id);
+      onCambio();
+    }
+  };
+
+  const guardar = async (cambios: Record<string, unknown>) => {
+    if (!abierto) return;
+    setGuardando(true);
+    const { error } = await supabase.from('mensajes_ayuda').update(cambios).eq('id', abierto.id);
+    setGuardando(false);
+    if (error) {
+      alerta('No se pudo guardar', error.message);
+      return;
+    }
+    setAbierto(null);
+    onCambio();
+  };
+
+  const borrar = () =>
+    abierto &&
+    alerta('Borrar mensaje', '¿Borrar este mensaje?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.from('mensajes_ayuda').delete().eq('id', abierto.id);
+          setAbierto(null);
+          onCambio();
+        },
+      },
+    ]);
+
+  if (!mensajes.length) {
+    return (
+      <Card>
+        <Text style={s.textoFilaSec}>Todavía no llegaron mensajes. Los usuarios escriben desde Perfil → Ayuda.</Text>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      {mensajes.map((m) => {
+        const t = TIPO_MENSAJE[m.tipo];
+        return (
+          <Card key={m.id} onPress={() => abrir(m)} style={m.estado === 'nuevo' ? { borderWidth: 1, borderColor: colors.primary } : undefined}>
+            <View style={s.fila}>
+              <Ionicons name={t.icono} size={18} color={t.color} style={{ marginRight: 8, alignSelf: 'flex-start', marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: m.estado === 'nuevo' ? '800' : '600' }} numberOfLines={3}>
+                  {m.mensaje}
+                </Text>
+                <Text style={[s.textoFilaSec, { fontSize: 12, marginTop: 3 }]}>
+                  {m.nombre ?? m.email ?? 'Cuenta borrada'} · {ROL_LABEL[m.rol as Rol] ?? ''} · {formatoFecha(m.creado_en.slice(0, 10))}
+                </Text>
+                <Text style={{ fontSize: 12, marginTop: 2, fontWeight: '700', color: m.estado === 'resuelto' ? colors.success : m.estado === 'nuevo' ? colors.primary : colors.textSec }}>
+                  {m.estado === 'resuelto' ? 'Resuelto' : m.estado === 'nuevo' ? 'Nuevo' : m.respuesta ? 'Respondido' : 'Visto'}
+                </Text>
+              </View>
+            </View>
+          </Card>
+        );
+      })}
+
+      <HojaModal visible={!!abierto} onClose={() => setAbierto(null)} titulo={abierto ? TIPO_MENSAJE[abierto.tipo].texto : ''}>
+        {abierto ? (
+          <>
+            <Text style={[s.textoFilaSec, { marginBottom: 8 }]}>
+              {abierto.nombre ?? '—'} · {abierto.email ?? ''} · {new Date(abierto.creado_en).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+            </Text>
+            <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22, marginBottom: 8 }}>{abierto.mensaje}</Text>
+            <Text style={[s.textoFilaSec, { fontSize: 12, marginBottom: 14 }]}>
+              {[abierto.pantalla, abierto.plataforma, abierto.version].filter(Boolean).join(' · ')}
+            </Text>
+            <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Respuesta (la ve en su Ayuda)</Text>
+            <TextInput
+              value={respuesta}
+              onChangeText={setRespuesta}
+              multiline
+              placeholder="Escribí la respuesta…"
+              placeholderTextColor={colors.textTer}
+              style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, color: colors.text, minHeight: 90, textAlignVertical: 'top', marginBottom: 12 }}
+            />
+            <Boton titulo="Enviar respuesta" icono="send" onPress={() => guardar({ respuesta: respuesta.trim() || null })} cargando={guardando} />
+            <Boton
+              titulo={abierto.estado === 'resuelto' ? 'Volver a abrir' : 'Marcar como resuelto'}
+              variante="secundario"
+              icono="checkmark-done-outline"
+              onPress={() => guardar({ estado: abierto.estado === 'resuelto' ? 'visto' : 'resuelto', respuesta: respuesta.trim() || null })}
+              style={{ marginTop: 10 }}
+            />
+            <Boton titulo="Borrar" variante="texto" onPress={borrar} style={{ marginTop: 6 }} />
+          </>
+        ) : null}
       </HojaModal>
     </>
   );
