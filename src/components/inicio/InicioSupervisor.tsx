@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
 import type { Grupo, Perfil } from '@/lib/types';
-import { Card, Pantalla, SeccionTitulo, TituloGrande, PasosConsolidacion, SelectorPilares } from '@/components/ui';
+import { Card, Pantalla, SeccionTitulo, TituloGrande, PasosConsolidacion, SelectorPilares, SelectorPosEncuentro, DespuesDelEncuentro, CLASES_POS_ENCUENTRO } from '@/components/ui';
+import { formatoFecha } from '@/lib/utils';
 import { EquipoLista } from '@/components/EquipoLista';
 import { FormTarjeta } from '@/components/mision_joven/FormTarjeta';
 import { useAuth } from '@/context/AuthContext';
@@ -90,6 +91,8 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
       pilar_5: !!seleccionada.pilar_5,
       comenzo_gv: seleccionada.comenzo_gv,
       encuentro: seleccionada.encuentro,
+      pos_encuentro: seleccionada.pos_encuentro ?? [],
+      reencuentro: !!seleccionada.reencuentro,
       observacion: seleccionada.observacion,
     }).eq('id', seleccionada.id);
     if(error) alerta("Error", error.message);
@@ -152,6 +155,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
           {[t.linea_lider ? `Línea: ${t.linea_lider}` : null, t.zona, t.telefono, `GV: ${t.gv_asignado || 'Sin asignar'}`].filter(Boolean).join(' · ')}
         </Text>
         <PasosConsolidacion tarjeta={t} />
+        <DespuesDelEncuentro tarjeta={t} />
         {t.observacion ? (
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 10, backgroundColor: colors.warningBg, padding: 8, borderRadius: 8 }}>
             <Ionicons name="document-text-outline" size={14} color={colors.warning} />
@@ -192,7 +196,15 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
     return (
       <Pressable onPress={() => abrirEdicion(t)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.border, marginTop: 8 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.text, fontWeight: '600' }}>{t.nombre}</Text>
+          <Text style={{ color: colors.text, fontWeight: '600' }}>
+            {t.nombre}
+            {t.encuentro ? (
+              <Text style={{ color: colors.textSec, fontWeight: '400', fontSize: 12 }}>
+                {'  '}PE {(t.pos_encuentro ?? []).length}/{CLASES_POS_ENCUENTRO}
+                {t.reencuentro ? ' · RE ✓' : ''}
+              </Text>
+            ) : null}
+          </Text>
           {t.telefono || t.zona ? <Text style={{ color: colors.textTer, fontSize: 12 }}>{[t.zona, t.telefono].filter(Boolean).join(' · ')}</Text> : null}
         </View>
         <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -419,6 +431,22 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
                   <Switch value={!!seleccionada?.[item.k]} onValueChange={v=>setSeleccionada({...seleccionada, [item.k]:v})} />
                 </View>
               ))}
+
+              {seleccionada?.encuentro ? (
+                <View style={{ borderBottomWidth: 1, borderBottomColor: colors.cardAlt }}>
+                  {seleccionada?.encuentro_en ? (
+                    <Text style={{ color: colors.textSec, fontSize: 12, marginTop: 10 }}>
+                      Encuentro el {formatoFecha(seleccionada.encuentro_en)} · el Reencuentro suele ser desde el{' '}
+                      {formatoFecha(`${Number(seleccionada.encuentro_en.slice(0, 4)) + 1}${seleccionada.encuentro_en.slice(4, 10)}`)}
+                    </Text>
+                  ) : null}
+                  <SelectorPosEncuentro hechas={seleccionada?.pos_encuentro ?? []} onCambio={(h) => setSeleccionada({ ...seleccionada, pos_encuentro: h })} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
+                    <Text style={{ color: colors.text, fontWeight: '600' }}>Reencuentro</Text>
+                    <Switch value={!!seleccionada?.reencuentro} onValueChange={(v) => setSeleccionada({ ...seleccionada, reencuentro: v })} />
+                  </View>
+                </View>
+              ) : null}
 
               {seleccionada?.estado === 'completada' ? (
                 <Pressable onPress={() => cambiarEstado(false)} style={{backgroundColor: colors.warningBg, padding: 14, borderRadius: 12, alignItems: 'center', marginTop: 20}}>

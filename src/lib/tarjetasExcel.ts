@@ -19,9 +19,11 @@ export const COLUMNAS_TARJETAS = [
   'GRUPO DE VIDA - ASISTENCIA',
   'ENCUENTRO',
   'OBSERVACIÓN',
+  'POS-ENCUENTRO',
+  'REENCUENTRO',
 ] as const;
 
-export const ANCHOS_TARJETAS = [6, 30, 18, 14, 12, 10, 8, 8, 8, 8, 8, 22, 12, 45];
+export const ANCHOS_TARJETAS = [6, 30, 18, 14, 12, 10, 8, 8, 8, 8, 8, 22, 12, 45, 14, 12];
 
 const esSi = (v?: string) => /^(s|si|sí|x|ok|1|true|asistiendo)$/i.test((v ?? '').trim());
 
@@ -44,6 +46,8 @@ export function tarjetaAFila(t: Record<string, any>, numero: number): Record<str
     'GRUPO DE VIDA - ASISTENCIA': t.asistencia_gv ? String(t.asistencia_gv).toUpperCase() : t.comenzo_gv ? 'ASISTIENDO' : '',
     ENCUENTRO: t.encuentro ? 'SI' : '',
     OBSERVACIÓN: t.observacion ?? '',
+    'POS-ENCUENTRO': t.encuentro ? `${(t.pos_encuentro ?? []).length}/10` : '',
+    REENCUENTRO: t.reencuentro ? 'SI' : '',
   };
 }
 
@@ -159,10 +163,14 @@ export function hojaTarjetasConFormato(XLSX: any, tarjetas: Record<string, any>[
   celda('M9', 'GRUPO DE VIDA', AZUL);
   celda('N9', 'ENCUENTRO', AZUL);
   celda('O9', 'OBSERVACION', AZUL);
+  celda('P9', 'POS-ENCUENTRO', AZUL);
+  celda('Q9', 'REENCUENTRO', AZUL);
   ['H', 'I', 'J', 'K', 'L'].forEach((c, i) => celda(`${c}10`, i + 1, OSCURO_TITULO));
   celda('M10', 'ASISTENCIA', OSCURO_TITULO);
   celda('N10', '', OSCURO_TITULO);
   celda('O10', '', AZUL);
+  celda('P10', 'CLASES', OSCURO_TITULO);
+  celda('Q10', '', OSCURO_TITULO);
 
   // Una fila por tarjeta, desde la 11
   tarjetas.forEach((t, i) => {
@@ -182,6 +190,8 @@ export function hojaTarjetasConFormato(XLSX: any, tarjetas: Record<string, any>[
     opcion(`M${r}`, gv === 'ASISTIENDO' ? 'ASISTIENDO' : gv === 'NO' ? 'NO' : '');
     opcion(`N${r}`, t.encuentro ? 'SI' : '');
     celda(`O${r}`, t.observacion ?? '', TEXTO);
+    celda(`P${r}`, t.encuentro ? `${(t.pos_encuentro ?? []).length}/10` : '', (t.pos_encuentro ?? []).length >= 10 ? SI : TEXTO);
+    opcion(`Q${r}`, t.reencuentro ? 'SI' : '');
   });
 
   ws['!ref'] = `A1:AD${ultima}`;
@@ -190,7 +200,7 @@ export function hojaTarjetasConFormato(XLSX: any, tarjetas: Record<string, any>[
     ...['B', 'C', 'D', 'E', 'F', 'G'].map((c) => XLSX.utils.decode_range(`${c}9:${c}10`)),
     XLSX.utils.decode_range('H9:L9'),
   ];
-  ws['!cols'] = [3, 7, 29, 20, 14, 12, 12, 6, 6, 6, 6, 6, 16, 20, 43, ...Array(15).fill(3)].map((w) => ({ wch: w }));
+  ws['!cols'] = [3, 7, 29, 20, 14, 12, 12, 6, 6, 6, 6, 6, 16, 20, 43, 16, 14, ...Array(13).fill(3)].map((w) => ({ wch: w }));
   ws['!rows'] = Array.from({ length: ultima }, (_, i) => ({ hpt: i === 7 ? 18 : i === 8 ? 25 : i === 9 ? 20 : i >= 10 ? 21 : 15 }));
   return ws;
 }

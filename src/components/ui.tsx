@@ -744,3 +744,64 @@ export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }
     </View>
   );
 }
+
+// ---------- Después del Encuentro: Pos-encuentro y Reencuentro ----------
+export const CLASES_POS_ENCUENTRO = 10;
+
+/** 10 botones para marcar las clases del Pos-encuentro (se pueden marcar salteadas) */
+export function SelectorPosEncuentro({ hechas, onCambio }: { hechas: number[]; onCambio: (h: number[]) => void }) {
+  const lista = hechas ?? [];
+  return (
+    <View style={{ paddingVertical: 10 }}>
+      <Text style={{ color: colors.text, fontWeight: '600', marginBottom: 8 }}>
+        Pos-encuentro{' '}
+        <Text style={{ color: colors.textSec, fontWeight: '400' }}>
+          ({lista.length} de {CLASES_POS_ENCUENTRO} clases)
+        </Text>
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        {Array.from({ length: CLASES_POS_ENCUENTRO }, (_, i) => i + 1).map((n) => {
+          const hecha = lista.includes(n);
+          return (
+            <Pressable
+              key={n}
+              onPress={() => onCambio(hecha ? lista.filter((x) => x !== n) : [...lista, n].sort((a, b) => a - b))}
+              style={{
+                width: 44,
+                height: 40,
+                borderRadius: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: hecha ? colors.success : colors.cardAlt,
+              }}
+              accessibilityLabel={`Clase ${n}${hecha ? ', hecha' : ''}`}
+            >
+              <Text style={{ color: hecha ? '#FFFFFF' : colors.text, fontWeight: '800' }}>{n}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/** Una línea con cómo va después del Encuentro (si ya lo hizo) */
+export function DespuesDelEncuentro({ tarjeta }: { tarjeta: Record<string, any> }) {
+  if (!tarjeta.encuentro) return null;
+  const clases = (tarjeta.pos_encuentro ?? []).length;
+  const completo = clases >= CLASES_POS_ENCUENTRO;
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+      <View style={{ backgroundColor: completo ? colors.successBg : colors.cardAlt, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
+        <Text style={{ fontSize: 11, fontWeight: '700', color: completo ? colors.success : colors.textSec }}>
+          Pos-encuentro {clases}/{CLASES_POS_ENCUENTRO}
+        </Text>
+      </View>
+      <View style={{ backgroundColor: tarjeta.reencuentro ? colors.successBg : colors.cardAlt, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 }}>
+        <Text style={{ fontSize: 11, fontWeight: '700', color: tarjeta.reencuentro ? colors.success : colors.textSec }}>
+          {tarjeta.reencuentro ? 'Reencuentro ✓' : 'Sin reencuentro'}
+        </Text>
+      </View>
+    </View>
+  );
+}
