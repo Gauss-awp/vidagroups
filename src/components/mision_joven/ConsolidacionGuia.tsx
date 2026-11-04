@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {View, Text, ScrollView, Switch, TextInput} from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { Card, SelectorPilares } from '@/components/ui';
+import { Card, SelectorPilares, SelectorPosEncuentro } from '@/components/ui';
 import { colors } from '@/lib/theme';
 import { alerta } from '@/lib/alerta';
 
@@ -14,7 +14,6 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
      .select('*')
      .eq('grupo_id', grupoId)
      .order('creado_en', { ascending: false });
-    if(error) console.log("ERROR:", error);
     setTarjetas(data || []);
   };
 
@@ -87,6 +86,24 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
             <Text style={{ color: colors.text }}>Encuentro</Text>
             <Switch value={!!t.encuentro} onValueChange={() => toggle(t, 'encuentro',!!t.encuentro)} />
           </View>
+
+          {/* Después del Encuentro: el guía marca las clases del Pos-encuentro y el Reencuentro */}
+          {t.encuentro ? (
+            <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: colors.border }}>
+              <SelectorPosEncuentro
+                hechas={t.pos_encuentro ?? []}
+                onCambio={async (h) => {
+                  setTarjetas((prev) => prev.map((x) => (x.id === t.id ? { ...x, pos_encuentro: h } : x)));
+                  const { error } = await supabase.from('tarjetas_consolidacion').update({ pos_encuentro: h }).eq('id', t.id);
+                  if (error) alerta('Error', error.message);
+                }}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ color: colors.text }}>Reencuentro</Text>
+                <Switch value={!!t.reencuentro} onValueChange={() => toggle(t, 'reencuentro', !!t.reencuentro)} />
+              </View>
+            </View>
+          ) : null}
 
           <TextInput
             placeholder="Observación..."

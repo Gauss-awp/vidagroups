@@ -344,10 +344,10 @@ export default function ModoReunion() {
         {paso === 3 ? (
           <>
             {encabezado(3, 'Datos de la reunión')}
-            <Campo etiqueta="Ofrenda ($)" placeholder="Ej: 12000" value={datos.ofrenda} onChangeText={(v) => setDatos({ ...datos, ofrenda: v })} keyboardType="numeric" />
-            <Campo etiqueta="Material (prédica)" placeholder="Ej: Prédica del domingo, Pr. Sandra" value={datos.material} onChangeText={(v) => setDatos({ ...datos, material: v })} />
-            <Campo etiqueta="Quién compartió" placeholder="Ej: Joaco y Ambar" value={datos.compartio} onChangeText={(v) => setDatos({ ...datos, compartio: v })} />
-            <Campo etiqueta="Nota de la semana (opcional)" placeholder="Ej: Evangelismo, GV conjunto" value={datos.notas} onChangeText={(v) => setDatos({ ...datos, notas: v })} />
+            <Campo etiqueta="Ofrenda ($)" placeholder="Ej: $12000" value={datos.ofrenda} onChangeText={(v) => setDatos({ ...datos, ofrenda: v })} keyboardType="numeric" />
+            <Campo etiqueta="Material (prédica)" placeholder="Ej: Prédica del domingo, Pr o Pra" value={datos.material} onChangeText={(v) => setDatos({ ...datos, material: v })} />
+            <Campo etiqueta="Quién compartió" placeholder="Ej: nombre1 y nombre2" value={datos.compartio} onChangeText={(v) => setDatos({ ...datos, compartio: v })} />
+            <Campo etiqueta="Nota de la semana (opcional)" placeholder="Ej: Evangelismo, GV conjunto, GV Normal" value={datos.notas} onChangeText={(v) => setDatos({ ...datos, notas: v })} />
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
               <Boton titulo="Atrás" variante="secundario" onPress={() => setPaso(ausentes.length ? 2 : 1)} style={{ flex: 1 }} />
               <Boton
