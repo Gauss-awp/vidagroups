@@ -20,22 +20,34 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
   const [misGrupos, setMisGrupos] = useState<Grupo[]>([]);
   const [todosLosGrupos, setTodosLosGrupos] = useState<Grupo[]>([]);
   const [tarjetas, setTarjetas] = useState<any[]>([]);
-  const [filtro, setFiltro] = useState<'sin_asignar' | 'asignadas' | 'en_gv' | 'completadas' | 'todas'>('todas');
+  const [busqueda, setBusqueda] = useState('');
+  const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
+  const [verCompletadas, setVerCompletadas] = useState(false);
+  const [vista, setVista] = useState<'normal' | 'sin_fono' | 'salieron'>('normal');
+  const [guias, setGuias] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [seleccionada, setSeleccionada] = useState<any>(null);
   const [modal, setModal] = useState(false);
 
    const cargarTodo = useCallback(async () => {
-    const { data: tarjetasData, error: errT } = await supabase.from('tarjetas_consolidacion').select('*').order('creado_en', { ascending: false });
-    
-    // FIX: Pedimos 1000 grupos sin filtrar por guia_id
-    const { data: todosData, error: errG } = await supabase.from('groups').select('*').limit(1000).order('nombre');
-    
+    const redIds = redesConsolida.length ? redesConsolida.map((r) => r.id) : perfil.red_id ? [perfil.red_id] : [];
+    let consultaGrupos = supabase.from('groups').select('*').order('nombre');
+    if (redIds.length) consultaGrupos = consultaGrupos.in('red_id', redIds);
+    const [{ data: tarjetasData }, { data: todosData }] = await Promise.all([
+      supabase.from('tarjetas_consolidacion').select('*').order('creado_en', { ascending: false }),
+      consultaGrupos,
+    ]);
+    // Nombres de los guías, para mostrar "Grupo de vida 04 · Catt"
+    const idsGuias = [...new Set(((todosData ?? []) as Grupo[]).map((g) => g.guia_id).filter(Boolean))];
+    if (idsGuias.length) {
+      const { data: pg } = await supabase.from('profiles').select('id, nombre, apellido').in('id', idsGuias);
+      setGuias(Object.fromEntries(((pg ?? []) as { id: string; nombre: string | null; apellido: string | null }[]).map((x) => [x.id, (x.nombre ?? '').trim()])));
+    }
 
     setTarjetas(tarjetasData || []);
     setMisGrupos((todosData ?? []) as Grupo[]); // para consolidación misGrupos = todos
     setTodosLosGrupos((todosData ?? []) as Grupo[]);
-  }, [perfil.id]);
+  }, [perfil.id, perfil.red_id, redesConsolida]);
   useEffect(() => { cargarTodo(); }, [cargarTodo, refreshKey]);
 
   useEffect(() => {
@@ -94,26 +106,117 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
     ]);
   };
 
-  const filtradas = tarjetas.filter(t => {
-    if (filtro === 'sin_asignar') return!t.gv_asignado;
-    if (filtro === 'asignadas') return t.gv_asignado &&!t.comenzo_gv;
-    if (filtro === 'en_gv') return!!t.comenzo_gv && t.estado !== 'completada';
-    if (filtro === 'completadas') return t.estado === 'completada';
-    return true;
-  });
+  // ---------------- Organización del panel ----------------
+  const texto = busqueda.trim().toLowerCase();
+  const coincide = (x: any) => !texto || `${x.nombre ?? ''} ${x.telefono ?? ''} ${x.zona ?? ''}`.toLowerCase().includes(texto);
+  const hace3dias = Date.now() - 3 * 86400000;
+  const activas = tarjetas.filter((x) => x.estado !== 'completada' && coincide(x));
+  const completadas = tarjetas.filter((x) => x.estado === 'completada' && coincide(x));
+  const sinAsignar = activas.filter((x) => !x.grupo_id && !x.gv_asignado);
+  const sinFono = activas.filter((x) => !x.fonovisita && new Date(x.creado_en).getTime() < hace3dias);
+  const salieron = sinAsignar.filter((x) => /Salió del/i.test(x.observacion ?? ''));
+  const deGrupo = (x: any) => x.grupo_id ?? todosLosGrupos.find((g) => g.nombre === x.gv_asignado)?.id ?? 'otro';
+  const porGrupo = todosLosGrupos
+    .map((g) => {
+      const lista = activas.filter((x) => (x.grupo_id || x.gv_asignado) && deGrupo(x) === g.id);
+      return { grupo: g, lista, sinFono: lista.filter((x) => !x.fonovisita).length };
+    })
+    .filter((x) => x.lista.length > 0)
+    .sort((a, b) => b.sinFono - a.sinFono || b.lista.length - a.lista.length || a.grupo.nombre.localeCompare(b.grupo.nombre));
+  const otros = activas.filter((x) => (x.grupo_id || x.gv_asignado) && deGrupo(x) === 'otro');
 
-  const counts = {
-    sin: tarjetas.filter(t =>!t.gv_asignado).length,
-    asig: tarjetas.filter(t => t.gv_asignado &&!t.comenzo_gv).length,
-    en_gv: tarjetas.filter(t =>!!t.comenzo_gv && t.estado !== 'completada').length,
-    completadas: tarjetas.filter(t => t.estado === 'completada').length,
-  };
+  // Para derivar: primero los grupos de su misma zona
+  const gruposPara = (x: any) =>
+    todosLosGrupos
+      .filter((g) => !x.red_id || !(g as any).red_id || (g as any).red_id === x.red_id)
+      .sort((a, b) => {
+        const z = (x.zona ?? '').toLowerCase().trim();
+        const enZona = (g: any) => (z && `${g.barrio ?? ''}`.toLowerCase().includes(z) ? 0 : 1);
+        return enZona(a) - enZona(b) || a.nombre.localeCompare(b.nombre);
+      });
 
   const Badge = ({ activo, texto }: { activo: boolean, texto: string }) => (
     <View style={{ backgroundColor: activo? colors.successBg : colors.cardAlt, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginTop: 4 }}>
       <Text style={{ fontSize: 11, color: activo? colors.success : colors.textTer, fontWeight: '700' }}>{activo? '✅' : '⏳'} {texto}</Text>
     </View>
   );
+
+  /** Tarjeta completa, con los botones para derivar a un grupo */
+  const TarjetaGrande = ({ t }: { t: any }) => (
+    <Pressable onPress={() => abrirEdicion(t)}>
+      <Card style={{ borderLeftWidth: 4, borderLeftColor: t.encuentro ? colors.success : t.visita ? colors.warning : colors.border }}>
+        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }}>
+          {t.nombre} {t.edad ? `- ${t.edad} años` : ''}
+        </Text>
+        <Text style={{ color: colors.textSec, fontSize: 12, marginTop: 2 }}>
+          {[t.linea_lider ? `Línea: ${t.linea_lider}` : null, t.zona, t.telefono, `GV: ${t.gv_asignado || 'Sin asignar'}`].filter(Boolean).join(' · ')}
+        </Text>
+        <PasosConsolidacion tarjeta={t} />
+        {t.observacion ? (
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 10, backgroundColor: colors.warningBg, padding: 8, borderRadius: 8 }}>
+            <Ionicons name="document-text-outline" size={14} color={colors.warning} />
+            <Text style={{ fontSize: 12, color: colors.warning, flex: 1 }}>{t.observacion}</Text>
+          </View>
+        ) : null}
+        {!t.grupo_id && !t.gv_asignado && todosLosGrupos.length > 0 ? (
+          <>
+            <Text style={{ fontSize: 12, color: colors.textSec, marginTop: 12, marginBottom: 6 }}>Derivar a:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {gruposPara(t).map((g) => (
+                <TouchableOpacity
+                  key={g.id}
+                  onPress={() => asignarGV(t.id, g.id)}
+                  style={{ backgroundColor: colors.success, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, marginRight: 6 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>→ {g.nombre}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        ) : null}
+        <Text style={{ fontSize: 11, color: colors.textTer, marginTop: 8 }}>Tocá para editar</Text>
+      </Card>
+    </Pressable>
+  );
+
+  /** Fila corta: nombre y los 5 pasos en puntitos */
+  const FilaCompacta = ({ t }: { t: any }) => {
+    const n = [t.pilar_1, t.pilar_2, t.pilar_3, t.pilar_4, t.pilar_5].filter(Boolean).length || (t.pilares ? 5 : 0);
+    const pasos = [
+      { l: 'F', ok: !!t.fonovisita },
+      { l: 'V', ok: !!t.visita },
+      { l: n > 0 && n < 5 ? String(n) : 'P', ok: n === 5, parcial: n > 0 && n < 5 },
+      { l: 'G', ok: !!t.comenzo_gv },
+      { l: 'E', ok: !!t.encuentro },
+    ];
+    return (
+      <Pressable onPress={() => abrirEdicion(t)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.border, marginTop: 8 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontWeight: '600' }}>{t.nombre}</Text>
+          {t.telefono || t.zona ? <Text style={{ color: colors.textTer, fontSize: 12 }}>{[t.zona, t.telefono].filter(Boolean).join(' · ')}</Text> : null}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 4 }}>
+          {pasos.map((p, i) => (
+            <View
+              key={i}
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 11,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: p.ok ? colors.success : 'transparent',
+                borderWidth: 1.5,
+                borderColor: p.ok || (p as any).parcial ? colors.success : colors.border,
+              }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '800', color: p.ok ? '#FFFFFF' : (p as any).parcial ? colors.success : colors.textTer }}>{p.l}</Text>
+            </View>
+          ))}
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
     <Pantalla>
@@ -138,45 +241,129 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
             </View>
           )}
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {[
-                { k: 'sin_asignar', label: `Sin Asignar (${counts.sin})` },
-                { k: 'asignadas', label: `Asignadas (${counts.asig})` },
-                { k: 'en_gv', label: `En GV (${counts.en_gv})` },
-                { k: 'completadas', label: `Completadas (${counts.completadas})` },
-                { k: 'todas', label: `Todas (${tarjetas.length})` },
-              ].map(f => (
-                <TouchableOpacity key={f.k} onPress={() => setFiltro(f.k as any)}
-                  style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, backgroundColor: filtro === f.k? colors.primary : colors.card, borderWidth: 1, borderColor: colors.border }}>
-                  <Text style={{ color: filtro === f.k? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>{f.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+          {/* Buscador */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 12, marginTop: 12, borderWidth: 0.5, borderColor: colors.border }}>
+            <Ionicons name="search" size={18} color={colors.textTer} />
+            <TextInput
+              value={busqueda}
+              onChangeText={setBusqueda}
+              placeholder="Buscar por nombre, teléfono o zona"
+              placeholderTextColor={colors.textTer}
+              style={{ flex: 1, padding: 12, color: colors.text }}
+            />
+            {busqueda ? (
+              <Pressable onPress={() => setBusqueda('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={colors.textTer} />
+              </Pressable>
+            ) : null}
+          </View>
 
-          <SeccionTitulo titulo={`Tarjetas - ${filtro}`} />
-          {filtradas.map(t => (
-            <Pressable key={t.id} onPress={() => abrirEdicion(t)}>
-              <Card style={{ borderLeftWidth: 4, borderLeftColor: t.encuentro? colors.success : t.visita? colors.warning : colors.border }}>
-                <Text style={{ color: colors.text,  fontSize: 16, fontWeight: '800' }}>{t.nombre} {t.edad? `- ${t.edad} años` : ''}</Text>
-                {t.estado === 'completada' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}><Ionicons name="checkmark-circle" size={14} color={colors.success} /><Text style={{ color: colors.success, fontWeight: '800', fontSize: 12 }}>Consolidación completada</Text></View> : null}
-                <Text style={{ color: colors.textSec, fontSize: 12, marginTop: 2 }}>{[t.linea_lider ? `Línea: ${t.linea_lider}` : null, t.zona, t.telefono, `GV: ${t.gv_asignado || 'Sin asignar'}`].filter(Boolean).join(' · ')}</Text>
-                <PasosConsolidacion tarjeta={t} />
-                {t.observacion? <View style={{ flexDirection: 'row', gap: 6, marginTop: 10, backgroundColor: colors.warningBg, padding: 8, borderRadius: 8 }}><Ionicons name="document-text-outline" size={14} color={colors.warning} /><Text style={{ fontSize: 12, color: colors.warning, flex: 1 }}>{t.observacion}</Text></View> : null}
-                <Text style={{ fontSize: 11, color: colors.textTer, marginTop: 8 }}>Tocá para editar</Text>
-                {!t.gv_asignado && todosLosGrupos.length > 0 && (
-                  <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-                    {todosLosGrupos.slice(0,4).map(g => (
-                      <TouchableOpacity key={g.id} onPress={() => asignarGV(t.id, g.id)} style={{ backgroundColor: colors.success, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
-                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>→ {g.nombre}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </Card>
-            </Pressable>
-          ))}
+          {/* Para hacer */}
+          {!texto && (sinAsignar.length || sinFono.length || salieron.length) ? (
+            <Card style={{ marginTop: 12, backgroundColor: colors.primaryBg }}>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>Para hacer</Text>
+              {sinAsignar.length ? (
+                <Text style={{ color: colors.text, fontSize: 14, marginBottom: 4 }}>
+                  <Ionicons name="person-add-outline" size={14} color={colors.primary} /> {sinAsignar.length} sin asignar a un grupo
+                </Text>
+              ) : null}
+              {sinFono.length ? (
+                <Pressable onPress={() => setVista(vista === 'sin_fono' ? 'normal' : 'sin_fono')}>
+                  <Text style={{ color: colors.warning, fontSize: 14, fontWeight: '700', marginBottom: 4 }}>
+                    <Ionicons name="call-outline" size={14} color={colors.warning} /> {sinFono.length} sin fonovisita hace más de 3 días ›
+                  </Text>
+                </Pressable>
+              ) : null}
+              {salieron.length ? (
+                <Pressable onPress={() => setVista(vista === 'salieron' ? 'normal' : 'salieron')}>
+                  <Text style={{ color: colors.danger, fontSize: 14, fontWeight: '700' }}>
+                    <Ionicons name="exit-outline" size={14} color={colors.danger} /> {salieron.length} {salieron.length === 1 ? 'salió de su grupo' : 'salieron de su grupo'} ›
+                  </Text>
+                </Pressable>
+              ) : null}
+            </Card>
+          ) : null}
+
+          {vista !== 'normal' ? (
+            <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <SeccionTitulo titulo={vista === 'sin_fono' ? 'Sin fonovisita' : 'Salieron de su grupo'} />
+                <Pressable onPress={() => setVista('normal')} hitSlop={8}>
+                  <Text style={{ color: colors.primary, fontWeight: '700' }}>Ver todo</Text>
+                </Pressable>
+              </View>
+              {(vista === 'sin_fono' ? sinFono : salieron).map((x) => (
+                <TarjetaGrande key={x.id} t={x} />
+              ))}
+            </>
+          ) : (
+            <>
+              {/* Sin asignar: la bandeja de entrada */}
+              <SeccionTitulo titulo={`Sin asignar (${sinAsignar.length})`} />
+              {sinAsignar.length === 0 ? (
+                <Card>
+                  <Text style={{ color: colors.textSec }}>{texto ? 'Nadie coincide con la búsqueda.' : 'Todas las personas nuevas tienen grupo.'}</Text>
+                </Card>
+              ) : (
+                sinAsignar.map((x) => <TarjetaGrande key={x.id} t={x} />)
+              )}
+
+              {/* Por grupo */}
+              <SeccionTitulo titulo="Por grupo" />
+              {porGrupo.length ? (
+                <Text style={{ color: colors.textTer, fontSize: 12, marginTop: -4, marginBottom: 8 }}>
+                  Tocá un grupo para ver sus nuevos · F fono · V visita · P pilares · G va al GV · E encuentro
+                </Text>
+              ) : null}
+              {porGrupo.length === 0 && otros.length === 0 ? (
+                <Card>
+                  <Text style={{ color: colors.textSec }}>Todavía no hay personas derivadas a grupos.</Text>
+                </Card>
+              ) : null}
+              {porGrupo.map(({ grupo, lista, sinFono: nSinFono }) => {
+                const abierto = !!texto || !!abiertos[grupo.id];
+                return (
+                  <Card key={grupo.id}>
+                    <Pressable onPress={() => setAbiertos({ ...abiertos, [grupo.id]: !abiertos[grupo.id] })} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>{grupo.nombre}</Text>
+                        <Text style={{ color: colors.textSec, fontSize: 13, marginTop: 2 }}>
+                          {guias[grupo.guia_id] ? `${guias[grupo.guia_id]} · ` : ''}
+                          {lista.length} {lista.length === 1 ? 'nuevo' : 'nuevos'}
+                          {nSinFono ? <Text style={{ color: colors.warning, fontWeight: '700' }}> · {nSinFono} sin fonovisita</Text> : null}
+                        </Text>
+                      </View>
+                      <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSec} />
+                    </Pressable>
+                    {abierto ? lista.map((x) => <FilaCompacta key={x.id} t={x} />) : null}
+                  </Card>
+                );
+              })}
+              {otros.length ? (
+                <Card>
+                  <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>Otros grupos</Text>
+                  <Text style={{ color: colors.textSec, fontSize: 13, marginTop: 2 }}>Asignados a un grupo que no está en la lista</Text>
+                  {otros.map((x) => (
+                    <FilaCompacta key={x.id} t={x} />
+                  ))}
+                </Card>
+              ) : null}
+
+              {/* Completadas */}
+              <Pressable onPress={() => setVerCompletadas(!verCompletadas)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 18, marginBottom: 8 }}>
+                <Ionicons name={verCompletadas || texto ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSec} />
+                <Text style={{ color: colors.textSec, fontWeight: '700', marginLeft: 6 }}>Completadas ({completadas.length})</Text>
+              </Pressable>
+              {verCompletadas || texto ? (
+                <Card>
+                  {completadas.length === 0 ? <Text style={{ color: colors.textSec }}>Todavía no hay consolidaciones completadas.</Text> : null}
+                  {completadas.map((x) => (
+                    <FilaCompacta key={x.id} t={x} />
+                  ))}
+                </Card>
+              ) : null}
+            </>
+          )}
           <View style={{ height: 24 }} />
           <EquipoLista liderId={perfil.id} refreshKey={refreshKey} textoVacio="Todavía no tenés guías a cargo" />
         </ScrollView>
