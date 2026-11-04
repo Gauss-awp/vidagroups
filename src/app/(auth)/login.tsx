@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View, Image} from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/theme';
@@ -9,6 +9,7 @@ import { Boton, Campo, Pantalla } from '@/components/ui';
 import { alerta } from '@/lib/alerta';
 
 export default function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [verClave, setVerClave] = useState(false);
@@ -22,7 +23,17 @@ export default function Login() {
     setCargando(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     setCargando(false);
-    if (error) alerta('No pudiste ingresar', traducirError(error.message));
+    if (!error) return;
+    // Cuenta sin confirmar: se manda un código nuevo y se pasa a la pantalla para escribirlo
+    if (/not confirmed/i.test(error.message)) {
+      const correo = email.trim().toLowerCase();
+      await supabase.auth.resend({ type: 'signup', email: correo });
+      alerta('Falta confirmar tu correo', `Te mandamos un código a ${correo}. Escribilo en la pantalla siguiente.`, [
+        { text: 'Continuar', onPress: () => router.push({ pathname: '/registro', params: { confirmar: correo } }) },
+      ]);
+      return;
+    }
+    alerta('No pudiste ingresar', traducirError(error.message));
   };
 
   return (
