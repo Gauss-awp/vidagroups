@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { Card } from '../ui';
-import EventosMisionJoven from './EventosMisionJoven';
 import { colors } from '@/lib/theme';
 type Props = {
   tarjetas: any[];
@@ -49,7 +48,6 @@ export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Pro
           <Text style={{ color: colors.text,  fontWeight: '700' }}>Balance Consolidación - Este mes</Text>
           <Text style={{ marginTop: 6, color: colors.textSec }}>Aún no hay tarjetas este mes</Text>
         </Card>
-        <EventosMisionJoven redId={redId} puedeGeneral={puedeGeneral} />
       </View>
     );
   }
@@ -101,8 +99,6 @@ export function PanelBalance({ tarjetas = [], redId, puedeGeneral = false }: Pro
         ))}
       </Card>
 
-      {/* AQUI VA - ABAJO DE TODO */}
-      <EventosMisionJoven redId={redId} puedeGeneral={puedeGeneral} />
 
     </View>
   );

@@ -40,6 +40,7 @@ export function CrearGrupoConGuias({
   const [eligiendo, setEligiendo] = useState<'guia' | 'coguia' | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [errorLista, setErrorLista] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -48,8 +49,9 @@ export function CrearGrupoConGuias({
     setCoguia(null);
     setDia(null);
     setHora('');
+    setErrorLista(null);
     supabase.rpc('candidatos_guias_red', { p_red: redId ?? null }).then(({ data, error }) => {
-      if (error) alerta('No se pudo cargar la lista de guías', error.message);
+      setErrorLista(error ? error.message : null);
       setCandidatos((data ?? []) as Candidato[]);
     });
   }, [visible, redId]);
@@ -117,8 +119,16 @@ export function CrearGrupoConGuias({
             style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, color: colors.text, marginBottom: 10 }}
           />
           <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled">
-            {filtrados.length === 0 ? (
-              <Text style={s.textoFilaSec}>No hay guías aprobados en la red con ese nombre. La persona tiene que registrarse y ser aprobada primero.</Text>
+            {errorLista ? (
+              <Text style={{ color: colors.danger, fontSize: 13 }}>
+                No se pudo cargar la lista de guías. {/function|schema cache/i.test(errorLista) ? 'Falta actualizar la base de datos (etapa 26).' : errorLista}
+              </Text>
+            ) : filtrados.length === 0 ? (
+              <Text style={s.textoFilaSec}>
+                {busqueda.trim()
+                  ? 'Nadie coincide con la búsqueda.'
+                  : 'Todavía no hay guías aprobados en la red. La persona tiene que registrarse y ser aprobada primero.'}
+              </Text>
             ) : (
               filtrados.map((c) => (
                 <Pressable
