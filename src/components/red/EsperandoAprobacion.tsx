@@ -26,7 +26,7 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
 
   const guardarSolicitud = async () => {
     setGuardandoSolicitud(true);
-    const { error } = await supabase.rpc('elegir_solicitud_grupo', { p_grupo: solicitud.grupoId, p_nuevo: solicitud.nuevo });
+    const { error } = await supabase.rpc('elegir_solicitud_grupo', { p_grupo: solicitud.grupoId, p_nuevo: solicitud.nuevo, p_no_guia: !!solicitud.noGuia });
     setGuardandoSolicitud(false);
     if (error) {
       alerta('No se pudo guardar', error.message);
@@ -98,7 +98,11 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
           <Card>
             <SelectorGrupoSolicitud
               redId={perfil.red_id}
-              valor={{ grupoId: (perfil as any).solicitud_grupo_id ?? null, nuevo: (perfil as any).solicitud_grupo_nuevo ?? null }}
+              valor={
+                cambioPendiente
+                  ? solicitud
+                  : { grupoId: (perfil as any).solicitud_grupo_id ?? null, nuevo: (perfil as any).solicitud_grupo_nuevo ?? null, noGuia: !!(perfil as any).solicitud_no_guia }
+              }
               onCambio={(v) => {
                 setSolicitud(v);
                 setCambioPendiente(true);

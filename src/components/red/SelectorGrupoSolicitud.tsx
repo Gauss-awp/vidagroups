@@ -8,6 +8,8 @@ import { s } from '@/components/ui';
 export interface SolicitudGrupo {
   grupoId: string | null;
   nuevo: string | null;
+  /** Supervisores, pastores, encargados o consolidación: no guían un grupo */
+  noGuia?: boolean;
 }
 interface GrupoRed {
   id: string;
@@ -58,39 +60,58 @@ export function SelectorGrupoSolicitud({ redId, valor, onCambio }: { redId: stri
 
   return (
     <View style={{ marginBottom: 14 }}>
-      <Text style={{ color: colors.textSec, fontSize: 13, marginBottom: 4 }}>¿En qué grupo servís? (si sos guía)</Text>
-      <Text style={[s.textoFilaSec, { fontSize: 12, marginBottom: 8 }]}>
-        Así quien te aprueba ya sabe dónde sumarte. Si tu grupo ya está en la lista, elegilo; no lo pidas como nuevo.
-      </Text>
-      {grupos.map((g) =>
-        opcion(
-          valor.grupoId === g.id,
-          g.nombre,
-          g.guias ? `Guía: ${g.guias}` : 'Todavía sin guía',
-          () => {
-            setModoNuevo(false);
-            onCambio({ grupoId: g.id, nuevo: null });
-          },
-          'people-outline'
-        )
+      {valor.noGuia ? (
+        <>
+          {opcion(true, 'No soy guía', 'Guía Supervisor, pastor, encargado o consolidación', () => undefined, 'person-outline')}
+          <Pressable onPress={() => onCambio({ grupoId: null, nuevo: null, noGuia: false })} hitSlop={8}>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Soy guía de un grupo</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <Text style={{ color: colors.textSec, fontSize: 13, marginBottom: 4 }}>¿En qué grupo servís?</Text>
+          <Text style={[s.textoFilaSec, { fontSize: 12, marginBottom: 8 }]}>
+            Así quien te aprueba ya sabe dónde sumarte. Si tu grupo ya está en la lista, elegilo; no lo pidas como nuevo.
+          </Text>
+          {grupos.map((g) =>
+            opcion(
+              valor.grupoId === g.id,
+              g.nombre,
+              g.guias ? `Guía: ${g.guias}` : 'Todavía sin guía',
+              () => {
+                setModoNuevo(false);
+                onCambio({ grupoId: g.id, nuevo: null, noGuia: false });
+              },
+              'people-outline'
+            )
+          )}
+          {opcion(modoNuevo, 'Es un grupo nuevo', 'Todavía no está en la lista', () => {
+            setModoNuevo(true);
+            onCambio({ grupoId: null, nuevo: valor.nuevo ?? '', noGuia: false });
+          }, 'add-circle-outline')}
+          {modoNuevo ? (
+            <TextInput
+              value={valor.nuevo ?? ''}
+              onChangeText={(t) => onCambio({ grupoId: null, nuevo: t, noGuia: false })}
+              placeholder="Nombre del grupo, por ejemplo: Grupo de vida 12"
+              placeholderTextColor={colors.textTer}
+              style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, color: colors.text, marginBottom: 6 }}
+            />
+          ) : null}
+          <Pressable
+            onPress={() => {
+              setModoNuevo(false);
+              onCambio({ grupoId: null, nuevo: null, noGuia: true });
+            }}
+            hitSlop={8}
+            style={{ marginTop: 4 }}
+          >
+            <Text style={{ color: colors.textSec, fontSize: 13 }}>
+              ¿No sos guía? <Text style={{ color: colors.primary, fontWeight: '600' }}>Tocá acá</Text>
+            </Text>
+          </Pressable>
+        </>
       )}
-      {opcion(modoNuevo, 'Es un grupo nuevo', 'Todavía no está en la lista', () => {
-        setModoNuevo(true);
-        onCambio({ grupoId: null, nuevo: valor.nuevo ?? '' });
-      }, 'add-circle-outline')}
-      {modoNuevo ? (
-        <TextInput
-          value={valor.nuevo ?? ''}
-          onChangeText={(t) => onCambio({ grupoId: null, nuevo: t })}
-          placeholder="Nombre del grupo, por ejemplo: Grupo de vida 12"
-          placeholderTextColor={colors.textTer}
-          style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, color: colors.text, marginBottom: 6 }}
-        />
-      ) : null}
-      {opcion(!valor.grupoId && !modoNuevo, 'No guío un grupo', 'Por ejemplo, si sos de consolidación', () => {
-        setModoNuevo(false);
-        onCambio({ grupoId: null, nuevo: null });
-      }, 'remove-circle-outline')}
     </View>
   );
 }

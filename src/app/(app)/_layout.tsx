@@ -1,5 +1,6 @@
-import { Redirect, Stack } from 'expo-router';
-import { View } from 'react-native';
+import { Redirect, Stack, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, Text, View } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/lib/theme';
 import { Boton, Cargando, Pantalla, Vacio } from '@/components/ui';
@@ -36,14 +37,24 @@ export default function AppLayout() {
     <Recordatorios perfilId={perfil.id} rol={perfil.rol} />
     <RegistroAcceso perfilId={perfil.id} />
     <Stack
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.primary,
         headerTitleStyle: { color: colors.text },
         headerShadowVisible: false,
         headerBackTitle: 'Atrás',
         contentStyle: { backgroundColor: colors.bg },
-      }}
+        // Si se abrió una pantalla directo (por ejemplo, al recargar la web o desde una notificación)
+        // no hay "atrás": se muestra un botón para volver al inicio, donde están las pestañas
+        headerLeft: navigation.canGoBack()
+          ? undefined
+          : () => (
+              <Pressable onPress={() => router.replace('/')} hitSlop={12} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 12 }} accessibilityLabel="Ir al inicio">
+                <Ionicons name="home-outline" size={22} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontSize: 16, marginLeft: 6 }}>Inicio</Text>
+              </Pressable>
+            ),
+      })}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="grupo/[id]" options={{ title: 'Grupo' }} />

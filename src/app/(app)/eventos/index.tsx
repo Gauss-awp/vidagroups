@@ -101,8 +101,13 @@ export default function CentroEventos() {
   const activos = lista.filter((x) => (x.evento.estado ?? 'activo') === 'activo' && (diasHasta(x.evento.fecha_evento) ?? 0) >= 0);
   const porMoneda = (m: Moneda) => activos.filter((x) => (x.evento.moneda ?? 'ARS') === m);
   const suma = (l: Resumen[], k: 'recaudado' | 'esperado') => l.reduce((a, x) => a + x[k], 0);
+  // La moneda que se muestra grande es la de los eventos en curso (pesos si hay de los dos)
   const ars = porMoneda('ARS');
   const usd = porMoneda('USD');
+  const monedaPrincipal: Moneda = ars.length || !usd.length ? 'ARS' : 'USD';
+  const monedaSecundaria: Moneda = monedaPrincipal === 'ARS' ? 'USD' : 'ARS';
+  const principal = monedaPrincipal === 'ARS' ? ars : usd;
+  const secundaria = monedaPrincipal === 'ARS' ? usd : [];
 
   return (
     <>
@@ -120,11 +125,17 @@ export default function CentroEventos() {
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-          <Kpi titulo="Recaudado" valor={formatoMoneda(suma(ars, 'recaudado'), 'ARS')} detalle={usd.length ? `+ ${formatoMoneda(suma(usd, 'recaudado'), 'USD')}` : 'en eventos en curso'} icono="cash-outline" color={PALETA.pagado} />
+          <Kpi
+            titulo="Recaudado"
+            valor={formatoMoneda(suma(principal, 'recaudado'), monedaPrincipal)}
+            detalle={secundaria.length ? `+ ${formatoMoneda(suma(secundaria, 'recaudado'), monedaSecundaria)}` : 'en eventos en curso'}
+            icono="cash-outline"
+            color={PALETA.pagado}
+          />
           <Kpi
             titulo="Por cobrar"
-            valor={formatoMoneda(Math.max(0, suma(ars, 'esperado') - suma(ars, 'recaudado')), 'ARS')}
-            detalle={usd.length ? `+ ${formatoMoneda(Math.max(0, suma(usd, 'esperado') - suma(usd, 'recaudado')), 'USD')}` : undefined}
+            valor={formatoMoneda(Math.max(0, suma(principal, 'esperado') - suma(principal, 'recaudado')), monedaPrincipal)}
+            detalle={secundaria.length ? `+ ${formatoMoneda(Math.max(0, suma(secundaria, 'esperado') - suma(secundaria, 'recaudado')), monedaSecundaria)}` : undefined}
             icono="hourglass-outline"
             color={PALETA.cuotas}
           />
@@ -137,9 +148,9 @@ export default function CentroEventos() {
             <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 12 }}>Recaudación por evento</Text>
             <BarrasH
               filas={activos
-                .filter((x) => (x.evento.moneda ?? 'ARS') === 'ARS')
+                .filter((x) => (x.evento.moneda ?? 'ARS') === monedaPrincipal)
                 .map((x) => ({ etiqueta: x.evento.nombre, valor: x.recaudado, meta: x.esperado || undefined, detalle: `${x.anotados} anotados` }))}
-              formato={(n) => formatoMoneda(n, 'ARS')}
+              formato={(n) => formatoMoneda(n, monedaPrincipal)}
               colorFijo={PALETA.azul}
             />
           </Card>

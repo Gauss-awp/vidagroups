@@ -38,8 +38,8 @@ export default function Registro() {
       alerta('Falta tu red', 'Elegí la red a la que pertenecés.');
       return;
     }
-    if (!solicitud.grupoId && !solicitud.nuevo?.trim()) {
-      alerta('Falta tu grupo', 'Elegí tu grupo de la lista, o tocá "Es un grupo nuevo" y escribí su nombre.');
+    if (!solicitud.noGuia && !solicitud.grupoId && !solicitud.nuevo?.trim()) {
+      alerta('Falta tu grupo', 'Elegí tu grupo de la lista, o tocá "Es un grupo nuevo" y escribí su nombre. Si no sos guía, tocá "¿No sos guía?".');
       return;
     }
     if (form.password.length < 8) {
@@ -62,6 +62,7 @@ export default function Registro() {
           // El grupo en el que sirve: lo ve quien aprueba la cuenta
           grupo_id: solicitud.grupoId ?? undefined,
           grupo_nuevo: solicitud.nuevo?.trim() || undefined,
+          no_guia: solicitud.noGuia ? true : undefined,
         },
       },
     });

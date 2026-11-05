@@ -72,7 +72,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['guia_supervisor'],
     titulo: '¿Qué veo en "Mis Guías"?',
     texto:
-      'Los grupos que supervisás: cómo viene la asistencia, quién tiene faltas, los cumpleaños de la semana y las personas nuevas en consolidación.\n\nTocando un grupo entrás a verlo completo, y si el guía no pudo, podés cargar la reunión vos.',
+      'Arriba, las cuentas que esperan aprobación para tus grupos y el botón "Crear un grupo". Debajo, los grupos que supervisás: cómo viene la asistencia, quién tiene faltas, los cumpleaños de la semana y las personas nuevas en consolidación.\n\nTocando un grupo entrás a verlo completo, y si el guía no pudo, podés cargar la reunión vos.',
   },
 
   {
@@ -106,7 +106,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['pastor', 'guia_supervisor', 'apostol', 'administrador'],
     titulo: '¿Cómo apruebo a alguien que se registró?',
     texto:
-      'En "Mi Red" (o en "Mis Guías", si sos Guía Supervisor) aparecen las cuentas que esperan, con el grupo que pidió cada una. Tocá "Aprobar", elegí el rol y el grupo: si es un grupo nuevo, se crea en ese momento. Los Guías Supervisores aprueban guías; los otros roles los aprueban los encargados.',
+      'Cada cuenta nueva aparece con el grupo que pidió.\n\n• Si sos Guía Supervisor, en "Mis Guías" ves a quienes pidieron sumarse a un grupo que supervisás: tocá "Aprobar" y queda en ese grupo (el primero como guía principal y el segundo como segundo guía).\n• Los pedidos de "grupo nuevo" y de quienes no son guías los aprueban los encargados desde "Mi Red": elegís el rol y el grupo, y si es nuevo se crea en ese momento.\n• Los pastores y el rol Apóstol los aprueba el Administrador.',
   },
   {
     roles: ['pastor', 'guia_supervisor', 'apostol'],
@@ -133,10 +133,32 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['administrador'],
     titulo: '¿Qué hay en el panel de Administración?',
     texto:
-      'Salud del sistema, errores de la app, avisos para todos, mensajes de ayuda, cuentas, grupos, responsables de cada red, la carga de equipo y los cambios de rol. No se ven datos de miembros, asistencia, consolidación, notas ni ofrendas.',
+      'Salud (uso de la app, base de datos y versiones), Mensajes (lo que escriben desde Ayuda), Errores (los que registra la app sola), Avisos (para publicar un mensaje a todos o a un rol), Cuentas (aprobar, cambiar rol y red), Grupos (su equipo), Responsables de cada red, Equipo desde planilla y Cambios de rol.\n\nPor privacidad no se ven miembros, asistencia, consolidación, notas ni ofrendas.',
+  },
+
+  {
+    roles: ['administrador'],
+    titulo: '¿Cómo apruebo a un pastor, un encargado o la consolidadora?',
+    texto:
+      'Se registran tocando "¿No sos guía?". En tu panel → Cuentas → Pendientes, abrí la cuenta, elegí el rol (Pastor, Guía Supervisor o Consolidador) y la red, y guardá.\n\nDespués, en Responsables, sumalos donde corresponda: Pastores de la red, Encargados o Consolidadores. Así les aparece "Mi Red" o el panel de Consolidación.',
+  },
+  {
+    roles: ['administrador'],
+    titulo: '¿Cómo publico un aviso para todos?',
+    texto: 'En tu panel → Avisos → "Nuevo aviso". Poné el título, el mensaje, para quién (todos, guías, supervisores…), de qué red y cuánto tiempo dura. Aparece abajo en el inicio de cada uno hasta que lo cierre.',
+  },
+  {
+    roles: ['administrador'],
+    titulo: '¿Cómo respondo un mensaje de ayuda?',
+    texto: 'En tu panel → Mensajes, tocá el mensaje, escribí la respuesta y tocá "Enviar respuesta". La persona la ve en Perfil → Ayuda → "Mis mensajes". Cuando esté solucionado, marcalo como resuelto.',
   },
 
   // ------------------------- Para todos -------------------------
+  {
+    titulo: '¿Cómo me registro?',
+    texto:
+      'Tocá "Registrate", completá tu nombre, elegí tu red y tu grupo (o "Es un grupo nuevo" si todavía no está en la lista), tu correo y una contraseña. Te llega un código por correo para confirmar la cuenta.\n\nSi no sos guía (Guía Supervisor, pastor, encargado o consolidación), tocá "¿No sos guía?" en lugar de elegir un grupo.',
+  },
   {
     titulo: '¿Cómo instalo la app en el iPhone?',
     texto:

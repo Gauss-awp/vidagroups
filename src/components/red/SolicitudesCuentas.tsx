@@ -22,6 +22,7 @@ interface Solicitud {
   grupo_guias: string | null;
   grupo_nuevo: string | null;
   grupo_nuevo_existe: string | null;
+  no_guia: boolean;
 }
 interface GrupoRed {
   id: string;
@@ -82,7 +83,8 @@ export function SolicitudesCuentas({ redId, onCambio, ocultarSiVacio = false }: 
 
   const abrir = (x: Solicitud) => {
     setAbierta(x);
-    setRol('guia');
+    // Si dijo que no es guía, se propone Guía Supervisor (si quien aprueba puede asignarlo)
+    setRol(x.no_guia && rolesPara(x).includes('guia_supervisor') ? 'guia_supervisor' : 'guia');
     setDestino(destinoSugerido(x));
     setEligiendoOtro(false);
   };
@@ -130,6 +132,7 @@ export function SolicitudesCuentas({ redId, onCambio, ocultarSiVacio = false }: 
   const pedido = (x: Solicitud) => {
     if (x.grupo) return `Quiere sumarse a ${x.grupo}${x.grupo_guias ? ` (con ${x.grupo_guias})` : ''}`;
     if (x.grupo_nuevo) return `Abre un grupo nuevo: "${x.grupo_nuevo}"${x.grupo_nuevo_existe ? ' (ya existe: se suma ahí)' : ''}`;
+    if (x.no_guia) return 'No es guía (Guía Supervisor, pastor, encargado o consolidación)';
     return 'No indicó grupo';
   };
 
