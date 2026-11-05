@@ -59,13 +59,12 @@ export function CrearGrupoConGuias({
   const crear = async () => {
     const h = hora.trim().replace('.', ':');
     if (!nombre.trim()) return alerta('Falta el nombre', 'Poné un nombre para el grupo, por ejemplo "Grupo de vida 12".');
-    if (!guia) return alerta('Falta el guía', 'Elegí quién guía el grupo.');
     if (h && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(h)) return alerta('Hora inválida', 'Escribila como 21:00.');
     setGuardando(true);
     const { data, error } = await supabase.rpc('crear_grupo_con_guias', {
       p_nombre: nombre.trim(),
-      p_guia: guia.id,
-      p_coguia: coguia?.id ?? null,
+      p_guia: guia?.id ?? null,
+      p_coguia: guia ? coguia?.id ?? null : null,
       p_dia: dia,
       p_hora: h || null,
       p_red: redId ?? null,
@@ -94,10 +93,10 @@ export function CrearGrupoConGuias({
       >
         <Ionicons name={valor ? 'person' : 'person-add-outline'} size={18} color={valor ? colors.primary : colors.textSec} style={{ marginRight: 8 }} />
         <Text style={{ color: valor ? colors.text : colors.textSec, flex: 1, fontWeight: valor ? '700' : '400' }}>
-          {valor ? valor.nombre : opcional ? 'Sin segundo guía (opcional)' : 'Elegir'}
+          {valor ? valor.nombre : opcional ? 'Sin segundo guía (opcional)' : 'Todavía sin guía (opcional)'}
         </Text>
         {valor && opcional ? (
-          <Pressable onPress={() => setCoguia(null)} hitSlop={8}>
+          <Pressable onPress={() => (tipo === 'guia' ? (setGuia(null), setCoguia(null)) : setCoguia(null))} hitSlop={8}>
             <Ionicons name="close-circle" size={18} color={colors.textTer} />
           </Pressable>
         ) : (
@@ -157,8 +156,13 @@ export function CrearGrupoConGuias({
       ) : (
         <>
           <Campo etiqueta="Nombre del grupo" placeholder="Ej: Grupo de vida 12" value={nombre} onChangeText={setNombre} />
-          {persona('Guía principal', guia, 'guia')}
-          {persona('Segundo guía', coguia, 'coguia', true)}
+          {persona('Guía principal', guia, 'guia', true)}
+          {guia ? persona('Segundo guía', coguia, 'coguia', true) : null}
+          {!guia ? (
+            <Text style={[s.textoFilaSec, { fontSize: 12, marginTop: -4, marginBottom: 12 }]}>
+              Si los guías todavía no se registraron, creá el grupo igual: cuando se registren van a poder elegirlo, y vos los aprobás desde "Mis Guías".
+            </Text>
+          ) : null}
           <Text style={[s.textoFilaSec, { marginBottom: 6 }]}>Día de reunión (opcional)</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
             {DIAS.map((d, i) => (

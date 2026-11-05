@@ -66,7 +66,7 @@ export function SelectorGrupoSolicitud({ redId, valor, onCambio }: { redId: stri
         opcion(
           valor.grupoId === g.id,
           g.nombre,
-          g.guias ? `Guía: ${g.guias}` : null,
+          g.guias ? `Guía: ${g.guias}` : 'Todavía sin guía',
           () => {
             setModoNuevo(false);
             onCambio({ grupoId: g.id, nuevo: null });

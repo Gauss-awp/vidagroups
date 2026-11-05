@@ -79,7 +79,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['guia_supervisor'],
     titulo: '¿Cómo creo un grupo nuevo?',
     texto:
-      'En "Mis Guías" tocá "Crear un grupo". Poné el nombre, elegí al guía principal y, si son dos, al segundo guía (pueden ya guiar otro grupo). Opcional: el día y la hora.\n\nVos quedás como supervisor del grupo. Los guías tienen que estar registrados y aprobados.',
+      'En "Mis Guías" tocá "Crear un grupo" y poné el nombre. Si los guías ya tienen cuenta, elegilos (uno o dos); si todavía no se registraron, dejalo sin guía. Opcional: el día y la hora.\n\nVos quedás como supervisor. Cuando sus guías se registren y elijan ese grupo, el pedido te llega a vos en "Mis Guías": el primero que aprobás queda como guía principal y el segundo como segundo guía.',
   },
   {
     roles: ['guia_supervisor'],

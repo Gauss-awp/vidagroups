@@ -38,6 +38,10 @@ export default function Registro() {
       alerta('Falta tu red', 'Elegí la red a la que pertenecés.');
       return;
     }
+    if (!solicitud.grupoId && !solicitud.nuevo?.trim()) {
+      alerta('Falta tu grupo', 'Elegí tu grupo de la lista, o tocá "Es un grupo nuevo" y escribí su nombre.');
+      return;
+    }
     if (form.password.length < 8) {
       alerta('Contraseña corta', 'La contraseña tiene que tener al menos 8 caracteres.');
       return;
@@ -143,7 +147,7 @@ export default function Registro() {
 
           <Text style={{ color: colors.text, fontSize: 34, fontWeight: '700' }}>Crear cuenta</Text>
           <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 6, marginBottom: 24, lineHeight: 21 }}>
-            Elegí tu red. El encargado de esa red aprueba tu cuenta y te asigna el rol.
+            Elegí tu red y tu grupo. Tu Guía Supervisor o los encargados aprueban tu cuenta y te suman al grupo.
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
