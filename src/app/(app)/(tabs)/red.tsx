@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {RefreshControl, ScrollView, Text, View} from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { colors } from '@/lib/theme';
 import { useAuth } from '@/context/AuthContext';
 import { Boton, Campo, Card, Chip, HojaModal, Pantalla, TituloGrande, Vacio, s } from '@/components/ui';
-import { Aprobaciones } from '@/components/red/Aprobaciones';
+import { SolicitudesCuentas } from '@/components/red/SolicitudesCuentas';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { ResponsablesRed } from '@/components/red/ResponsablesRed';
 import { Importador } from '@/components/red/Importador';
@@ -99,7 +101,20 @@ export default function PanelRed() {
           </ScrollView>
         ) : null}
 
-        <Aprobaciones key={`ap-${refreshKey}`} redId={red.id} />
+        <SolicitudesCuentas key={`ap-${refreshKey}`} redId={red.id} />
+
+        <Card onPress={() => router.push({ pathname: '/eventos', params: { red: red.id, nombre: red.nombre } })} style={{ backgroundColor: '#1F3A5F', marginTop: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <Ionicons name="stats-chart" size={22} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 17 }}>Centro de Eventos</Text>
+              <Text style={{ color: '#C7D7EE', fontSize: 13 }}>Anotados, pagos, gráficos y planillas de cada evento</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+          </View>
+        </Card>
 
         <PanelBalance tarjetas={tarjetas} redId={red.id} puedeGeneral={esPastorOApostol} />
 

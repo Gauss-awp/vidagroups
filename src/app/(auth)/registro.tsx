@@ -3,6 +3,7 @@ import {KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View} from 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { SelectorGrupoSolicitud, type SolicitudGrupo } from '@/components/red/SelectorGrupoSolicitud';
 import { colors } from '@/lib/theme';
 import type { Red } from '@/lib/types';
 import { traducirError } from '@/lib/utils';
@@ -23,6 +24,8 @@ export default function Registro() {
   useEffect(() => {
     supabase.from('redes').select('id, nombre').order('nombre').then(({ data }) => setRedes((data ?? []) as Red[]));
   }, []);
+
+  const [solicitud, setSolicitud] = useState<SolicitudGrupo>({ grupoId: null, nuevo: null });
 
   const cambiar = (campo: keyof typeof form) => (valor: string) => setForm((f) => ({ ...f, [campo]: valor }));
 
@@ -47,7 +50,16 @@ export default function Registro() {
     const { data, error } = await supabase.auth.signUp({
       email: form.email.trim().toLowerCase(),
       password: form.password,
-      options: { data: { nombre: form.nombre.trim(), apellido: form.apellido.trim(), red_id: redId } },
+      options: {
+        data: {
+          nombre: form.nombre.trim(),
+          apellido: form.apellido.trim(),
+          red_id: redId,
+          // El grupo en el que sirve: lo ve quien aprueba la cuenta
+          grupo_id: solicitud.grupoId ?? undefined,
+          grupo_nuevo: solicitud.nuevo?.trim() || undefined,
+        },
+      },
     });
     setCargando(false);
     if (error) {
@@ -65,7 +77,7 @@ export default function Registro() {
     if (!confirmando) return;
     const token = codigo.replace(/\D/g, '');
     if (token.length < 6) {
-      alerta('Código incompleto', 'Escribí el código de 6 dígitos que te llegó por correo.');
+      alerta('Código incompleto', 'Escribí el código completo que te llegó por correo.');
       return;
     }
     setCargando(true);
@@ -98,11 +110,11 @@ export default function Registro() {
             </Pressable>
             <Text style={{ color: colors.text, fontSize: 30, fontWeight: '700' }}>Confirmá tu correo</Text>
             <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 6, marginBottom: 24, lineHeight: 21 }}>
-              Te mandamos un código de 6 dígitos a <Text style={{ fontWeight: '700', color: colors.text }}>{confirmando}</Text>. Escribilo acá. Si no lo ves, revisá en spam.
+              Te mandamos un código a <Text style={{ fontWeight: '700', color: colors.text }}>{confirmando}</Text>. Escribilo acá. Si no lo ves, revisá en spam.
             </Text>
             <Campo
               etiqueta="Código"
-              placeholder="123456"
+              placeholder="Código del correo"
               value={codigo}
               onChangeText={setCodigo}
               keyboardType="number-pad"
@@ -145,9 +157,18 @@ export default function Registro() {
           <Text style={s.etiqueta}>Tu red</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
             {redes.map((r) => (
-              <Chip key={r.id} texto={r.nombre} activo={redId === r.id} onPress={() => setRedId(r.id)} />
+              <Chip
+                key={r.id}
+                texto={r.nombre}
+                activo={redId === r.id}
+                onPress={() => {
+                  setRedId(r.id);
+                  setSolicitud({ grupoId: null, nuevo: null });
+                }}
+              />
             ))}
           </View>
+          <SelectorGrupoSolicitud redId={redId} valor={solicitud} onCambio={setSolicitud} />
           <Campo
             etiqueta="Correo"
             placeholder="tu@correo.com"

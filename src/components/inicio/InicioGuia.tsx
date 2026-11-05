@@ -5,7 +5,6 @@ import { colors } from '@/lib/theme';
 import type { Grupo, Perfil } from '@/lib/types';
 import { Cargando, Chip, Pantalla, TituloGrande, Card } from '@/components/ui';
 import { GrupoDetalle } from '@/components/grupo/GrupoDetalle';
-import { CrearGrupo } from '@/components/grupo/CrearGrupo';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
 import { esErrorDeRed, guardarCache, leerCache } from '@/lib/sinConexion';
 import { alerta } from '@/lib/alerta';
@@ -49,13 +48,11 @@ export function InicioGuia({ perfil }: { perfil: Perfil }) {
         <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
           <TituloGrande titulo="Mi Grupo" subtitulo={saludo} />
           <Card style={{ backgroundColor: colors.primaryBg }}>
-            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>Todavía no tenés un grupo</Text>
+            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 6 }}>Todavía no tenés un grupo asignado</Text>
             <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>
-              Si tu grupo ya existe (por ejemplo, lo guiás con otra persona), no lo crees de nuevo: pedile a tu Guía Supervisor o a los encargados que te sumen. Cuando te sumen, cerrá y abrí la app.
+              Tu Guía Supervisor o los encargados de tu red te van a sumar a tu grupo (o lo van a crear, si es nuevo). Cuando lo hagan, tirá hacia abajo para actualizar.
             </Text>
-            <Text style={{ color: colors.textSec, fontSize: 14, lineHeight: 20, marginTop: 8 }}>Si sos quien abre el grupo, crealo acá abajo.</Text>
           </Card>
-          <CrearGrupo guiaId={perfil.id} onCreado={cargar} />
         </ScrollView>
       </Pantalla>
     );

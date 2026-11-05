@@ -48,6 +48,11 @@ export function FormEvento({
   const [costo, setCosto] = useState('');
   const [fecha, setFecha] = useState(hoyISO());
   const [descripcion, setDescripcion] = useState('');
+  const [lugar, setLugar] = useState('');
+  const [cupo, setCupo] = useState('');
+  const [conCierre, setConCierre] = useState(false);
+  const [cierre, setCierre] = useState(hoyISO());
+  const [estado, setEstado] = useState<'activo' | 'cerrado' | 'cancelado'>('activo');
   const [alcance, setAlcance] = useState<Alcance>(alcances[0] ?? 'grupo');
   const [guardando, setGuardando] = useState(false);
 
@@ -61,6 +66,11 @@ export function FormEvento({
       setCosto(Number(evento.costo_total) ? String(Number(evento.costo_total)) : '');
       setFecha(evento.fecha_evento ?? hoyISO());
       setDescripcion(evento.descripcion ?? '');
+      setLugar(evento.lugar ?? '');
+      setCupo(evento.cupo ? String(evento.cupo) : '');
+      setConCierre(!!evento.cierre_inscripcion);
+      setCierre(evento.cierre_inscripcion ?? hoyISO());
+      setEstado(evento.estado ?? 'activo');
     } else {
       setNombre('');
       setTipo('encuentro');
@@ -68,6 +78,11 @@ export function FormEvento({
       setCosto('');
       setFecha(hoyISO());
       setDescripcion('');
+      setLugar('');
+      setCupo('');
+      setConCierre(false);
+      setCierre(hoyISO());
+      setEstado('activo');
       setAlcance(alcances[0] ?? 'grupo');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +98,16 @@ export function FormEvento({
       alerta('Costo inválido', 'Escribí un número, por ejemplo 45000.');
       return;
     }
+    const cupoN = cupo.trim() ? Number(cupo.replace(/\D/g, '')) : null;
+    if (cupoN !== null && (isNaN(cupoN) || cupoN <= 0)) {
+      alerta('Cupo inválido', 'Escribí la cantidad máxima de personas, por ejemplo 50.');
+      return;
+    }
     const datos = {
+      lugar: lugar.trim() || null,
+      cupo: cupoN,
+      cierre_inscripcion: conCierre ? cierre : null,
+      estado,
       nombre: nombre.trim(),
       tipo,
       moneda,
@@ -151,6 +175,27 @@ export function FormEvento({
             {alcances.map((a) => (
               <Chip key={a} texto={ALCANCE_LABEL[a]} activo={alcance === a} color={colors.purple} onPress={() => setAlcance(a)} />
             ))}
+          </View>
+        </>
+      ) : null}
+
+      <Campo etiqueta="Lugar (opcional)" placeholder="Ej: Complejo Los Reartes" value={lugar} onChangeText={setLugar} />
+      <Campo etiqueta="Cupo máximo (opcional)" placeholder="Ej: 50" keyboardType="number-pad" value={cupo} onChangeText={setCupo} />
+
+      <Text style={s.etiqueta}>Cierre de inscripción</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 }}>
+        <Chip texto="Sin fecha de cierre" activo={!conCierre} onPress={() => setConCierre(false)} />
+        <Chip texto="Con fecha de cierre" activo={conCierre} onPress={() => setConCierre(true)} />
+      </View>
+      {conCierre ? <SelectorFecha valor={cierre} onChange={setCierre} /> : null}
+
+      {evento ? (
+        <>
+          <Text style={s.etiqueta}>Estado</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 }}>
+            <Chip texto="Activo" activo={estado === 'activo'} onPress={() => setEstado('activo')} />
+            <Chip texto="Cerrado" activo={estado === 'cerrado'} onPress={() => setEstado('cerrado')} />
+            <Chip texto="Cancelado" activo={estado === 'cancelado'} onPress={() => setEstado('cancelado')} />
           </View>
         </>
       ) : null}

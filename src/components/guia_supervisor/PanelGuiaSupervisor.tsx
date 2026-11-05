@@ -7,6 +7,7 @@ import { colorPorcentaje, colors } from '@/lib/theme';
 import type { Moneda, Perfil } from '@/lib/types';
 import { formatoFecha, formatoMoneda, hoyISO, sumarDias } from '@/lib/utils';
 import { CrearGrupoConGuias } from '@/components/grupo/CrearGrupoConGuias';
+import { SolicitudesCuentas } from '@/components/red/SolicitudesCuentas';
 import { BarraProgreso, Boton, Card, Cargando, Pantalla, PasosConsolidacion, SeccionTitulo, TituloGrande, Vacio, s } from '@/components/ui';
 import { GraficoHabitos, TarjetaGrafico } from '@/components/Graficos';
 import { BotonReporte } from '@/components/reporte/BotonReporte';
@@ -103,6 +104,7 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
         {perfil.rol === 'guia_supervisor' ? (
           <Boton titulo="Crear un grupo" icono="add-circle-outline" variante="secundario" onPress={() => setCreando(true)} style={{ marginBottom: 12 }} />
         ) : null}
+        <SolicitudesCuentas ocultarSiVacio onCambio={cargar} />
         <CrearGrupoConGuias
           visible={creando}
           onClose={() => setCreando(false)}

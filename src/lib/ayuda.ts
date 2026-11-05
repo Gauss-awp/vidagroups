@@ -41,7 +41,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['guia', 'guia_supervisor'],
     titulo: 'Guío el grupo con otra persona, ¿cómo la sumo?',
     texto:
-      'Los guías de cada grupo los asigna su Guía Supervisor (o los encargados de la red), desde el grupo → "Equipo" → "Agregar".\n\nSi sos el segundo guía: registrate, esperá que te aprueben y pedile a tu Guía Supervisor que te sume. No crees el grupo de nuevo.',
+      'Cuando te registres, en "¿En qué grupo servís?" elegí tu grupo de la lista (o "Es un grupo nuevo" si todavía no está). Quien te aprueba te suma a ese grupo.\n\nSi ya tenés cuenta, tu Guía Supervisor (o los encargados) te suman desde el grupo → "Equipo" → "Agregar".',
   },
   {
     roles: ['guia', 'guia_supervisor'],
@@ -103,16 +103,29 @@ export const AYUDA: ItemAyuda[] = [
 
   // ------------------------- Pastores y encargados -------------------------
   {
-    roles: ['pastor', 'guia_supervisor', 'apostol'],
+    roles: ['pastor', 'guia_supervisor', 'apostol', 'administrador'],
     titulo: '¿Cómo apruebo a alguien que se registró?',
     texto:
-      'Entrá a "Mi Red". Arriba aparecen las cuentas que esperan aprobación: elegí su rol (Guía, Guía Supervisor, Consolidador) y aprobala. Desde ese momento ya puede usar la app.',
+      'En "Mi Red" (o en "Mis Guías", si sos Guía Supervisor) aparecen las cuentas que esperan, con el grupo que pidió cada una. Tocá "Aprobar", elegí el rol y el grupo: si es un grupo nuevo, se crea en ese momento. Los Guías Supervisores aprueban guías; los otros roles los aprueban los encargados.',
   },
   {
     roles: ['pastor', 'guia_supervisor', 'apostol'],
     titulo: '¿Cómo armo quién guía y quién supervisa cada grupo?',
     texto:
       'En "Mi Red" → "Gestionar GVs", abrí el grupo y vas a ver el "Equipo del grupo":\n\n• Guías: quiénes lo guían.\n• Supervisión: quiénes lo supervisan.\n\nCon "Agregar" sumás a alguien y con la ✕ lo quitás. La ⭐ marca al principal: tocá la estrella de otra persona para que pase a ser la principal.',
+  },
+
+  {
+    roles: ['pastor', 'guia_supervisor', 'apostol', 'administrador'],
+    titulo: '¿Cómo uso el Centro de Eventos?',
+    texto:
+      'En "Mi Red" tocá "Centro de Eventos". Ahí ves todos los eventos de la red con lo recaudado, lo que falta cobrar y quiénes pagaron.\n\nEntrando a un evento tenés: Resumen (indicadores y gráficos), Anotados (quién va y cuánto debe; tocá a alguien para anotarlo o registrar un pago), Pagos (el historial) y Planillas (exportar a Excel, importar una planilla y armar el mensaje con los saldos).',
+  },
+  {
+    roles: ['guia', 'guia_supervisor'],
+    titulo: '¿Cómo anoto a alguien a un evento y registro sus pagos?',
+    texto:
+      'En el grupo, pestaña "Eventos", entrá al evento. En "Anotados" → "No anotados" tocá a la persona para anotarla. Para registrar una cuota, tocala en la lista y completá el monto (hay botones para "Todo" y "La mitad"). Al registrar un pago queda anotada sola.',
   },
 
   // ------------------------- Administrador -------------------------
@@ -136,7 +149,7 @@ export const AYUDA: ItemAyuda[] = [
   },
   {
     titulo: 'Dice "Esperando aprobación", ¿qué hago?',
-    texto: 'Es normal: los encargados de tu red tienen que aprobar tu cuenta. Cuando lo hagan, cerrá y abrí la app.',
+    texto: 'Es normal: tu Guía Supervisor o los encargados de tu red tienen que aprobar tu cuenta y asignarte tu grupo. Mientras esperás, en esa misma pantalla podés elegir o corregir tu grupo. Cuando te aprueben, tocá "Actualizar".',
   },
   {
     titulo: 'Me olvidé la contraseña',

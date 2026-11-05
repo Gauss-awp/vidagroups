@@ -71,6 +71,10 @@ export interface Evento {
   costo_total: number;
   fecha_evento: string | null;
   descripcion: string | null;
+  lugar?: string | null;
+  cupo?: number | null;
+  cierre_inscripcion?: string | null;
+  estado?: 'activo' | 'cerrado' | 'cancelado';
   creado_por: string | null;
   creado_en: string;
 }

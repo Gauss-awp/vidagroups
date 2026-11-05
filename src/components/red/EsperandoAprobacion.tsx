@@ -6,6 +6,8 @@ import { colors } from '@/lib/theme';
 import type { Perfil, Red } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { Boton, Card, Chip, Pantalla, s } from '@/components/ui';
+import { SelectorGrupoSolicitud, type SolicitudGrupo } from './SelectorGrupoSolicitud';
+import { alerta } from '@/lib/alerta';
 
 /** Pantalla para cuentas pendientes de aprobación (o dadas de baja). */
 export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
@@ -17,6 +19,22 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
   useEffect(() => {
     supabase.from('redes').select('id, nombre').order('nombre').then(({ data }) => setRedes((data ?? []) as Red[]));
   }, []);
+
+  const [solicitud, setSolicitud] = useState<SolicitudGrupo>({ grupoId: null, nuevo: null });
+  const [cambioPendiente, setCambioPendiente] = useState(false);
+  const [guardandoSolicitud, setGuardandoSolicitud] = useState(false);
+
+  const guardarSolicitud = async () => {
+    setGuardandoSolicitud(true);
+    const { error } = await supabase.rpc('elegir_solicitud_grupo', { p_grupo: solicitud.grupoId, p_nuevo: solicitud.nuevo });
+    setGuardandoSolicitud(false);
+    if (error) {
+      alerta('No se pudo guardar', error.message);
+      return;
+    }
+    setCambioPendiente(false);
+    await refrescarPerfil();
+  };
 
   const miRed = redes.find((r) => r.id === perfil.red_id);
   const dadoDeBaja = perfil.estado === 'inactivo';
@@ -57,7 +75,7 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
           <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 8, textAlign: 'center', lineHeight: 21 }}>
             {dadoDeBaja
               ? 'Si creés que es un error, hablá con el encargado de tu red.'
-              : 'El encargado de tu red tiene que aprobar tu cuenta y asignarte un rol. Cuando lo haga, tocá "Actualizar".'}
+              : 'Tu Guía Supervisor o los encargados de tu red tienen que aprobar tu cuenta y asignarte tu grupo. Cuando lo hagan, tocá "Actualizar".'}
           </Text>
         </View>
 
@@ -73,6 +91,20 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
                 <Chip key={r.id} texto={r.nombre} activo={r.id === perfil.red_id} onPress={() => !cambiandoRed && elegirRed(r.id)} />
               ))}
             </View>
+          </Card>
+        ) : null}
+
+        {!dadoDeBaja && perfil.red_id ? (
+          <Card>
+            <SelectorGrupoSolicitud
+              redId={perfil.red_id}
+              valor={{ grupoId: (perfil as any).solicitud_grupo_id ?? null, nuevo: (perfil as any).solicitud_grupo_nuevo ?? null }}
+              onCambio={(v) => {
+                setSolicitud(v);
+                setCambioPendiente(true);
+              }}
+            />
+            {cambioPendiente ? <Boton titulo="Guardar mi grupo" icono="checkmark" onPress={guardarSolicitud} cargando={guardandoSolicitud} /> : null}
           </Card>
         ) : null}
 
