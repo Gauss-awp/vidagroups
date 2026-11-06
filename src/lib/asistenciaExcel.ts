@@ -10,7 +10,7 @@ export const MESES_MAYUS = [
 const ETIQUETAS_SEMANA = ['1era', '2 da', '3 era', '4 ta', '5ta'];
 const COL_ASIST = ['C', 'E', 'G', 'I', 'K'];
 const COL_CONSOL = ['D', 'F', 'H', 'J', 'L'];
-const FILAS_MIEMBROS = 30; // como la planilla; si hay más hermanos, se agregan filas
+const FILAS_MIEMBROS = 30; // como la planilla; si hay más miembros, se agregan filas
 const SEPARACION = 6; // filas vacías entre un mes y el siguiente
 export const FALTAS_ALEJADO = 6; // faltas seguidas para pintarlo en rojo
 
@@ -35,7 +35,7 @@ export interface MiembroPlanilla {
   roles?: { rol: RolEquipo; desde: string }[];
 }
 
-/** El rol que tenía el hermano a fin de un mes (según el historial) */
+/** El rol que tenía el miembro a fin de un mes (según el historial) */
 export function rolEnFecha(m: MiembroPlanilla, fecha: string): RolEquipo {
   if (!m.roles || m.roles.length === 0) return m.rol_equipo;
   const previos = m.roles.filter((r) => r.desde.slice(0, 10) <= fecha).sort((a, b) => a.desde.localeCompare(b.desde));
@@ -136,7 +136,7 @@ export function hojaAsistenciaConFormato(
       if (r.notas) set(`${COL_CONSOL[i]}${s + 10}`, r.notas);
     });
 
-    // Un renglón por hermano
+    // Un renglón por miembro
     for (let k = 0; k < filas; k++) {
       const fila = s + 11 + k;
       const m = lista[k];
@@ -253,7 +253,7 @@ const plata = (c: any): number | null => {
   return isNaN(n) ? null : n;
 };
 
-/** Lee la hoja de asistencia (formato de la iglesia) y devuelve cada mes con sus semanas y hermanos */
+/** Lee la hoja de asistencia (formato de la iglesia) y devuelve cada mes con sus semanas y miembros */
 export function leerPlanillaAsistencia(XLSX: any, ws: any, anioPorDefecto: number): PlanillaLeida {
   const rango = XLSX.utils.decode_range(ws['!ref'] ?? 'A1:L1');
   const cel = (col: string, fila: number) => ws[`${col}${fila}`];
@@ -292,7 +292,7 @@ export function leerPlanillaAsistencia(XLSX: any, ws: any, anioPorDefecto: numbe
       return fecha ? { fecha, notas: texto(cel(COL_CONSOL[i], equipo)) || null, ofrenda: null, material: null, compartio: null } : null;
     });
 
-    // Hermanos, hasta la fila "SEMANAS"
+    // Miembros, hasta la fila "SEMANAS"
     const miembros: MiembroLeido[] = [];
     let g = equipo + 1;
     for (; g <= rango.e.r + 1 && !/^SEMANAS$/i.test(texto(cel('A', g))); g++) {

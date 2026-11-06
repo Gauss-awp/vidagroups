@@ -98,18 +98,6 @@ export function SelectorGrupoSolicitud({ redId, valor, onCambio }: { redId: stri
               style={{ backgroundColor: colors.cardAlt, borderRadius: 12, padding: 12, color: colors.text, marginBottom: 6 }}
             />
           ) : null}
-          <Pressable
-            onPress={() => {
-              setModoNuevo(false);
-              onCambio({ grupoId: null, nuevo: null, noGuia: true });
-            }}
-            hitSlop={8}
-            style={{ marginTop: 4 }}
-          >
-            <Text style={{ color: colors.textSec, fontSize: 13 }}>
-              ¿No sos guía? <Text style={{ color: colors.primary, fontWeight: '600' }}>Tocá acá</Text>
-            </Text>
-          </Pressable>
         </>
       )}
     </View>

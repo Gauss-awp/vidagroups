@@ -225,7 +225,7 @@ export function MiembrosTab({
         <Cargando />
       ) : miembros.length === 0 ? (
         <Card>
-          <Vacio icono="people-outline" titulo="Todavía no hay miembros" texto="Agregá a los hermanos de tu grupo de vida para empezar." />
+          <Vacio icono="people-outline" titulo="Todavía no hay miembros" texto="Agregá a los miembros de tu grupo de vida para empezar." />
         </Card>
       ) : (
         <>
@@ -235,7 +235,7 @@ export function MiembrosTab({
             <Stat etiqueta="Bajo 50%" valor={String(enRiesgo)} icono="alert-circle" color={colors.danger} />
           </View>
 
-          <SeccionTitulo titulo="Hermanos" />
+          <SeccionTitulo titulo="Miembros" />
           {analisis.map((a) => {
             const abierto = expandido === a.miembro.id;
             const color = a.total ? colorPorcentaje(a.pct) : colors.textTer;
@@ -300,7 +300,7 @@ export function MiembrosTab({
             );
           })}
           <Text style={[s.textoFilaSec, { marginLeft: 4 }]}>
-            Tocá un hermano para ver su historial y editar sus datos. Mantenelo apretado para quitarlo del grupo.
+            Tocá un miembro para ver su historial y editar sus datos. Mantenelo apretado para quitarlo del grupo.
           </Text>
         </>
       )}

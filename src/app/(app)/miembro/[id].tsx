@@ -22,7 +22,7 @@ interface PagoEvento {
   pagos: { monto: number; fecha: string; nota: string | null }[];
 }
 
-/** Historial de un hermano: asistencia, pagos y consolidación, con sus datos editables. */
+/** Historial de un miembro: asistencia, pagos y consolidación, con sus datos editables. */
 export default function MiembroPantalla() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [miembro, setMiembro] = useState<(Miembro & { grupo: { nombre: string } | null }) | null>(null);
@@ -40,7 +40,7 @@ export default function MiembroPantalla() {
     if (!id) return;
     const { data: m, error: err } = await supabase.from('miembros_grupo').select('*, grupo:groups(nombre)').eq('id', id).maybeSingle();
     if (err || !m) {
-      setError(err?.message ?? 'No tenés acceso a este hermano.');
+      setError(err?.message ?? 'No tenés acceso a este miembro.');
       return;
     }
     const mm = m as Miembro & { grupo: { nombre: string } | null };

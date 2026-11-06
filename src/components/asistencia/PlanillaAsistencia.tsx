@@ -25,7 +25,7 @@ interface ChoqueFecha {
 interface NombreDudoso {
   planilla: string; // como está escrito en la planilla
   candidatos: { id: string; nombre: string }[];
-  eleccion: string; // id del hermano de la app, o 'nuevo'
+  eleccion: string; // id del miembro de la app, o 'nuevo'
 }
 interface Resumen {
   meses: string[];
@@ -34,8 +34,8 @@ interface Resumen {
   actualizan: number; // reuniones que ya estaban (misma fecha)
   nuevasFechas: number;
   choques: ChoqueFecha[];
-  coinciden: number; // hermanos con el mismo nombre
-  nuevos: string[]; // hermanos sin ningún parecido
+  coinciden: number; // miembros con el mismo nombre
+  nuevos: string[]; // miembros sin ningún parecido
   dudosos: NombreDudoso[];
   planilla: PlanillaLeida;
 }
@@ -182,7 +182,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
           }
         });
 
-      // Hermanos: igual nombre, parecido (a elegir) o nuevo
+      // Miembros: igual nombre, parecido (a elegir) o nuevo
       const exacto = new Set(existentes.map((m) => clave(m.nombre)));
       const nombresPlanilla = new Map<string, string>();
       let reuniones = 0;
@@ -251,7 +251,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         if (error) throw new Error(`Al unir la reunión del ${c.app}: ${error.message}`);
       }
 
-      // 1. Hermanos: los que no existen se crean, con la fecha de su primera reunión
+      // 1. Miembros: los que no existen se crean, con la fecha de su primera reunión
       const { data: existentes } = await supabase.from('miembros_grupo').select('id, nombre, apellido, rol_equipo').eq('grupo_id', grupoId);
       const porNombre = new Map(((existentes ?? []) as any[]).map((m) => [clave(`${m.nombre} ${m.apellido ?? ''}`), m]));
       const primeraFecha = new Map<string, string>();
@@ -272,7 +272,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       );
       const nombreOriginal = new Map<string, string>();
       planilla.meses.forEach((m) => m.miembros.forEach((h) => nombreOriginal.set(clave(h.nombre), h.nombre)));
-      // Los nombres parecidos que se eligieron como "el mismo hermano"
+      // Los nombres parecidos que se eligieron como "el mismo miembro"
       const porId = new Map(((existentes ?? []) as any[]).map((m) => [m.id, m]));
       resumen.dudosos.forEach((d) => {
         if (d.eleccion !== 'nuevo' && porId.has(d.eleccion)) porNombre.set(clave(d.planilla), porId.get(d.eleccion));
@@ -290,7 +290,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
           };
         });
         const { data: creados, error } = await supabase.from('miembros_grupo').insert(filas).select('id, nombre, apellido, rol_equipo');
-        if (error) throw new Error(`Al crear hermanos: ${error.message}`);
+        if (error) throw new Error(`Al crear miembros: ${error.message}`);
         (creados ?? []).forEach((m: any) => porNombre.set(clave(`${m.nombre} ${m.apellido ?? ''}`), m));
       }
       // Rol de los que ya estaban, si no tenían
@@ -347,7 +347,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       if (Object.keys(cambios).length) await supabase.from('groups').update(cambios).eq('id', grupoId);
 
       setTrabajando(false);
-      alerta('Planilla importada', `Se cargaron ${resumen.reuniones} reuniones y ${resumen.asistencias} asistencias${aCrear.length ? `, y ${aCrear.length} hermanos nuevos` : ''}.`);
+      alerta('Planilla importada', `Se cargaron ${resumen.reuniones} reuniones y ${resumen.asistencias} asistencias${aCrear.length ? `, y ${aCrear.length} miembros nuevos` : ''}.`);
       setResumen(null);
       onImportado?.();
     } catch (e) {
@@ -401,7 +401,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
               </View>
             ))}
 
-            <Text style={[s.textoFila, { marginTop: 14, fontWeight: '700' }]}>Hermanos</Text>
+            <Text style={[s.textoFila, { marginTop: 14, fontWeight: '700' }]}>Miembros</Text>
             <Text style={s.textoFilaSec}>
               {resumen.coinciden} coinciden con la app
               {resumen.nuevos.length ? ` · ${resumen.nuevos.length} nuevos: ${resumen.nuevos.slice(0, 10).join(', ')}${resumen.nuevos.length > 10 ? '…' : ''}` : ''}
@@ -415,7 +415,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
                   {d.candidatos.map((c) => (
                     <Chip key={c.id} texto={c.nombre} activo={d.eleccion === c.id} onPress={() => cambiarDudoso(i, c.id)} />
                   ))}
-                  <Chip texto="Es un hermano nuevo" activo={d.eleccion === 'nuevo'} onPress={() => cambiarDudoso(i, 'nuevo')} />
+                  <Chip texto="Es un miembro nuevo" activo={d.eleccion === 'nuevo'} onPress={() => cambiarDudoso(i, 'nuevo')} />
                 </View>
               </View>
             ))}

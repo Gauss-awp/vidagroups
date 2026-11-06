@@ -155,7 +155,6 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
           {[t.linea_lider ? `Línea: ${t.linea_lider}` : null, t.zona, t.telefono, `GV: ${t.gv_asignado || 'Sin asignar'}`].filter(Boolean).join(' · ')}
         </Text>
         <PasosConsolidacion tarjeta={t} />
-        <DespuesDelEncuentro tarjeta={t} />
         {t.observacion ? (
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 10, backgroundColor: colors.warningBg, padding: 8, borderRadius: 8 }}>
             <Ionicons name="document-text-outline" size={14} color={colors.warning} />
@@ -192,29 +191,26 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
       { l: n > 0 && n < 5 ? String(n) : 'P', ok: n === 5, parcial: n > 0 && n < 5 },
       { l: 'G', ok: !!t.comenzo_gv },
       { l: 'E', ok: !!t.encuentro },
+      (() => {
+        const np = (t.pos_encuentro ?? []).length;
+        return { l: np > 0 && np < CLASES_POS_ENCUENTRO ? String(np) : 'PE', ok: np >= CLASES_POS_ENCUENTRO, parcial: np > 0 && np < CLASES_POS_ENCUENTRO };
+      })(),
+      { l: 'RE', ok: !!t.reencuentro },
     ];
     return (
       <Pressable onPress={() => abrirEdicion(t)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 0.5, borderTopColor: colors.border, marginTop: 8 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.text, fontWeight: '600' }}>
-            {t.nombre}
-            {t.encuentro ? (
-              <Text style={{ color: colors.textSec, fontWeight: '400', fontSize: 12 }}>
-                {'  '}PE {(t.pos_encuentro ?? []).length}/{CLASES_POS_ENCUENTRO}
-                {t.reencuentro ? ' · RE ✓' : ''}
-              </Text>
-            ) : null}
-          </Text>
+          <Text style={{ color: colors.text, fontWeight: '600' }}>{t.nombre}</Text>
           {t.telefono || t.zona ? <Text style={{ color: colors.textTer, fontSize: 12 }}>{[t.zona, t.telefono].filter(Boolean).join(' · ')}</Text> : null}
         </View>
-        <View style={{ flexDirection: 'row', gap: 4 }}>
+        <View style={{ flexDirection: 'row', gap: 3 }}>
           {pasos.map((p, i) => (
             <View
               key={i}
               style={{
-                width: 22,
-                height: 22,
-                borderRadius: 11,
+                width: 24,
+                height: 24,
+                borderRadius: 12,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: p.ok ? colors.success : 'transparent',
@@ -222,7 +218,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
                 borderColor: p.ok || (p as any).parcial ? colors.success : colors.border,
               }}
             >
-              <Text style={{ fontSize: 10, fontWeight: '800', color: p.ok ? '#FFFFFF' : (p as any).parcial ? colors.success : colors.textTer }}>{p.l}</Text>
+              <Text style={{ fontSize: p.l.length > 1 ? 8 : 10, fontWeight: '800', color: p.ok ? '#FFFFFF' : (p as any).parcial ? colors.success : colors.textTer }}>{p.l}</Text>
             </View>
           ))}
         </View>
@@ -324,7 +320,7 @@ export function InicioSupervisor({ perfil }: { perfil: Perfil }) {
               <SeccionTitulo titulo="Por grupo" />
               {porGrupo.length ? (
                 <Text style={{ color: colors.textTer, fontSize: 12, marginTop: -4, marginBottom: 8 }}>
-                  Tocá un grupo para ver sus nuevos · F fono · V visita · P pilares · G va al GV · E encuentro
+                  Tocá un grupo para ver sus nuevos · F fono · V visita · P pilares · G va al GV · E encuentro · PE pos-encuentro · RE reencuentro
                 </Text>
               ) : null}
               {porGrupo.length === 0 && otros.length === 0 ? (

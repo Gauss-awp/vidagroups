@@ -23,12 +23,21 @@ interface Solicitud {
   grupo_nuevo: string | null;
   grupo_nuevo_existe: string | null;
   no_guia: boolean;
+  rol_pedido: string | null;
 }
 interface GrupoRed {
   id: string;
   nombre: string;
   guias: string | null;
 }
+const PEDIDO_LABEL: Record<string, string> = {
+  guia: 'Guía',
+  guia_supervisor: 'Guía Supervisor',
+  encargado: 'Encargado de red',
+  pastor: 'Pastor',
+  consolidacion: 'Consolidación',
+};
+
 type Destino = { tipo: 'existente'; id: string; nombre: string } | { tipo: 'nuevo'; nombre: string } | { tipo: 'ninguno' };
 
 /**
@@ -84,7 +93,9 @@ export function SolicitudesCuentas({ redId, onCambio, ocultarSiVacio = false }: 
   const abrir = (x: Solicitud) => {
     setAbierta(x);
     // Si dijo que no es guía, se propone Guía Supervisor (si quien aprueba puede asignarlo)
-    setRol(x.no_guia && rolesPara(x).includes('guia_supervisor') ? 'guia_supervisor' : 'guia');
+    const propuesto: Rol =
+      x.rol_pedido === 'pastor' ? 'pastor' : x.rol_pedido === 'consolidacion' ? 'consolidacion' : x.rol_pedido === 'guia_supervisor' || x.rol_pedido === 'encargado' || x.no_guia ? 'guia_supervisor' : 'guia';
+    setRol(rolesPara(x).includes(propuesto) ? propuesto : 'guia');
     setDestino(destinoSugerido(x));
     setEligiendoOtro(false);
   };
@@ -132,6 +143,7 @@ export function SolicitudesCuentas({ redId, onCambio, ocultarSiVacio = false }: 
   const pedido = (x: Solicitud) => {
     if (x.grupo) return `Quiere sumarse a ${x.grupo}${x.grupo_guias ? ` (con ${x.grupo_guias})` : ''}`;
     if (x.grupo_nuevo) return `Abre un grupo nuevo: "${x.grupo_nuevo}"${x.grupo_nuevo_existe ? ' (ya existe: se suma ahí)' : ''}`;
+    if (x.rol_pedido && x.rol_pedido !== 'guia') return `Se registró como ${PEDIDO_LABEL[x.rol_pedido] ?? x.rol_pedido}`;
     if (x.no_guia) return 'No es guía (Guía Supervisor, pastor, encargado o consolidación)';
     return 'No indicó grupo';
   };
@@ -189,6 +201,15 @@ export function SolicitudesCuentas({ redId, onCambio, ocultarSiVacio = false }: 
                 <Chip key={r} texto={ROL_LABEL[r]} activo={rol === r} color={ROL_COLOR[r]} onPress={() => setRol(r)} />
               ))}
             </View>
+            {abierta.rol_pedido === 'encargado' || abierta.rol_pedido === 'pastor' || abierta.rol_pedido === 'consolidacion' ? (
+              <Text style={[s.textoFilaSec, { fontSize: 12, marginBottom: 10 }]}>
+                {abierta.rol_pedido === 'encargado'
+                  ? 'Después de aprobarlo, el Administrador lo suma en Responsables → Encargados para que vea "Mi Red".'
+                  : abierta.rol_pedido === 'pastor'
+                    ? 'Después de aprobarlo, el Administrador lo suma en Responsables → Pastores de la red.'
+                    : 'Después de aprobarla, el Administrador la suma en Responsables → Consolidadores.'}
+              </Text>
+            ) : null}
             {rolesPara(abierta).length === 1 ? (
               <Text style={[s.textoFilaSec, { fontSize: 12, marginBottom: 10 }]}>Como Guía Supervisor aprobás guías. Los otros roles los aprueban los encargados.</Text>
             ) : null}

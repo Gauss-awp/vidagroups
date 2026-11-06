@@ -18,7 +18,7 @@ interface Nota {
 }
 
 /**
- * Notas pastorales de un grupo o de un hermano.
+ * Notas pastorales de un grupo o de un miembro.
  * Las ven solo el guía del grupo y su Guía Supervisor: quedan para el próximo guía.
  */
 export function Notas({ grupoId, miembroId, refreshKey = 0 }: { grupoId: string; miembroId?: string; refreshKey?: number }) {
@@ -106,14 +106,14 @@ export function Notas({ grupoId, miembroId, refreshKey = 0 }: { grupoId: string;
 
       {notas.length === 0 ? (
         <Card>
-          <Vacio icono="document-text-outline" titulo="Todavía no hay notas" texto="Anotá lo que el próximo guía debería saber de este grupo o de cada hermano." />
+          <Vacio icono="document-text-outline" titulo="Todavía no hay notas" texto="Anotá lo que el próximo guía debería saber de este grupo o de cada miembro." />
         </Card>
       ) : (
         notas.map((n) => (
           <Card key={n.id}>
             {!miembroId ? (
               <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700', marginBottom: 4 }}>
-                {n.miembro_id ? `Sobre ${nombreMiembro(n.miembro_id) ?? 'un hermano que ya no está'}` : 'Sobre el grupo'}
+                {n.miembro_id ? `Sobre ${nombreMiembro(n.miembro_id) ?? 'un miembro que ya no está'}` : 'Sobre el grupo'}
               </Text>
             ) : null}
             <Text style={{ color: colors.text, fontSize: 15, lineHeight: 21 }}>{n.texto}</Text>

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------
-// Para el importador: encontrar hermanos que probablemente sean el mismo
+// Para el importador: encontrar miembros que probablemente sean el mismo
 // aunque estén escritos distinto ("Catalina Cordi" / "Catt Cordi").
 // ---------------------------------------------------------------------
 

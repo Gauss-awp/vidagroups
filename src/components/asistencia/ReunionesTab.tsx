@@ -16,7 +16,7 @@ interface FilaReunion {
   notas: string | null;
   asistencias: { miembro_id: string; presente: boolean; consolidado: boolean }[];
 }
-interface Hermano {
+interface Miembro {
   id: string;
   creado_en: string;
   activo: boolean;
@@ -32,7 +32,7 @@ export function ReunionesTab({ grupoId, refreshKey = 0 }: { grupoId: string; gru
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [mes, setMes] = useState(hoy.getMonth());
   const [reuniones, setReuniones] = useState<FilaReunion[]>([]);
-  const [hermanos, setHermanos] = useState<Hermano[]>([]);
+  const [miembros, setHermanos] = useState<Miembro[]>([]);
   const [cargando, setCargando] = useState(true);
   const [sinRed, setSinRed] = useState(false);
   const [pendientes, setPendientes] = useState(0);
@@ -59,7 +59,7 @@ export function ReunionesTab({ grupoId, refreshKey = 0 }: { grupoId: string; gru
     }
     setSinRed(false);
     setReuniones((r.data ?? []) as FilaReunion[]);
-    setHermanos((m.data ?? []) as Hermano[]);
+    setHermanos((m.data ?? []) as Miembro[]);
     setCargando(false);
     medirCarga('Reuniones', inicio);
   }, [grupoId, anio, mes]);
@@ -91,7 +91,7 @@ export function ReunionesTab({ grupoId, refreshKey = 0 }: { grupoId: string; gru
 
   // Cuántos estaban en el grupo ese día
   const esperados = (fecha: string) =>
-    hermanos.filter((h) => h.creado_en.slice(0, 10) <= fecha && (h.activo || (!!h.baja_en && h.baja_en.slice(0, 10) >= fecha))).length;
+    miembros.filter((h) => h.creado_en.slice(0, 10) <= fecha && (h.activo || (!!h.baja_en && h.baja_en.slice(0, 10) >= fecha))).length;
 
   return (
     <View>

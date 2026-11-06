@@ -17,7 +17,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['guia', 'guia_supervisor'],
     titulo: '¿Cómo cargo la reunión de mi grupo?',
     texto:
-      'En tu grupo tocá el botón grande "Cargar la reunión". Son tres pasos:\n\n1. ¿Quién vino? Tocá a cada hermano que vino (o "Vinieron todos").\n2. ¿Por qué faltaron? Elegí un motivo para cada ausente y queda la "C". Si todavía no hablaste con alguien, dejalo en "Lo consolido después".\n3. Datos de la reunión: ofrenda, material, quién compartió.\n\nAl final tocá "Terminar". Funciona aunque no tengas señal: se envía sola cuando vuelve la conexión.',
+      'En tu grupo tocá el botón grande "Cargar la reunión". Son tres pasos:\n\n1. ¿Quién vino? Tocá a cada miembro que vino (o "Vinieron todos").\n2. ¿Por qué faltaron? Elegí un motivo para cada ausente y queda la "C". Si todavía no hablaste con alguien, dejalo en "Lo consolido después".\n3. Datos de la reunión: ofrenda, material, quién compartió.\n\nAl final tocá "Terminar". Funciona aunque no tengas señal: se envía sola cuando vuelve la conexión.',
   },
   {
     roles: ['guia', 'guia_supervisor'],
@@ -33,7 +33,7 @@ export const AYUDA: ItemAyuda[] = [
   },
   {
     roles: ['guia', 'guia_supervisor'],
-    titulo: '¿Cómo agrego o quito a un hermano?',
+    titulo: '¿Cómo agrego o quito a un miembro?',
     texto:
       'En la pestaña "Miembros":\n\n• Para agregar: "Agregar miembro".\n• Para editar sus datos o ver su historial: tocalo.\n• Para quitarlo del grupo: mantenelo apretado. Su historial no se pierde: sigue apareciendo en la planilla de los meses en que estuvo.',
   },
@@ -53,7 +53,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['guia', 'guia_supervisor'],
     titulo: '¿Cómo saco la planilla de asistencia en Excel?',
     texto:
-      'En la pestaña "Reuniones", abajo de todo, tocá "Planilla de asistencia (exportar / importar)". Elegí el año y tocá "Exportar": sale igual a la planilla de la iglesia, con los 12 meses.\n\nDesde ahí también podés importar la planilla que ya tenías, para traer a tus hermanos con su historial.',
+      'En la pestaña "Reuniones", abajo de todo, tocá "Planilla de asistencia (exportar / importar)". Elegí el año y tocá "Exportar": sale igual a la planilla de la iglesia, con los 12 meses.\n\nDesde ahí también podés importar la planilla que ya tenías, para traer a tus miembros con su historial.',
   },
   {
     roles: ['guia', 'guia_supervisor'],
@@ -140,7 +140,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['administrador'],
     titulo: '¿Cómo apruebo a un pastor, un encargado o la consolidadora?',
     texto:
-      'Se registran tocando "¿No sos guía?". En tu panel → Cuentas → Pendientes, abrí la cuenta, elegí el rol (Pastor, Guía Supervisor o Consolidador) y la red, y guardá.\n\nDespués, en Responsables, sumalos donde corresponda: Pastores de la red, Encargados o Consolidadores. Así les aparece "Mi Red" o el panel de Consolidación.',
+      'Al registrarse eligen su servicio (Pastor, Encargado de red o Consolidación). En tu panel → Cuentas aparecen arriba, con lo que pidieron: tocá "Aprobar" y el rol ya viene propuesto.\n\nDespués, en Responsables, sumalos donde corresponda: Pastores de la red, Encargados o Consolidadores. Así les aparece "Mi Red" o el panel de Consolidación.',
   },
   {
     roles: ['administrador'],
@@ -157,7 +157,7 @@ export const AYUDA: ItemAyuda[] = [
   {
     titulo: '¿Cómo me registro?',
     texto:
-      'Tocá "Registrate", completá tu nombre, elegí tu red y tu grupo (o "Es un grupo nuevo" si todavía no está en la lista), tu correo y una contraseña. Te llega un código por correo para confirmar la cuenta.\n\nSi no sos guía (Guía Supervisor, pastor, encargado o consolidación), tocá "¿No sos guía?" en lugar de elegir un grupo.',
+      'Tocá "Registrate", completá tu nombre, elegí tu red y tu servicio: Guía de un grupo, Guía Supervisor, Encargado de red, Pastor o Consolidación. Si sos guía, elegí también tu grupo (o "Es un grupo nuevo" si todavía no está en la lista). Después tu correo y una contraseña: te llega un código para confirmar la cuenta.\n\nLa app te dice quién te aprueba según el servicio que elegiste.',
   },
   {
     titulo: '¿Cómo instalo la app en el iPhone?',

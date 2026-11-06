@@ -417,7 +417,7 @@ export default function EventoDetalle() {
               ))}
             </ScrollView>
             {filtro === 'no_anotados' ? (
-              <Text style={[s.textoFilaSec, { fontSize: 12, marginBottom: 8 }]}>Hermanos que pueden ir y todavía no están anotados. Tocá uno para anotarlo.</Text>
+              <Text style={[s.textoFilaSec, { fontSize: 12, marginBottom: 8 }]}>Miembros que pueden ir y todavía no están anotados. Tocá uno para anotarlo.</Text>
             ) : null}
             {secciones.length === 0 ? (
               <Card>

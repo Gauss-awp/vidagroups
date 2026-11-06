@@ -3,7 +3,7 @@ import {KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View} from 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
-import { SelectorGrupoSolicitud, type SolicitudGrupo } from '@/components/red/SelectorGrupoSolicitud';
+import { SelectorRolRegistro, pedidoCompleto, type PedidoRegistro } from '@/components/red/SelectorRolRegistro';
 import { colors } from '@/lib/theme';
 import type { Red } from '@/lib/types';
 import { traducirError } from '@/lib/utils';
@@ -25,7 +25,7 @@ export default function Registro() {
     supabase.from('redes').select('id, nombre').order('nombre').then(({ data }) => setRedes((data ?? []) as Red[]));
   }, []);
 
-  const [solicitud, setSolicitud] = useState<SolicitudGrupo>({ grupoId: null, nuevo: null });
+  const [solicitud, setSolicitud] = useState<PedidoRegistro>({ rol: null, grupoId: null, nuevo: null });
 
   const cambiar = (campo: keyof typeof form) => (valor: string) => setForm((f) => ({ ...f, [campo]: valor }));
 
@@ -38,8 +38,9 @@ export default function Registro() {
       alerta('Falta tu red', 'Elegí la red a la que pertenecés.');
       return;
     }
-    if (!solicitud.noGuia && !solicitud.grupoId && !solicitud.nuevo?.trim()) {
-      alerta('Falta tu grupo', 'Elegí tu grupo de la lista, o tocá "Es un grupo nuevo" y escribí su nombre. Si no sos guía, tocá "¿No sos guía?".');
+    const faltaPedido = pedidoCompleto(solicitud);
+    if (faltaPedido) {
+      alerta('Falta un dato', faltaPedido);
       return;
     }
     if (form.password.length < 8) {
@@ -62,7 +63,8 @@ export default function Registro() {
           // El grupo en el que sirve: lo ve quien aprueba la cuenta
           grupo_id: solicitud.grupoId ?? undefined,
           grupo_nuevo: solicitud.nuevo?.trim() || undefined,
-          no_guia: solicitud.noGuia ? true : undefined,
+          rol_pedido: solicitud.rol ?? undefined,
+          no_guia: solicitud.rol && solicitud.rol !== 'guia' ? true : undefined,
         },
       },
     });
@@ -148,7 +150,7 @@ export default function Registro() {
 
           <Text style={{ color: colors.text, fontSize: 34, fontWeight: '700' }}>Crear cuenta</Text>
           <Text style={{ color: colors.textSec, fontSize: 15, marginTop: 6, marginBottom: 24, lineHeight: 21 }}>
-            Elegí tu red y tu grupo. Tu Guía Supervisor o los encargados aprueban tu cuenta y te suman al grupo.
+            Elegí tu red y tu servicio. Después de crear la cuenta, quien corresponda la aprueba.
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -168,12 +170,12 @@ export default function Registro() {
                 activo={redId === r.id}
                 onPress={() => {
                   setRedId(r.id);
-                  setSolicitud({ grupoId: null, nuevo: null });
+                  setSolicitud({ rol: null, grupoId: null, nuevo: null });
                 }}
               />
             ))}
           </View>
-          <SelectorGrupoSolicitud redId={redId} valor={solicitud} onCambio={setSolicitud} />
+          <SelectorRolRegistro redId={redId} valor={solicitud} onCambio={setSolicitud} />
           <Campo
             etiqueta="Correo"
             placeholder="tu@correo.com"

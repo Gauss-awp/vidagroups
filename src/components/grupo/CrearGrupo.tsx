@@ -33,7 +33,7 @@ export function CrearGrupo({ guiaId, onCreado }: { guiaId: string; onCreado: () 
     <Card>
       <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>Creá tu grupo de vida</Text>
       <Text style={{ color: colors.textSec, fontSize: 15, marginBottom: 16, lineHeight: 21 }}>
-        El grupo queda en tu red. Después vas a poder agregar a los hermanos, sus hábitos y los pagos de encuentros y campamentos.
+        El grupo queda en tu red. Después vas a poder agregar a los miembros, sus hábitos y los pagos de encuentros y campamentos.
       </Text>
       <Campo etiqueta="Nombre del grupo" placeholder="Ej: Grupo Barrio Centro" value={nombre} onChangeText={setNombre} />
       

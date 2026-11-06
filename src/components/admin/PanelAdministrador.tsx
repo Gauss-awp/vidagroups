@@ -8,6 +8,7 @@ import { ROL_LABEL, ROL_RANGO, formatoFecha } from '@/lib/utils';
 import { Boton, Card, Cargando, Chip, HojaModal, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
 import { EquipoDesdePlanilla } from '@/components/red/EquipoDesdePlanilla';
 import { EquipoDelGrupo } from '@/components/grupo/EquipoDelGrupo';
+import { SolicitudesCuentas } from '@/components/red/SolicitudesCuentas';
 import { alerta } from '@/lib/alerta';
 
 // ---------- Tipos de lo que devuelven las funciones del Administrador ----------
@@ -247,6 +248,7 @@ export function PanelAdministrador({ perfil }: { perfil: Perfil }) {
         {seccion === 'mensajes' ? <Mensajes mensajes={mensajes} onCambio={cargar} /> : null}
         {seccion === 'errores' ? <Errores errores={errores} cuentas={cuentas} onCambio={cargar} /> : null}
         {seccion === 'avisos' ? <Avisos avisos={avisos} redes={redes} onCambio={cargar} /> : null}
+        {seccion === 'cuentas' ? <SolicitudesCuentas ocultarSiVacio onCambio={cargar} /> : null}
         {seccion === 'cuentas' ? <Cuentas cuentas={cuentas} redes={redes} yo={perfil.id} onCambio={cargar} /> : null}
         {seccion === 'grupos' ? <Grupos grupos={grupos} cuentas={cuentas} onCambio={cargar} /> : null}
         {seccion === 'responsables' ? <Responsables redes={redes} lista={responsables} cuentas={cuentas} onCambio={cargar} /> : null}

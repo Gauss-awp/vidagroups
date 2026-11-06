@@ -61,7 +61,7 @@ export default function ResumenAnual() {
       r.asistencia !== null ? `⭐ ${r.asistencia}% de asistencia promedio` : null,
       r.mejor_mes ? `📈 Mejor mes: ${MESES[r.mejor_mes.mes - 1]} (${r.mejor_mes.asistencia}%)` : null,
       r.record ? `🏆 Récord: ${r.record.presentes} personas el ${formatoFecha(r.record.fecha)}` : null,
-      r.nuevos ? `🌱 ${r.nuevos} hermanos nuevos` : null,
+      r.nuevos ? `🌱 ${r.nuevos} miembros nuevos` : null,
       r.consolidados ? `✅ ${r.consolidados} consolidaciones completadas` : null,
       r.constantes.length ? `💪 Los más constantes: ${r.constantes.slice(0, 3).map((c) => c.nombre.split(' ')[0]).join(', ')}` : null,
       '',
@@ -100,7 +100,7 @@ export default function ResumenAnual() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
               {dato('calendar', String(r.reuniones), 'reuniones')}
               {dato('stats-chart', r.asistencia !== null ? `${r.asistencia}%` : '—', 'asistencia promedio', r.asistencia !== null ? colorPorcentaje(r.asistencia) : colors.textSec)}
-              {dato('leaf', String(r.nuevos), 'hermanos nuevos', colors.success)}
+              {dato('leaf', String(r.nuevos), 'miembros nuevos', colors.success)}
               {dato('checkmark-done-circle', String(r.consolidados), 'consolidaciones completadas', colors.success)}
               {dato('chatbubbles', String(r.c_cargadas), 'ausentes consolidados (C)', colors.teal)}
             </View>

@@ -651,6 +651,8 @@ const PASOS: { clave: string; texto: string }[] = [
   { clave: 'pilares', texto: 'Pilares' },
   { clave: 'comenzo_gv', texto: 'GV' },
   { clave: 'encuentro', texto: 'Encuentro' },
+  { clave: 'pos_encuentro', texto: 'Pos-enc.' },
+  { clave: 'reencuentro', texto: 'Reenc.' },
 ];
 
 /** Cuántos de los 5 pilares hizo (si solo está la marca vieja de "pilares", cuenta 5) */
@@ -704,9 +706,12 @@ export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 12 }}>
       {PASOS.map((p, i) => {
         const nPilares = pilaresHechos(tarjeta);
-        const hechoDe = (clave: string) => (clave === 'pilares' ? nPilares === 5 : !!tarjeta[clave]);
+        const nPos = (tarjeta.pos_encuentro ?? []).length;
+        const hechoDe = (clave: string) =>
+          clave === 'pilares' ? nPilares === 5 : clave === 'pos_encuentro' ? nPos >= CLASES_POS_ENCUENTRO : !!tarjeta[clave];
         const hecho = hechoDe(p.clave);
-        const parcial = p.clave === 'pilares' && nPilares > 0 && nPilares < 5;
+        const parcial = (p.clave === 'pilares' && nPilares > 0 && nPilares < 5) || (p.clave === 'pos_encuentro' && nPos > 0 && nPos < CLASES_POS_ENCUENTRO);
+        const numero = p.clave === 'pilares' ? nPilares : nPos;
         const siguienteHecho = i < PASOS.length - 1 && hechoDe(PASOS[i + 1].clave);
         return (
           <View key={p.clave} style={{ flex: 1, alignItems: 'center' }}>
@@ -725,7 +730,7 @@ export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }
                 }}
               >
                 {hecho ? <Ionicons name="checkmark" size={13} color="#FFFFFF" /> : null}
-                {parcial ? <Text style={{ color: colors.success, fontSize: 10, fontWeight: '800' }}>{nPilares}</Text> : null}
+                {parcial ? <Text style={{ color: colors.success, fontSize: 10, fontWeight: '800' }}>{numero}</Text> : null}
               </View>
               <View
                 style={{
@@ -735,8 +740,11 @@ export function PasosConsolidacion({ tarjeta }: { tarjeta: Record<string, any> }
                 }}
               />
             </View>
-            <Text style={{ fontSize: tipo.mini, marginTop: 4, color: hecho ? colors.success : colors.textSec, fontWeight: hecho ? '700' : '500' }}>
-              {p.clave === 'pilares' && parcial ? `Pilares ${nPilares}/5` : p.texto}
+            <Text
+              numberOfLines={1}
+              style={{ fontSize: tipo.mini, marginTop: 4, color: hecho ? colors.success : colors.textSec, fontWeight: hecho ? '700' : '500' }}
+            >
+              {parcial ? (p.clave === 'pilares' ? `${nPilares}/5` : `${nPos}/${CLASES_POS_ENCUENTRO}`) : p.texto}
             </Text>
           </View>
         );

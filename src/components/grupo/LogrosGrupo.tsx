@@ -51,7 +51,7 @@ export function LogrosGrupo({
     if (l.semanas_seguidas >= 4) items.push({ icono: 'flame', color: colors.warning, emoji: '🔥', texto: `${l.semanas_seguidas} semanas seguidas con reunión` });
     if (l.asistencia_mes !== null && l.asistencia_mes >= 75) items.push({ icono: 'star', color: colors.warning, emoji: '⭐', texto: `${l.asistencia_mes}% de asistencia en ${mes.toLowerCase()}` });
     if (l.record && l.record_es_del_mes) items.push({ icono: 'trophy', color: colors.warning, emoji: '🏆', texto: `Récord del grupo: ${l.record.presentes} personas el ${formatoFecha(l.record.fecha)}` });
-    if (l.nuevos_mes > 0) items.push({ icono: 'leaf', color: colors.success, emoji: '🌱', texto: `${l.nuevos_mes} ${l.nuevos_mes === 1 ? 'hermano nuevo' : 'hermanos nuevos'} este mes` });
+    if (l.nuevos_mes > 0) items.push({ icono: 'leaf', color: colors.success, emoji: '🌱', texto: `${l.nuevos_mes} ${l.nuevos_mes === 1 ? 'miembro nuevo' : 'miembros nuevos'} este mes` });
     if (l.completadas_mes > 0) items.push({ icono: 'checkmark-done-circle', color: colors.success, emoji: '✅', texto: `${l.completadas_mes} ${l.completadas_mes === 1 ? 'consolidación completada' : 'consolidaciones completadas'}` });
     if (l.miembros >= 10) items.push({ icono: 'people', color: colors.primary, emoji: '👥', texto: `${l.miembros} miembros en el grupo` });
   }

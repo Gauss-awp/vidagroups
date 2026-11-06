@@ -206,7 +206,7 @@ export function GrupoDetalle({
         <Card onPress={puedeNotas ? () => setTab(5) : undefined} style={{ backgroundColor: colors.primaryBg, marginTop: 12 }}>
           <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 15 }}>Recibiste este grupo el {formatoFecha(traspaso.fecha)}</Text>
           <Text style={{ color: colors.text, fontSize: 14, marginTop: 4, lineHeight: 20 }}>
-            Antes lo guiaba {traspaso.anterior}. Tocá acá para leer las notas que dejó sobre el grupo y cada hermano.
+            Antes lo guiaba {traspaso.anterior}. Tocá acá para leer las notas que dejó sobre el grupo y cada miembro.
           </Text>
         </Card>
       ) : null}

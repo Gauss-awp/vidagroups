@@ -280,7 +280,7 @@ export function leerPlanillaEvento(XLSX: any, libro: any): { filas: FilaImportad
     for (let i = 0; i < Math.min(filas.length, 15); i++) {
       const cab = (filas[i] ?? []).map(normal);
       const col = (...claves: string[]) => cab.findIndex((c) => claves.some((k) => c === k || c.startsWith(k)));
-      const cNombre = col('nombre y apellido', 'apellido y nombre', 'nombre', 'hermano', 'participante');
+      const cNombre = col('nombre y apellido', 'apellido y nombre', 'nombre', 'miembro', 'hermano', 'participante');
       if (cNombre < 0) continue;
       const cApellido = cab.findIndex((c, k) => k !== cNombre && c.startsWith('apellido'));
       const cGrupo = col('grupo', 'gv', 'grupo de vida');

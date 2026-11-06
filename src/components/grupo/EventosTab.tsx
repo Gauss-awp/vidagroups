@@ -201,7 +201,7 @@ export function EventosTab({ grupoId, refreshKey }: { grupoId: string; refreshKe
                   onPress={() => setEventoActivo(esActivo ? null : ev.id)}
                   style={{ marginTop: 12, paddingVertical: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>{esActivo ? 'Ocultar pagos' : 'Ver pagos de cada hermano'}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>{esActivo ? 'Ocultar pagos' : 'Ver pagos de cada miembro'}</Text>
                   <Ionicons name={esActivo ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primary} />
                 </TouchableOpacity>
               </>

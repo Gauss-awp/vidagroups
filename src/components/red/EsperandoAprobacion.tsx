@@ -6,7 +6,7 @@ import { colors } from '@/lib/theme';
 import type { Perfil, Red } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { Boton, Card, Chip, Pantalla, s } from '@/components/ui';
-import { SelectorGrupoSolicitud, type SolicitudGrupo } from './SelectorGrupoSolicitud';
+import { SelectorRolRegistro, type PedidoRegistro, type RolPedido } from './SelectorRolRegistro';
 import { alerta } from '@/lib/alerta';
 
 /** Pantalla para cuentas pendientes de aprobación (o dadas de baja). */
@@ -20,13 +20,18 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
     supabase.from('redes').select('id, nombre').order('nombre').then(({ data }) => setRedes((data ?? []) as Red[]));
   }, []);
 
-  const [solicitud, setSolicitud] = useState<SolicitudGrupo>({ grupoId: null, nuevo: null });
+  const [solicitud, setSolicitud] = useState<PedidoRegistro>({ rol: null, grupoId: null, nuevo: null });
   const [cambioPendiente, setCambioPendiente] = useState(false);
   const [guardandoSolicitud, setGuardandoSolicitud] = useState(false);
 
   const guardarSolicitud = async () => {
     setGuardandoSolicitud(true);
-    const { error } = await supabase.rpc('elegir_solicitud_grupo', { p_grupo: solicitud.grupoId, p_nuevo: solicitud.nuevo, p_no_guia: !!solicitud.noGuia });
+    const { error } = await supabase.rpc('elegir_solicitud_grupo', {
+      p_grupo: solicitud.grupoId,
+      p_nuevo: solicitud.nuevo,
+      p_no_guia: !!solicitud.rol && solicitud.rol !== 'guia',
+      p_rol: solicitud.rol,
+    });
     setGuardandoSolicitud(false);
     if (error) {
       alerta('No se pudo guardar', error.message);
@@ -96,19 +101,24 @@ export function EsperandoAprobacion({ perfil }: { perfil: Perfil }) {
 
         {!dadoDeBaja && perfil.red_id ? (
           <Card>
-            <SelectorGrupoSolicitud
+            <SelectorRolRegistro
               redId={perfil.red_id}
               valor={
                 cambioPendiente
                   ? solicitud
-                  : { grupoId: (perfil as any).solicitud_grupo_id ?? null, nuevo: (perfil as any).solicitud_grupo_nuevo ?? null, noGuia: !!(perfil as any).solicitud_no_guia }
+                  : {
+                      rol: ((perfil as any).solicitud_rol as RolPedido | null) ?? ((perfil as any).solicitud_no_guia ? null : 'guia'),
+                      grupoId: (perfil as any).solicitud_grupo_id ?? null,
+                      nuevo: (perfil as any).solicitud_grupo_nuevo ?? null,
+                      tambienGuia: (perfil as any).solicitud_rol === 'guia_supervisor' && !!((perfil as any).solicitud_grupo_id || (perfil as any).solicitud_grupo_nuevo),
+                    }
               }
               onCambio={(v) => {
                 setSolicitud(v);
                 setCambioPendiente(true);
               }}
             />
-            {cambioPendiente ? <Boton titulo="Guardar mi grupo" icono="checkmark" onPress={guardarSolicitud} cargando={guardandoSolicitud} /> : null}
+            {cambioPendiente ? <Boton titulo="Guardar" icono="checkmark" onPress={guardarSolicitud} cargando={guardandoSolicitud} /> : null}
           </Card>
         ) : null}
 

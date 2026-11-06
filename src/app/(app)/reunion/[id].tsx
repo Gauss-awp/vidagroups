@@ -10,7 +10,7 @@ import { reprogramarPronto } from '@/lib/recordatorios';
 import { Boton, Campo, Card, Cargando, SelectorFecha, Vacio, s } from '@/components/ui';
 import { alerta } from '@/lib/alerta';
 
-interface Hermano {
+interface Miembro {
   id: string;
   nombre: string;
   apellido: string | null;
@@ -30,7 +30,7 @@ export default function ModoReunion() {
   const [existe, setExiste] = useState(false);
   const [irAPaso2, setIrAPaso2] = useState(params.paso === '2');
   const [grupoNombre, setGrupoNombre] = useState('');
-  const [hermanos, setHermanos] = useState<Hermano[]>([]);
+  const [miembros, setHermanos] = useState<Miembro[]>([]);
   const [vino, setVino] = useState<Record<string, boolean>>({});
   // Motivo por ausente: texto = consolidado con ese motivo; vacío = "lo consolido después"
   const [motivos, setMotivos] = useState<Record<string, string>>({});
@@ -48,7 +48,7 @@ export default function ModoReunion() {
   const [guardando, setGuardando] = useState(false);
   const [sinRed, setSinRed] = useState(false);
 
-  // Carga los hermanos y, si la reunión de esa fecha ya existe, lo que se había cargado
+  // Carga los miembros y, si la reunión de esa fecha ya existe, lo que se había cargado
   useEffect(() => {
     if (!grupoId) return;
     (async () => {
@@ -65,7 +65,7 @@ export default function ModoReunion() {
       ]);
       if (m.error && esErrorDeRed(m.error)) {
         setSinRed(true);
-        const copia = await leerCache<{ miembros: Hermano[] }>(`asis:${grupoId}`);
+        const copia = await leerCache<{ miembros: Miembro[] }>(`asis:${grupoId}`);
         const grupo = await leerCache<{ grupo: { nombre: string } }>(`grupo:${grupoId}`);
         setHermanos(copia?.miembros ?? []);
         setGrupoNombre(grupo?.grupo.nombre ?? '');
@@ -76,7 +76,7 @@ export default function ModoReunion() {
       setGrupoNombre((g.data as { nombre: string } | null)?.nombre ?? '');
       // Los que estaban en el grupo ese día (incluye a los que se quitaron después)
       setHermanos(
-        ((m.data ?? []) as (Hermano & { creado_en: string; activo: boolean; baja_en: string | null })[]).filter(
+        ((m.data ?? []) as (Miembro & { creado_en: string; activo: boolean; baja_en: string | null })[]).filter(
           (x) => x.creado_en.slice(0, 10) <= fecha && (x.activo || (!!x.baja_en && x.baja_en.slice(0, 10) >= fecha))
         )
       );
@@ -121,10 +121,10 @@ export default function ModoReunion() {
       },
     ]);
 
-  const ausentes = hermanos.filter((h) => !vino[h.id]);
-  const presentes = hermanos.length - ausentes.length;
+  const ausentes = miembros.filter((h) => !vino[h.id]);
+  const presentes = miembros.length - ausentes.length;
   const consolidados = ausentes.filter((h) => motivos[h.id]).length;
-  const nombre = (h: Hermano) => `${h.nombre} ${h.apellido ?? ''}`.trim();
+  const nombre = (h: Miembro) => `${h.nombre} ${h.apellido ?? ''}`.trim();
 
   const terminar = async () => {
     const ofrenda = datos.ofrenda.trim() ? Number(datos.ofrenda.replace(/\./g, '').replace(',', '.')) : null;
@@ -132,7 +132,7 @@ export default function ModoReunion() {
       alerta('Ofrenda inválida', 'Escribí solo el número, por ejemplo 12000.');
       return;
     }
-    const filas = hermanos.map((h) => ({
+    const filas = miembros.map((h) => ({
       miembro_id: h.id,
       presente: !!vino[h.id],
       consolidado: !vino[h.id] && !!motivos[h.id],
@@ -214,14 +214,14 @@ export default function ModoReunion() {
           <>
             {encabezado(1, '¿Quién vino?')}
             <SelectorFecha valor={fecha} onChange={setFecha} marcarFechas={fechasConReunion} />
-            {hermanos.length === 0 ? (
+            {miembros.length === 0 ? (
               <Card>
-                <Text style={s.textoFilaSec}>Todavía no hay hermanos en este grupo. Agregalos en la pestaña Miembros.</Text>
+                <Text style={s.textoFilaSec}>Todavía no hay miembros en este grupo. Agregalos en la pestaña Miembros.</Text>
               </Card>
             ) : (
               <>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {hermanos.map((h) => {
+                  {miembros.map((h) => {
                     const si = !!vino[h.id];
                     return (
                       <Pressable
@@ -247,20 +247,20 @@ export default function ModoReunion() {
                   })}
                 </View>
                 <Pressable
-                  onPress={() => setVino(Object.fromEntries(hermanos.map((h) => [h.id, presentes !== hermanos.length])))}
+                  onPress={() => setVino(Object.fromEntries(miembros.map((h) => [h.id, presentes !== miembros.length])))}
                   style={{ marginTop: 12, alignSelf: 'center' }}
                 >
                   <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                    {presentes === hermanos.length ? 'Desmarcar todos' : 'Vinieron todos'}
+                    {presentes === miembros.length ? 'Desmarcar todos' : 'Vinieron todos'}
                   </Text>
                 </Pressable>
               </>
             )}
             <Boton
-              titulo={`${presentes} de ${hermanos.length} vinieron · Siguiente`}
+              titulo={`${presentes} de ${miembros.length} vinieron · Siguiente`}
               icono="arrow-forward"
               onPress={() => setPaso(ausentes.length ? 2 : 3)}
-              deshabilitado={hermanos.length === 0}
+              deshabilitado={miembros.length === 0}
               style={{ marginTop: 18 }}
             />
             {existe && !sinRed ? (
@@ -367,7 +367,7 @@ export default function ModoReunion() {
             <Ionicons name="checkmark-circle" size={72} color={colors.success} />
             <Text style={{ color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 12 }}>¡Reunión cargada!</Text>
             <Text style={{ color: colors.textSec, fontSize: 16, marginTop: 8, textAlign: 'center' }}>
-              {presentes} de {hermanos.length} vinieron
+              {presentes} de {miembros.length} vinieron
               {ausentes.length ? ` · ${consolidados} con C` : ''}
               {ausentes.length - consolidados > 0 ? ` · ${ausentes.length - consolidados} para consolidar después` : ''}
             </Text>

@@ -60,7 +60,7 @@ export function SupervisoresPastoral({ refreshKey = 0 }: { refreshKey?: number }
         const dif = sp.asistencia !== null && sp.asistencia_anterior !== null ? sp.asistencia - sp.asistencia_anterior : null;
         const avisos: { texto: string; color: string; icono: React.ComponentProps<typeof Ionicons>['name'] }[] = [];
         if (sp.sin_reunion) avisos.push({ texto: `${sp.sin_reunion} ${sp.sin_reunion === 1 ? 'grupo' : 'grupos'} sin reunión hace 2 semanas`, color: colors.warning, icono: 'pause-circle' });
-        if (sp.alertas) avisos.push({ texto: `${sp.alertas} ${sp.alertas === 1 ? 'hermano' : 'hermanos'} con 3 faltas seguidas`, color: colors.danger, icono: 'alert-circle' });
+        if (sp.alertas) avisos.push({ texto: `${sp.alertas} ${sp.alertas === 1 ? 'miembro' : 'miembros'} con 3 faltas seguidas`, color: colors.danger, icono: 'alert-circle' });
         if (sp.sin_empezar) avisos.push({ texto: `${sp.sin_empezar} ${sp.sin_empezar === 1 ? 'persona nueva' : 'personas nuevas'} sin empezar el grupo`, color: colors.primary, icono: 'person-add' });
         const estaAbierto = abierto === sp.id;
         return (

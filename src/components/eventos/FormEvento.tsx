@@ -162,7 +162,7 @@ export function FormEvento({
         keyboardType="decimal-pad"
         value={costo}
         onChangeText={setCosto}
-        ayuda="Lo que paga cada hermano. Dejalo vacío si el evento es gratis."
+        ayuda="Lo que paga cada miembro. Dejalo vacío si el evento es gratis."
       />
 
       <Text style={s.etiqueta}>Fecha del evento</Text>
