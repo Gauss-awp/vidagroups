@@ -1,29 +1,38 @@
 import React, { useState } from 'react';
-import {Pressable, Text, View} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as XLSX from 'xlsx-js-style';
 import * as DocumentPicker from 'expo-document-picker';
 import { supabase } from '@/lib/supabase';
 import { compartirArchivo, leerArchivoElegido } from '@/lib/archivos';
 import { colors } from '@/lib/theme';
-import { MESES } from '@/lib/utils';
-import { FALTAS_ALEJADO, hojaAsistenciaConFormato, leerPlanillaAsistencia, type PlanillaLeida, type RolEquipo } from '@/lib/asistenciaExcel';
+import { MESES, formatoFecha } from '@/lib/utils';
+import {
+  FALTAS_ALEJADO,
+  MESES_GV,
+  leerLibroGV,
+  libroGV,
+  type EncabezadoMes,
+  type FilaGuardada,
+  type MiembroGV,
+  type PlanillaLeidaGV,
+  type RolEquipo,
+} from '@/lib/planillaGV';
 import { Boton, Card, Chip, HojaModal, s } from '@/components/ui';
 import { candidatosParecidos } from '@/lib/parecidos';
-import { formatoFecha } from '@/lib/utils';
 import { alerta } from '@/lib/alerta';
 
 const clave = (t: string) =>
   t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
 interface ChoqueFecha {
-  planilla: string; // fecha en la planilla
-  app: string; // fecha de la reunión cargada en la app
+  planilla: string;
+  app: string;
   appId: string;
-  unir: boolean; // true = es la misma reunión, pasa a la fecha de la planilla
+  unir: boolean;
 }
 interface NombreDudoso {
-  planilla: string; // como está escrito en la planilla
+  planilla: string;
   candidatos: { id: string; nombre: string }[];
   eleccion: string; // id del miembro de la app, o 'nuevo'
 }
@@ -31,103 +40,117 @@ interface Resumen {
   meses: string[];
   reuniones: number;
   asistencias: number;
-  actualizan: number; // reuniones que ya estaban (misma fecha)
+  actualizan: number;
   nuevasFechas: number;
   choques: ChoqueFecha[];
-  coinciden: number; // miembros con el mismo nombre
-  nuevos: string[]; // miembros sin ningún parecido
+  coinciden: number;
+  nuevos: string[];
   dudosos: NombreDudoso[];
-  planilla: PlanillaLeida;
+  hojas: string[];
+  planilla: PlanillaLeidaGV;
 }
 
+const CAMPOS_DATOS = ['telefono', 'direccion', 'bautismo', 'sanidad_interior', 'pilares_dato', 'encuentro_dato', 'reencuentro_dato', 'pos_encuentro_dato', 'escuela_capacitacion'] as const;
+
 /**
- * Planilla mensual de asistencia del grupo (formato de la iglesia):
- * exportarla con todo lo cargado en la app, o importar una planilla existente.
+ * Planilla del grupo en el formato exacto de la iglesia (ASISTENCIA GV, OFRENDAS y DATOS):
+ * exportarla con todo lo cargado en la app, o importar la planilla que ya tienen.
  */
 export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; onImportado?: () => void }) {
   const [anio, setAnio] = useState(new Date().getFullYear());
   const [trabajando, setTrabajando] = useState(false);
   const [resumen, setResumen] = useState<Resumen | null>(null);
 
-  // ---------------- Exportar ----------------
+  // =====================================================================
+  // EXPORTAR
+  // =====================================================================
   const exportar = async () => {
     setTrabajando(true);
     try {
       const { data: g, error } = await supabase.from('groups').select('*').eq('id', grupoId).single();
       if (error || !g) throw new Error(error?.message ?? 'No se encontró el grupo');
-      const [sup, mi, re, ult] = await Promise.all([
+      const desde = `${anio - 1}-12-01`;
+      const hasta = `${anio + 1}-01-31`;
+      const [sup, mi, re, ult, pf, pm, seg] = await Promise.all([
         g.supervisor_id ? supabase.from('profiles').select('nombre, apellido').eq('id', g.supervisor_id).maybeSingle() : Promise.resolve({ data: null }),
-        supabase.from('miembros_grupo').select('id, nombre, apellido, rol_equipo, creado_en, activo, baja_en').eq('grupo_id', grupoId),
+        supabase.from('miembros_grupo').select('*').eq('grupo_id', grupoId),
         supabase
           .from('reuniones')
-          .select('id, fecha, notas, ofrenda, material, compartio, asistencias(miembro_id, presente, consolidado, motivo)')
+          .select('id, fecha, notas, ofrenda, ofrenda_texto, ofrenda_entregada, material, compartio, asistencias(miembro_id, presente, consolidado, motivo)')
           .eq('grupo_id', grupoId)
-          .gte('fecha', `${anio}-01-01`)
-          .lte('fecha', `${anio}-12-31`)
+          .gte('fecha', desde)
+          .lte('fecha', hasta)
           .order('fecha'),
         supabase.from('reuniones').select('fecha, asistencias(miembro_id, presente)').eq('grupo_id', grupoId).order('fecha', { ascending: false }).limit(FALTAS_ALEJADO),
+        supabase.from('planilla_filas').select('anio, mes, miembro_id, fila, codigo, marcas').eq('grupo_id', grupoId),
+        supabase.from('planilla_meses').select('anio, mes, encabezado').eq('grupo_id', grupoId),
+        supabase.from('grupo_supervisores').select('perfil_id').eq('grupo_id', grupoId),
       ]);
-      // Activos, y los que se quitaron pero estuvieron (para no perder su historial)
-      const miembrosRaw = ((mi.data ?? []) as { id: string; nombre: string; apellido: string | null; rol_equipo: RolEquipo; creado_en: string; activo: boolean; baja_en: string | null }[])
-        .filter((m) => m.activo || m.baja_en);
-
-      // En rojo: los que faltaron a todas las últimas reuniones (siguen en la lista)
+      const miembrosRaw = ((mi.data ?? []) as any[]).filter((m) => m.activo || m.baja_en);
       const ultimas = (ult.data ?? []) as { fecha: string; asistencias: { miembro_id: string; presente: boolean }[] }[];
-      const alejado = (id: string, desde: string) =>
+      const alejado = (id: string, desdeM: string) =>
         ultimas.length >= FALTAS_ALEJADO &&
-        ultimas.every((r) => r.fecha >= desde.slice(0, 10) && !(r.asistencias ?? []).some((a) => a.miembro_id === id && a.presente));
-
+        ultimas.every((r) => r.fecha >= desdeM.slice(0, 10) && !(r.asistencias ?? []).some((a) => a.miembro_id === id && a.presente));
       const ids = miembrosRaw.map((m) => m.id);
       const { data: historialRoles } = ids.length
         ? await supabase.from('miembros_rol_historial').select('miembro_id, rol, desde').in('miembro_id', ids).order('desde')
         : { data: [] };
-      const rolesDe = (id: string) =>
-        ((historialRoles ?? []) as { miembro_id: string; rol: RolEquipo; desde: string }[])
-          .filter((h) => h.miembro_id === id)
-          .map((h) => ({ rol: h.rol, desde: h.desde }));
+      const filasGuardadas = (pf.data ?? []) as FilaGuardada[];
+      const enPlanilla = new Set(filasGuardadas.map((f) => f.miembro_id));
 
-      const { data: contactos } = ids.length
-        ? await supabase.from('seguimientos_faltas').select('miembro_id, creado_en, nota').in('miembro_id', ids).eq('tipo', 'contacto').gte('creado_en', `${anio}-01-01`)
-        : { data: [] };
-
-      const { data: segundos } = await supabase.from('grupo_supervisores').select('perfil_id').eq('grupo_id', grupoId);
-      const idsSeg = ((segundos ?? []) as { perfil_id: string }[]).map((x) => x.perfil_id);
+      // Líder supervisor: el texto cargado en el grupo, o los nombres de su supervisión
+      const idsSeg = ((seg.data ?? []) as { perfil_id: string }[]).map((x) => x.perfil_id);
       const { data: perfSeg } = idsSeg.length ? await supabase.from('profiles').select('nombre').in('id', idsSeg) : { data: [] };
       const nombresSup = [
         sup.data ? String((sup.data as any).nombre ?? '').trim() : '',
         ...((perfSeg ?? []) as { nombre: string | null }[]).map((p) => String(p.nombre ?? '').trim()),
       ].filter(Boolean);
-      const lider = g.lider_supervisor || nombresSup.join(' y ');
 
-      const hoja = hojaAsistenciaConFormato(
-        XLSX,
+      const miembros: MiembroGV[] = miembrosRaw.map((m) => ({
+        id: m.id,
+        nombre: m.nombre,
+        apellido: m.apellido,
+        desde: String(m.creado_en).slice(0, 10),
+        hasta: m.activo ? null : String(m.baja_en ?? '').slice(0, 10) || null,
+        activo: m.activo,
+        alejado: m.activo && alejado(m.id, m.creado_en),
+        roles: ((historialRoles ?? []) as any[]).filter((h) => h.miembro_id === m.id).map((h) => ({ rol: h.rol as RolEquipo, desde: h.desde })),
+        rolActual: m.rol_equipo,
+        datos: Object.fromEntries(CAMPOS_DATOS.map((c) => [c, m[c] ?? null])) as any,
+        datosFila: m.datos_fila,
+        datosNumero: m.datos_numero,
+        datosNombre: m.datos_nombre,
+        enPlanilla: enPlanilla.has(m.id),
+      }));
+
+      const libro = libroGV(XLSX, {
         anio,
-        { nombre: g.nombre, lider_supervisor: lider || null, dia_horario: g.dia_horario ?? null, barrio: g.barrio ?? null, direccion: g.direccion ?? null },
-        miembrosRaw.map((m) => ({
-          id: m.id,
-          nombre: `${m.nombre} ${m.apellido ?? ''}`.trim(),
-          rol_equipo: m.rol_equipo,
-          desde: m.creado_en.slice(0, 10),
-          alejado: m.activo && alejado(m.id, m.creado_en),
-          hasta: m.activo ? null : (m.baja_en ?? '').slice(0, 10) || null,
-          roles: rolesDe(m.id),
-        })),
-        ((re.data ?? []) as any[]).map((r) => ({ ...r, asistencias: r.asistencias ?? [] })),
-        ((contactos ?? []) as any[]).map((c) => ({ miembro_id: c.miembro_id, fecha: String(c.creado_en).slice(0, 10), nota: c.nota }))
-      );
-      const libro = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(libro, hoja, 'ASITENCIA GV');
+        grupo: {
+          nombre: g.nombre,
+          lider_supervisor: g.lider_supervisor || nombresSup.join(' y ') || null,
+          dia_horario: g.dia_horario ?? null,
+          barrio: g.barrio ?? null,
+          direccion: g.direccion ?? null,
+        },
+        miembros,
+        reuniones: ((re.data ?? []) as any[]).map((r) => ({ ...r, asistencias: r.asistencias ?? [] })),
+        filas: filasGuardadas,
+        encabezados: ((pm.data ?? []) as any[]).map((x) => ({ anio: x.anio, mes: x.mes, ...x.encabezado })) as EncabezadoMes[],
+        datosSueltos: (g.planilla_datos_sueltos ?? []) as any[],
+      });
       const base64 = XLSX.write(libro, { type: 'base64', bookType: 'xlsx' });
-
       setTrabajando(false);
-      await compartirArchivo(base64, `Asistencia_${g.nombre.replace(/[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ]+/g, '_')}_${anio}.xlsx`, `Planilla de asistencia ${anio}`);
+      const numero = (g.nombre.match(/(\d+)\s*$/) ?? [])[1];
+      await compartirArchivo(base64, `GV ${numero ? Number(numero) : g.nombre}- ${anio}.xlsx`, `Planilla ${anio}`);
     } catch (e) {
       setTrabajando(false);
       alerta('No se pudo exportar', e instanceof Error ? e.message : String(e));
     }
   };
 
-  // ---------------- Importar: leer y mostrar el resumen ----------------
+  // =====================================================================
+  // IMPORTAR: leer y mostrar el resumen
+  // =====================================================================
   const elegirArchivo = async () => {
     const r = await DocumentPicker.getDocumentAsync({
       type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', '*/*'],
@@ -138,34 +161,27 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
     try {
       const { datos, tipo } = await leerArchivoElegido(r.assets[0]);
       const libro = XLSX.read(datos, { type: tipo });
-      const nombreHoja =
-        libro.SheetNames.find((n: string) => {
-          const ws = libro.Sheets[n];
-          return Object.keys(ws).some((k) => !k.startsWith('!') && /INFORME MENSUAL/i.test(String(ws[k]?.v ?? '')));
-        }) ?? libro.SheetNames[0];
-      const planilla = leerPlanillaAsistencia(XLSX, libro.Sheets[nombreHoja], anio);
+      const planilla = leerLibroGV(XLSX, libro, anio);
       if (planilla.meses.length === 0) {
         setTrabajando(false);
-        alerta('No se encontraron reuniones', 'La planilla no tiene meses con fechas cargadas en la fila "Equipo de Trabajo".');
+        alerta('No se encontró la planilla', 'El archivo tiene que tener la hoja de asistencia con los "INFORME MENSUAL" de cada mes.');
         return;
       }
-      // Lo que ya hay en la app, para avisar los choques
       const fechasPlanilla = planilla.meses.flatMap((m) => m.semanas.filter(Boolean).map((s) => s!.fecha)).sort();
-      const desde = new Date(`${fechasPlanilla[0]}T12:00:00`);
-      desde.setDate(desde.getDate() - 7);
-      const hasta = new Date(`${fechasPlanilla[fechasPlanilla.length - 1]}T12:00:00`);
-      hasta.setDate(hasta.getDate() + 7);
       const iso = (d: Date) => d.toISOString().slice(0, 10);
+      const masMenos = (f: string | undefined, dias: number) => {
+        const d = new Date(`${f ?? `${anio}-01-01`}T12:00:00`);
+        d.setDate(d.getDate() + dias);
+        return iso(d);
+      };
       const [ex, reu] = await Promise.all([
         supabase.from('miembros_grupo').select('id, nombre, apellido').eq('grupo_id', grupoId),
-        supabase.from('reuniones').select('id, fecha').eq('grupo_id', grupoId).gte('fecha', iso(desde)).lte('fecha', iso(hasta)),
+        supabase.from('reuniones').select('id, fecha').eq('grupo_id', grupoId).gte('fecha', masMenos(fechasPlanilla[0], -7)).lte('fecha', masMenos(fechasPlanilla[fechasPlanilla.length - 1], 7)),
       ]);
       const existentes = ((ex.data ?? []) as any[]).map((m) => ({ id: m.id as string, nombre: `${m.nombre} ${m.apellido ?? ''}`.trim() }));
-      const enApp = ((reu.data ?? []) as { id: string; fecha: string }[]);
+      const enApp = (reu.data ?? []) as { id: string; fecha: string }[];
       const setPlanilla = new Set(fechasPlanilla);
       const setApp = new Set(enApp.map((r) => r.fecha));
-
-      // Reuniones: misma fecha = se actualiza; fecha parecida (±3 días) = posible choque
       const actualizan = fechasPlanilla.filter((f) => setApp.has(f)).length;
       const choques: ChoqueFecha[] = [];
       const usadas = new Set<string>();
@@ -173,8 +189,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         .filter((f) => !setApp.has(f))
         .forEach((f) => {
           const cerca = enApp.find(
-            (r) => !setPlanilla.has(r.fecha) && !usadas.has(r.id) &&
-              Math.abs(new Date(`${r.fecha}T12:00:00`).getTime() - new Date(`${f}T12:00:00`).getTime()) <= 3 * 86400000
+            (r) => !setPlanilla.has(r.fecha) && !usadas.has(r.id) && Math.abs(new Date(`${r.fecha}T12:00:00`).getTime() - new Date(`${f}T12:00:00`).getTime()) <= 3 * 86400000
           );
           if (cerca) {
             usadas.add(cerca.id);
@@ -182,7 +197,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
           }
         });
 
-      // Miembros: igual nombre, parecido (a elegir) o nuevo
+      // Todos los nombres de la planilla (también los que todavía no tienen asistencia)
       const exacto = new Set(existentes.map((m) => clave(m.nombre)));
       const nombresPlanilla = new Map<string, string>();
       let reuniones = 0;
@@ -190,9 +205,8 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       planilla.meses.forEach((m) => {
         reuniones += m.semanas.filter(Boolean).length;
         m.miembros.forEach((h) => {
-          const n = h.valores.filter(Boolean).length;
-          asistencias += n;
-          if (n > 0) nombresPlanilla.set(clave(h.nombre), h.nombre);
+          asistencias += h.valores.filter(Boolean).length;
+          nombresPlanilla.set(clave(h.nombre), h.nombre);
         });
       });
       let coinciden = 0;
@@ -205,18 +219,14 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         }
         const cand = candidatosParecidos(nombre, existentes);
         if (cand.length) {
-          dudosos.push({
-            planilla: nombre,
-            candidatos: cand.map((c) => ({ id: c.id, nombre: c.nombre })),
-            eleccion: cand[0].puntaje >= 0.75 ? cand[0].id : 'nuevo',
-          });
+          dudosos.push({ planilla: nombre, candidatos: cand.map((c) => ({ id: c.id, nombre: c.nombre })), eleccion: cand[0].puntaje >= 0.75 ? cand[0].id : 'nuevo' });
         } else {
           nuevos.push(nombre);
         }
       }
-
+      const hojas = ['ASISTENCIA GV', Object.keys(planilla.ofrendasCrudas).length ? 'OFRENDAS' : null, planilla.datos.length ? 'DATOS' : null].filter(Boolean) as string[];
       setResumen({
-        meses: planilla.meses.map((m) => `${MESES[m.mes]} ${m.anio}`),
+        meses: planilla.meses.filter((m) => m.miembros.length || m.semanas.some(Boolean)).map((m) => `${MESES[m.mes]} ${m.anio}`),
         reuniones,
         asistencias,
         actualizan,
@@ -225,6 +235,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         coinciden,
         nuevos,
         dudosos,
+        hojas,
         planilla,
       });
     } catch (e) {
@@ -233,101 +244,89 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
     setTrabajando(false);
   };
 
-  const cambiarChoque = (i: number, unir: boolean) =>
-    setResumen((r) => (r ? { ...r, choques: r.choques.map((c, k) => (k === i ? { ...c, unir } : c)) } : r));
-  const cambiarDudoso = (i: number, eleccion: string) =>
-    setResumen((r) => (r ? { ...r, dudosos: r.dudosos.map((d, k) => (k === i ? { ...d, eleccion } : d)) } : r));
+  const cambiarChoque = (i: number, unir: boolean) => setResumen((r) => (r ? { ...r, choques: r.choques.map((c, k) => (k === i ? { ...c, unir } : c)) } : r));
+  const cambiarDudoso = (i: number, eleccion: string) => setResumen((r) => (r ? { ...r, dudosos: r.dudosos.map((d, k) => (k === i ? { ...d, eleccion } : d)) } : r));
 
-  // ---------------- Importar: cargar en la base ----------------
+  // =====================================================================
+  // IMPORTAR: cargar en la base
+  // =====================================================================
   const importar = async () => {
     if (!resumen) return;
     setTrabajando(true);
     try {
       const { planilla } = resumen;
 
-      // 0. Reuniones que son la misma con otra fecha: pasan a la fecha de la planilla
+      // 0. Reuniones que son la misma con otra fecha
       for (const c of resumen.choques.filter((x) => x.unir)) {
         const { error } = await supabase.from('reuniones').update({ fecha: c.planilla }).eq('id', c.appId);
         if (error) throw new Error(`Al unir la reunión del ${c.app}: ${error.message}`);
       }
 
-      // 1. Miembros: los que no existen se crean, con la fecha de su primera reunión
+      // 1. Miembros: se crean los que faltan (aunque todavía no tengan asistencia)
       const { data: existentes } = await supabase.from('miembros_grupo').select('id, nombre, apellido, rol_equipo').eq('grupo_id', grupoId);
       const porNombre = new Map(((existentes ?? []) as any[]).map((m) => [clave(`${m.nombre} ${m.apellido ?? ''}`), m]));
-      const primeraFecha = new Map<string, string>();
-      const rolDe = new Map<string, RolEquipo>();
-      const rolDesde = new Map<string, string>();
-      planilla.meses.forEach((m) =>
-        m.miembros.forEach((h) => {
-          const k = clave(h.nombre);
-          if (h.rol && !rolDe.get(k)) rolDe.set(k, h.rol);
-          // Primer mes en que aparece como G o equipo
-          const inicioMes = `${m.anio}-${String(m.mes + 1).padStart(2, '0')}-01`;
-          if (h.rol && (!rolDesde.has(k) || inicioMes < rolDesde.get(k)!)) rolDesde.set(k, inicioMes);
-          h.valores.forEach((v, i) => {
-            const f = m.semanas[i]?.fecha;
-            if (v && f && (!primeraFecha.has(k) || f < primeraFecha.get(k)!)) primeraFecha.set(k, f);
-          });
-        })
-      );
-      const nombreOriginal = new Map<string, string>();
-      planilla.meses.forEach((m) => m.miembros.forEach((h) => nombreOriginal.set(clave(h.nombre), h.nombre)));
-      // Los nombres parecidos que se eligieron como "el mismo miembro"
       const porId = new Map(((existentes ?? []) as any[]).map((m) => [m.id, m]));
       resumen.dudosos.forEach((d) => {
         if (d.eleccion !== 'nuevo' && porId.has(d.eleccion)) porNombre.set(clave(d.planilla), porId.get(d.eleccion));
       });
-      const aCrear = [...primeraFecha.keys()].filter((k) => !porNombre.has(k));
+      const primeraFecha = new Map<string, string>();
+      const nombreOriginal = new Map<string, string>();
+      const rolActual = new Map<string, RolEquipo>();
+      const rolDesde = new Map<string, string>();
+      const ordenMeses = [...planilla.meses].sort((a, b) => a.anio * 12 + a.mes - (b.anio * 12 + b.mes));
+      ordenMeses.forEach((m) => {
+        const inicioMes = `${m.anio}-${String(m.mes + 1).padStart(2, '0')}-01`;
+        m.miembros.forEach((h) => {
+          const k = clave(h.nombre);
+          nombreOriginal.set(k, h.nombre);
+          if (!primeraFecha.has(k) || inicioMes < primeraFecha.get(k)!) primeraFecha.set(k, inicioMes);
+          h.valores.forEach((v, i) => {
+            const f = m.semanas[i]?.fecha;
+            if (v && f && f < (primeraFecha.get(k) ?? '9999') ) primeraFecha.set(k, f);
+          });
+          rolActual.set(k, h.rol); // el último mes manda
+          if (h.rol && !rolDesde.has(k)) rolDesde.set(k, inicioMes);
+        });
+      });
+      const aCrear = [...nombreOriginal.keys()].filter((k) => !porNombre.has(k));
       if (aCrear.length) {
         const filas = aCrear.map((k) => {
           const partes = nombreOriginal.get(k)!.trim().split(/\s+/);
-          return {
-            grupo_id: grupoId,
-            nombre: partes[0],
-            apellido: partes.slice(1).join(' '),
-            rol_equipo: rolDe.get(k) ?? null,
-            creado_en: `${primeraFecha.get(k)}T12:00:00`,
-          };
+          return { grupo_id: grupoId, nombre: partes[0], apellido: partes.slice(1).join(' '), rol_equipo: rolActual.get(k) ?? null, creado_en: `${primeraFecha.get(k)}T12:00:00` };
         });
         const { data: creados, error } = await supabase.from('miembros_grupo').insert(filas).select('id, nombre, apellido, rol_equipo');
         if (error) throw new Error(`Al crear miembros: ${error.message}`);
         (creados ?? []).forEach((m: any) => porNombre.set(clave(`${m.nombre} ${m.apellido ?? ''}`), m));
       }
-      // Rol de los que ya estaban, si no tenían
-      const conRolNuevo: string[] = [];
-      for (const [k, rol] of rolDe) {
+      for (const [k, rol] of rolActual) {
         const m = porNombre.get(k);
-        if (m && !m.rol_equipo && rol) {
-          await supabase.from('miembros_grupo').update({ rol_equipo: rol }).eq('id', m.id);
-          conRolNuevo.push(k);
-        }
-      }
-      // El rol cuenta desde el primer mes de la planilla en que figura como G o equipo
-      for (const k of [...conRolNuevo, ...aCrear.filter((x) => rolDe.get(x))]) {
-        const m = porNombre.get(k);
-        const desde = rolDesde.get(k);
-        if (m && desde) {
-          await supabase.from('miembros_rol_historial').update({ desde: `${desde}T12:00:00` }).eq('miembro_id', m.id).gt('desde', `${desde}T12:00:00`);
-        }
+        if (m && !m.rol_equipo && rol) await supabase.from('miembros_grupo').update({ rol_equipo: rol }).eq('id', m.id);
+        const desdeRol = rolDesde.get(k);
+        if (m && desdeRol) await supabase.from('miembros_rol_historial').update({ desde: `${desdeRol}T12:00:00` }).eq('miembro_id', m.id).gt('desde', `${desdeRol}T12:00:00`);
       }
 
-      // 2. Reuniones y asistencia
+      // 2. Reuniones (con ofrenda, material, quién compartió y a quién se entregó) y asistencia
       for (const mes of planilla.meses) {
         for (let i = 0; i < mes.semanas.length; i++) {
           const sem = mes.semanas[i];
           if (!sem) continue;
-          const fila: Record<string, unknown> = { grupo_id: grupoId, fecha: sem.fecha };
-          if (sem.notas) fila.notas = sem.notas;
-          if (sem.ofrenda !== null) fila.ofrenda = sem.ofrenda;
-          if (sem.material) fila.material = sem.material;
-          if (sem.compartio) fila.compartio = sem.compartio;
+          const fila: Record<string, unknown> = {
+            grupo_id: grupoId,
+            fecha: sem.fecha,
+            notas: sem.notas,
+            ofrenda: sem.ofrenda,
+            ofrenda_texto: sem.ofrenda_texto,
+            material: sem.material,
+            compartio: sem.compartio,
+            ofrenda_entregada: planilla.ofrendas[`${mes.anio}-${mes.mes}-${i}`] ?? null,
+          };
           const { data: r, error } = await supabase.from('reuniones').upsert(fila, { onConflict: 'grupo_id,fecha' }).select('id').single();
           if (error) throw new Error(`Reunión del ${sem.fecha}: ${error.message}`);
           const asist = mes.miembros
             .map((h) => {
               const v = h.valores[i];
               const m = porNombre.get(clave(h.nombre));
-              return v && m ? { reunion_id: r.id, miembro_id: m.id, presente: v.asist === 'P', consolidado: v.consolidado, motivo: v.motivo } : null;
+              return v && m ? { reunion_id: r.id, miembro_id: m.id, presente: v.asist === 'P', consolidado: v.consolidado } : null;
             })
             .filter(Boolean);
           if (asist.length) {
@@ -337,17 +336,59 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
         }
       }
 
-      // 3. Datos del grupo, solo si en la app están vacíos
+      // 3. Cómo era cada mes (orden, códigos, encabezado), para exportarla idéntica
+      for (const mes of planilla.meses) {
+        await supabase.from('planilla_filas').delete().eq('grupo_id', grupoId).eq('anio', mes.anio).eq('mes', mes.mes);
+        const filas = mes.miembros
+          .map((h) => {
+            const m = porNombre.get(clave(h.nombre));
+            return m ? { grupo_id: grupoId, anio: mes.anio, mes: mes.mes, miembro_id: m.id, fila: h.fila, codigo: h.codigo, marcas: Object.keys(h.marcas).length ? h.marcas : null } : null;
+          })
+          .filter(Boolean) as any[];
+        // Si un nombre aparece dos veces en el mes, queda el primero
+        const unicas = [...new Map(filas.map((f) => [f.miembro_id, f])).values()];
+        if (unicas.length) {
+          const { error } = await supabase.from('planilla_filas').insert(unicas);
+          if (error) throw new Error(`Orden de ${MESES_GV[mes.mes]}: ${error.message}`);
+        }
+        const { error: e3 } = await supabase.from('planilla_meses').upsert({ grupo_id: grupoId, anio: mes.anio, mes: mes.mes, encabezado: mes.encabezado }, { onConflict: 'grupo_id,anio,mes' });
+        if (e3) throw new Error(`Encabezado de ${MESES_GV[mes.mes]}: ${e3.message}`);
+      }
+
+      // 4. Datos del grupo (si en la app están vacíos) y renglones sueltos de DATOS
       const { data: g } = await supabase.from('groups').select('dia_horario, barrio, direccion, lider_supervisor').eq('id', grupoId).single();
-      const cambios: Record<string, string> = {};
+      const cambios: Record<string, unknown> = { planilla_datos_sueltos: planilla.datosSueltos.length ? planilla.datosSueltos : null };
       (['dia_horario', 'barrio', 'direccion', 'lider_supervisor'] as const).forEach((c) => {
         const v = planilla.grupo[c];
         if (v && !(g as any)?.[c]) cambios[c] = v;
       });
-      if (Object.keys(cambios).length) await supabase.from('groups').update(cambios).eq('id', grupoId);
+      await supabase.from('groups').update(cambios).eq('id', grupoId);
+
+      // 5. Hoja DATOS: teléfono, dirección, bautismo, encuentro…
+      const lista = [...porNombre.values()].map((m: any) => ({ id: m.id, nombre: `${m.nombre} ${m.apellido ?? ''}`.trim() }));
+      let conDatos = 0;
+      const sinPareja: string[] = [];
+      for (const d of planilla.datos) {
+        const exactoD = lista.find((x) => clave(x.nombre) === clave(d.nombre));
+        const m = exactoD ?? candidatosParecidos(d.nombre, lista, 0.75, 1)[0];
+        if (!m) {
+          sinPareja.push(d.nombre);
+          continue;
+        }
+        const datosM: Record<string, unknown> = { datos_fila: d.fila, datos_numero: d.numero, datos_nombre: d.nombreOriginal };
+        CAMPOS_DATOS.forEach((c) => {
+          if ((d as any)[c]) datosM[c] = (d as any)[c];
+        });
+        const { error } = await supabase.from('miembros_grupo').update(datosM).eq('id', m.id);
+        if (!error) conDatos++;
+      }
 
       setTrabajando(false);
-      alerta('Planilla importada', `Se cargaron ${resumen.reuniones} reuniones y ${resumen.asistencias} asistencias${aCrear.length ? `, y ${aCrear.length} miembros nuevos` : ''}.`);
+      const avisos = planilla.avisos.length ? `\n\nRevisá: ${planilla.avisos.slice(0, 4).join(' · ')}${planilla.avisos.length > 4 ? '…' : ''}` : '';
+      alerta(
+        'Planilla importada',
+        `Se cargaron ${resumen.reuniones} reuniones y ${resumen.asistencias} asistencias${aCrear.length ? `, ${aCrear.length} miembros nuevos` : ''}${conDatos ? ` y los datos de ${conDatos} miembros` : ''}.${sinPareja.length ? `\n\nEn DATOS no se encontró a: ${sinPareja.join(', ')}.` : ''}${avisos}`
+      );
       setResumen(null);
       onImportado?.();
     } catch (e) {
@@ -358,9 +399,9 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
 
   return (
     <Card>
-      <Text style={{ fontWeight: '700', color: colors.text, fontSize: 16 }}>Planilla de asistencia</Text>
+      <Text style={{ fontWeight: '700', color: colors.text, fontSize: 16 }}>Planilla del grupo</Text>
       <Text style={[s.textoFilaSec, { marginTop: 2, marginBottom: 10 }]}>
-        El informe mensual de la iglesia, un mes debajo del otro, con asistencia, consolidaciones, ofrenda y material.
+        La planilla de la iglesia, idéntica: ASISTENCIA GV (diciembre a enero, un mes debajo del otro), OFRENDAS y DATOS de cada miembro.
       </Text>
       <View style={[s.fila, { justifyContent: 'center', marginBottom: 10 }]}>
         <Pressable onPress={() => setAnio(anio - 1)} hitSlop={10} accessibilityLabel="Año anterior">
@@ -379,14 +420,26 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
       <HojaModal visible={!!resumen} onClose={() => setResumen(null)} titulo="Importar planilla">
         {resumen ? (
           <>
-            <Text style={s.textoFila}>{resumen.meses.length} meses: {resumen.meses.join(', ')}</Text>
-            <Text style={[s.textoFilaSec, { marginTop: 4 }]}>{resumen.reuniones} reuniones · {resumen.asistencias} asistencias</Text>
+            <Text style={s.textoFila}>Hojas: {resumen.hojas.join(', ')}</Text>
+            <Text style={[s.textoFilaSec, { marginTop: 4 }]}>
+              {resumen.meses.length} meses · {resumen.reuniones} reuniones · {resumen.asistencias} asistencias
+              {resumen.planilla.datos.length ? ` · datos de ${resumen.planilla.datos.length} miembros` : ''}
+            </Text>
+            {resumen.planilla.avisos.length ? (
+              <View style={{ backgroundColor: colors.warningBg, borderRadius: 10, padding: 10, marginTop: 10 }}>
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700', marginBottom: 4 }}>Para revisar</Text>
+                {resumen.planilla.avisos.map((a) => (
+                  <Text key={a} style={{ color: colors.text, fontSize: 12 }}>
+                    • {a}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
 
             <Text style={[s.textoFila, { marginTop: 14, fontWeight: '700' }]}>Reuniones</Text>
             <Text style={s.textoFilaSec}>
               {resumen.actualizan ? `${resumen.actualizan} ya estaban en la app y se actualizan con la planilla. ` : ''}
               {resumen.nuevasFechas > 0 ? `${resumen.nuevasFechas} se agregan. ` : ''}
-              {resumen.actualizan ? 'En esas reuniones, el P/A y la C de la planilla reemplazan lo cargado en la app.' : ''}
             </Text>
             {resumen.choques.map((c, i) => (
               <View key={c.appId} style={{ backgroundColor: colors.warningBg, borderRadius: 10, padding: 10, marginTop: 8 }}>
@@ -404,7 +457,7 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
             <Text style={[s.textoFila, { marginTop: 14, fontWeight: '700' }]}>Miembros</Text>
             <Text style={s.textoFilaSec}>
               {resumen.coinciden} coinciden con la app
-              {resumen.nuevos.length ? ` · ${resumen.nuevos.length} nuevos: ${resumen.nuevos.slice(0, 10).join(', ')}${resumen.nuevos.length > 10 ? '…' : ''}` : ''}
+              {resumen.nuevos.length ? ` · ${resumen.nuevos.length} nuevos: ${resumen.nuevos.slice(0, 12).join(', ')}${resumen.nuevos.length > 12 ? '…' : ''}` : ''}
             </Text>
             {resumen.dudosos.map((d, i) => (
               <View key={d.planilla} style={{ backgroundColor: colors.cardAlt, borderRadius: 10, padding: 10, marginTop: 8 }}>
@@ -421,7 +474,8 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
             ))}
 
             <Text style={[s.textoFilaSec, { marginTop: 14, marginBottom: 14 }]}>
-              Los "G" quedan como guías y los "A", "C1" y "C2" como equipo. Lo que no está en la planilla no se toca.
+              Se guarda también el orden de cada mes, los códigos (G, A, C1…), las ofrendas y los datos de cada miembro, para que la planilla exportada salga
+              igual a esta.
             </Text>
             <Boton titulo="Importar" icono="checkmark" onPress={importar} cargando={trabajando} />
           </>
@@ -430,4 +484,3 @@ export function PlanillaAsistencia({ grupoId, onImportado }: { grupoId: string; 
     </Card>
   );
 }
-

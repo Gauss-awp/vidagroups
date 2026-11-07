@@ -23,6 +23,7 @@ from (values
   (29, 'Cada supervisor ve sus grupos', exists (select 1 from pg_proc where proname='puede_aprobar_perfil')),
   (30, 'Grupos sin guía todavía', exists (select 1 from information_schema.columns where table_schema='public' and table_name='groups' and column_name='guia_id' and is_nullable='YES')),
   (31, 'Registrarse sin ser guía', exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='solicitud_no_guia')),
-  (32, 'Registro por servicio', exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='solicitud_rol'))
+  (32, 'Registro por servicio', exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='solicitud_rol')),
+  (33, 'Planilla idéntica a la de la iglesia', to_regclass('public.planilla_meses') is not null)
 ) as e(etapa, que_agrega, ok)
 order by etapa;

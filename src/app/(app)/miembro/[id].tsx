@@ -23,6 +23,17 @@ interface PagoEvento {
 }
 
 /** Historial de un miembro: asistencia, pagos y consolidación, con sus datos editables. */
+const DATOS_PLANILLA: { campo: string; etiqueta: string; ejemplo: string }[] = [
+  { campo: 'direccion', etiqueta: 'Dirección', ejemplo: 'Emilio Caraffa 256' },
+  { campo: 'bautismo', etiqueta: 'Bautismo', ejemplo: 'SI / NO' },
+  { campo: 'sanidad_interior', etiqueta: 'Sanidad interior', ejemplo: 'SI / NO' },
+  { campo: 'pilares_dato', etiqueta: 'Pilares', ejemplo: 'SI / NO' },
+  { campo: 'encuentro_dato', etiqueta: 'Encuentro', ejemplo: 'SI- JUNIO' },
+  { campo: 'reencuentro_dato', etiqueta: 'Reencuentro', ejemplo: 'SI- SEPTIEMBRE' },
+  { campo: 'pos_encuentro_dato', etiqueta: 'Pos encuentro', ejemplo: 'SI / NO' },
+  { campo: 'escuela_capacitacion', etiqueta: 'Escuela de capacitación', ejemplo: 'Si / No' },
+];
+
 export default function MiembroPantalla() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [miembro, setMiembro] = useState<(Miembro & { grupo: { nombre: string } | null }) | null>(null);
@@ -32,6 +43,8 @@ export default function MiembroPantalla() {
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
   const [form, setForm] = useState({ nombre: '', apellido: '', telefono: '', cumple: '', rol: null as 'guia' | 'equipo' | null });
+  // Datos de la hoja DATOS de la planilla
+  const [datosPlanilla, setDatosPlanilla] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [puedeNotas, setPuedeNotas] = useState(false);
   const [racha, setRacha] = useState<{ racha_actual: number; mejor_racha: number } | null>(null);
@@ -118,6 +131,7 @@ export default function MiembroPantalla() {
       cumple: formatoCumple(miembro.cumpleanos),
       rol: miembro.rol_equipo ?? null,
     });
+    setDatosPlanilla(Object.fromEntries(DATOS_PLANILLA.map((d) => [d.campo, String((miembro as any)[d.campo] ?? '')])));
     setEditando(true);
   };
 
@@ -134,7 +148,14 @@ export default function MiembroPantalla() {
     setGuardando(true);
     const { error: err } = await supabase
       .from('miembros_grupo')
-      .update({ nombre: form.nombre.trim(), apellido: form.apellido.trim(), telefono: form.telefono.trim() || null, cumpleanos: cumple, rol_equipo: form.rol })
+      .update({
+        nombre: form.nombre.trim(),
+        apellido: form.apellido.trim(),
+        telefono: form.telefono.trim() || null,
+        cumpleanos: cumple,
+        rol_equipo: form.rol,
+        ...Object.fromEntries(DATOS_PLANILLA.map((d) => [d.campo, (datosPlanilla[d.campo] ?? '').trim() || null])),
+      })
       .eq('id', miembro.id);
     setGuardando(false);
     if (err) {
@@ -290,6 +311,17 @@ export default function MiembroPantalla() {
           <Chip texto="Guía" activo={form.rol === 'guia'} onPress={() => setForm({ ...form, rol: 'guia' })} />
         </View>
         <Text style={[s.textoFilaSec, { marginBottom: 14 }]}>En la planilla, los guías aparecen con "G" en azul y el equipo en celeste.</Text>
+        <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 4 }}>Datos de la planilla</Text>
+        <Text style={[s.textoFilaSec, { marginBottom: 10 }]}>Lo que va en la hoja DATOS. Se escribe igual que en la planilla de la iglesia.</Text>
+        {DATOS_PLANILLA.map((d) => (
+          <Campo
+            key={d.campo}
+            etiqueta={d.etiqueta}
+            placeholder={d.ejemplo}
+            value={datosPlanilla[d.campo] ?? ''}
+            onChangeText={(v) => setDatosPlanilla({ ...datosPlanilla, [d.campo]: v })}
+          />
+        ))}
         <Boton titulo="Guardar" onPress={guardar} cargando={guardando} />
       </HojaModal>
     </>

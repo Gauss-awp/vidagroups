@@ -35,7 +35,7 @@ export default function ModoReunion() {
   // Motivo por ausente: texto = consolidado con ese motivo; vacío = "lo consolido después"
   const [motivos, setMotivos] = useState<Record<string, string>>({});
   const [otro, setOtro] = useState<string | null>(null);
-  const [datos, setDatos] = useState({ notas: '', ofrenda: '', material: '', compartio: '' });
+  const [datos, setDatos] = useState({ notas: '', ofrenda: '', material: '', compartio: '', entregada: '' });
   const [cargando, setCargando] = useState(true);
   // Días con reunión cargada, para marcarlos en el calendario
   const fechasConReunion = useCallback(
@@ -58,7 +58,7 @@ export default function ModoReunion() {
         supabase.from('miembros_grupo').select('id, nombre, apellido, creado_en, activo, baja_en').eq('grupo_id', grupoId).order('nombre'),
         supabase
           .from('reuniones')
-          .select('notas, ofrenda, material, compartio, asistencias(miembro_id, presente, consolidado, motivo)')
+          .select('notas, ofrenda, ofrenda_texto, ofrenda_entregada, material, compartio, asistencias(miembro_id, presente, consolidado, motivo)')
           .eq('grupo_id', grupoId)
           .eq('fecha', fecha)
           .maybeSingle(),
@@ -92,9 +92,10 @@ export default function ModoReunion() {
       setMotivos(mo);
       setDatos({
         notas: re?.notas ?? '',
-        ofrenda: re?.ofrenda !== null && re?.ofrenda !== undefined ? String(re.ofrenda) : '',
+        ofrenda: re?.ofrenda !== null && re?.ofrenda !== undefined ? String(re.ofrenda) : re?.ofrenda_texto ?? '',
         material: re?.material ?? '',
         compartio: re?.compartio ?? '',
+        entregada: re?.ofrenda_entregada ?? '',
       });
       // Si se abrió para completar consolidaciones, va directo al paso 2
       if (irAPaso2 && (re?.asistencias ?? []).some((a: any) => !a.presente)) setPaso(2);
@@ -127,11 +128,8 @@ export default function ModoReunion() {
   const nombre = (h: Miembro) => `${h.nombre} ${h.apellido ?? ''}`.trim();
 
   const terminar = async () => {
-    const ofrenda = datos.ofrenda.trim() ? Number(datos.ofrenda.replace(/\./g, '').replace(',', '.')) : null;
-    if (ofrenda !== null && isNaN(ofrenda)) {
-      alerta('Ofrenda inválida', 'Escribí solo el número, por ejemplo 12000.');
-      return;
-    }
+    const numeroOfrenda = datos.ofrenda.trim() ? Number(datos.ofrenda.replace(/[$\s.]/g, '').replace(',', '.')) : null;
+    const ofrenda = numeroOfrenda !== null && !isNaN(numeroOfrenda) ? numeroOfrenda : null;
     const filas = miembros.map((h) => ({
       miembro_id: h.id,
       presente: !!vino[h.id],
@@ -140,6 +138,9 @@ export default function ModoReunion() {
     }));
     const cambios = {
       notas: datos.notas.trim() || null,
+      ofrenda_entregada: datos.entregada.trim() || null,
+      // si la ofrenda no es un número (por ejemplo "-"), se guarda el texto tal cual
+      ofrenda_texto: ofrenda === null && datos.ofrenda.trim() ? datos.ofrenda.trim() : null,
       ofrenda,
       material: datos.material.trim() || null,
       compartio: datos.compartio.trim() || null,
@@ -345,6 +346,12 @@ export default function ModoReunion() {
           <>
             {encabezado(3, 'Datos de la reunión')}
             <Campo etiqueta="Ofrenda ($)" placeholder="Ej: $12000" value={datos.ofrenda} onChangeText={(v) => setDatos({ ...datos, ofrenda: v })} keyboardType="numeric" />
+            <Campo
+              etiqueta="Ofrenda entregada a… (opcional)"
+              placeholder="Ej: Tesorería MJ, domingo 9/11"
+              value={datos.entregada}
+              onChangeText={(v) => setDatos({ ...datos, entregada: v })}
+            />
             <Campo etiqueta="Material (prédica)" placeholder="Ej: Prédica del domingo, Pr o Pra" value={datos.material} onChangeText={(v) => setDatos({ ...datos, material: v })} />
             <Campo etiqueta="Quién compartió" placeholder="Ej: nombre1 y nombre2" value={datos.compartio} onChangeText={(v) => setDatos({ ...datos, compartio: v })} />
             <Campo etiqueta="Nota de la semana (opcional)" placeholder="Ej: Evangelismo, GV conjunto, GV Normal" value={datos.notas} onChangeText={(v) => setDatos({ ...datos, notas: v })} />
