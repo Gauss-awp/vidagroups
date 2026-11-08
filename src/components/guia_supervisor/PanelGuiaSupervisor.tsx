@@ -105,6 +105,16 @@ export function PanelGuiaSupervisor({ perfil }: { perfil: Perfil }) {
           <Boton titulo="Crear un grupo" icono="add-circle-outline" variante="secundario" onPress={() => setCreando(true)} style={{ marginBottom: 12 }} />
         ) : null}
         <SolicitudesCuentas ocultarSiVacio onCambio={cargar} />
+        <Card onPress={() => router.push('/seguimiento')} style={{ backgroundColor: '#14532D' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="pulse" size={22} color="#FFFFFF" style={{ marginRight: 12 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 16 }}>Seguimiento de tus grupos</Text>
+              <Text style={{ color: '#BBF7D0', fontSize: 13 }}>Con quién hablar y quién se trabó en la consolidación</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+          </View>
+        </Card>
         <CrearGrupoConGuias
           visible={creando}
           onClose={() => setCreando(false)}

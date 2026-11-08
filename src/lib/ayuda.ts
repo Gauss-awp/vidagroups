@@ -128,6 +128,13 @@ export const AYUDA: ItemAyuda[] = [
       'En el grupo, pestaña "Eventos", entrá al evento. En "Anotados" → "No anotados" tocá a la persona para anotarla. Para registrar una cuota, tocala en la lista y completá el monto (hay botones para "Todo" y "La mitad"). Al registrar un pago queda anotada sola.',
   },
 
+  {
+    roles: ['pastor', 'guia_supervisor', 'apostol'],
+    titulo: '¿Para qué sirve "Seguimiento"?',
+    texto:
+      'Te muestra dónde poner la atención esta semana: con qué guías hablar (y por qué), qué grupos necesitan ayuda (en rojo) o hay que mirar (en amarillo), y qué personas nuevas se trabaron en la consolidación (por ejemplo, hicieron el Encuentro y no empezaron el Pos-encuentro).\n\nCuando hablás con un guía, tocá "Ya hablé": sale de la lista por una semana y queda anotado en "Charlas del último mes". Los pastores y encargados lo ven desde "Mi Red"; los Guías Supervisores, desde "Mis Guías", solo con sus grupos.',
+  },
+
   // ------------------------- Administrador -------------------------
   {
     roles: ['administrador'],

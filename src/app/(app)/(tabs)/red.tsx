@@ -103,6 +103,19 @@ export default function PanelRed() {
 
         <SolicitudesCuentas key={`ap-${refreshKey}`} redId={red.id} />
 
+        <Card onPress={() => router.push({ pathname: '/seguimiento', params: { red: red.id, nombre: red.nombre } })} style={{ backgroundColor: '#14532D', marginTop: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <Ionicons name="pulse" size={22} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 17 }}>Seguimiento</Text>
+              <Text style={{ color: '#BBF7D0', fontSize: 13 }}>Con quién hablar, qué grupo necesita ayuda y quién se trabó</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+          </View>
+        </Card>
+
         <Card onPress={() => router.push({ pathname: '/eventos', params: { red: red.id, nombre: red.nombre } })} style={{ backgroundColor: '#1F3A5F', marginTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
