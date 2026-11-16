@@ -8,6 +8,7 @@ import { ROL_LABEL } from '@/lib/utils';
 import { alerta } from '@/lib/alerta';
 import { candidatosParecidos } from '@/lib/parecidos';
 import { useAuth } from '@/context/AuthContext';
+import { useAvatares } from '@/lib/avatares';
 import { Avatar, Boton, Card, Chip, HojaModal, SeccionTitulo, s } from '@/components/ui';
 
 interface Solicitud {
@@ -53,6 +54,7 @@ export function SolicitudesCuentas({ redId, onCambio, ocultarSiVacio = false }: 
   const [destino, setDestino] = useState<Destino>({ tipo: 'ninguno' });
   const [eligiendoOtro, setEligiendoOtro] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const avatares = useAvatares(lista.map((x) => x.id));
 
   const cargar = useCallback(async () => {
     const { data } = await supabase.rpc('solicitudes_pendientes');
@@ -173,7 +175,7 @@ export function SolicitudesCuentas({ redId, onCambio, ocultarSiVacio = false }: 
           return (
             <Card key={x.id}>
               <View style={s.fila}>
-                <Avatar nombre={x.nombre} color={colors.warning} />
+                <Avatar nombre={x.nombre} color={colors.warning} avatar={avatares[x.id]} />
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={s.textoFila}>{x.nombre}</Text>
                   <Text style={s.textoFilaSec}>{x.email}</Text>

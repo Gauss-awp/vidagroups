@@ -7,7 +7,8 @@ import { colors } from '@/lib/theme';
 import { alerta } from '@/lib/alerta';
 import { formatoFecha } from '@/lib/utils';
 import { BarrasH, Kpi, PALETA } from '@/components/eventos/Graficos';
-import { Boton, Card, Cargando, HojaModal, SeccionTitulo, Vacio, s } from '@/components/ui';
+import { Avatar, Boton, Card, Cargando, HojaModal, SeccionTitulo, Vacio, s } from '@/components/ui';
+import { useAvatares } from '@/lib/avatares';
 
 type Estado = 'rojo' | 'amarillo' | 'verde';
 interface GrupoSeg {
@@ -73,6 +74,7 @@ export default function Seguimiento() {
   const [guardando, setGuardando] = useState(false);
   const [abierto, setAbierto] = useState<ClaveTrabado | null>(null);
   const [verTodos, setVerTodos] = useState(false);
+  const avatares = useAvatares((panel?.hablar ?? []).map((h) => h.guia_id));
 
   const cargar = useCallback(async () => {
     if (!red) {
@@ -157,7 +159,8 @@ export default function Seguimiento() {
           panel.hablar.map((h) => (
             <Card key={`${h.guia_id}-${h.grupo_id}`}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
+                <Avatar nombre={h.guia} tamano={44} avatar={avatares[h.guia_id]} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>{h.guia}</Text>
                   <Text style={s.textoFilaSec}>
                     {h.grupo}

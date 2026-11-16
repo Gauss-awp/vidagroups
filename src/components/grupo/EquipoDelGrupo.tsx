@@ -6,7 +6,8 @@ import { colors } from '@/lib/theme';
 import { alerta } from '@/lib/alerta';
 import { ROL_LABEL } from '@/lib/utils';
 import type { Rol } from '@/lib/types';
-import { Cargando, HojaModal, s } from '@/components/ui';
+import { Avatar, Cargando, HojaModal, s } from '@/components/ui';
+import { useAvatares } from '@/lib/avatares';
 
 type Tipo = 'guia' | 'supervisor';
 interface Persona {
@@ -30,6 +31,7 @@ export function EquipoDelGrupo({ grupoId, onCambio }: { grupoId: string; onCambi
   const [eligiendo, setEligiendo] = useState<Tipo | null>(null);
   const [candidatos, setCandidatos] = useState<{ id: string; nombre: string; rol: Rol }[]>([]);
   const [busqueda, setBusqueda] = useState('');
+  const avatares = useAvatares([...(equipo?.guias ?? []), ...(equipo?.supervisores ?? [])].map((p) => p.id));
   const [trabajando, setTrabajando] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -115,6 +117,9 @@ export function EquipoDelGrupo({ grupoId, onCambio }: { grupoId: string; onCambi
             >
               <Ionicons name={p.principal ? 'star' : 'star-outline'} size={16} color={p.principal ? colors.warning : colors.textTer} />
             </Pressable>
+            <View style={{ marginLeft: 6 }}>
+              <Avatar nombre={p.nombre} tamano={24} avatar={avatares[p.id]} />
+            </View>
             <Text style={{ color: colors.text, fontWeight: p.principal ? '700' : '500', marginLeft: 6 }}>{p.nombre}</Text>
             {puede ? (
               <Pressable onPress={() => quitar(p, tipo)} hitSlop={8} style={{ marginLeft: 6 }} accessibilityLabel={`Quitar a ${p.nombre}`}>

@@ -53,7 +53,7 @@ export default function EquipoPantalla() {
       >
         <Card>
           <View style={s.fila}>
-            <Avatar nombre={nombreCompleto(lider)} color={ROL_COLOR[lider.rol]} tamano={52} />
+            <Avatar nombre={nombreCompleto(lider)} color={ROL_COLOR[lider.rol]} tamano={52} avatar={(lider as any).avatar} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={{ color: colors.text, fontSize: 19, fontWeight: '700' }}>{nombreCompleto(lider)}</Text>
               <Text style={s.textoFilaSec}>{lider.email}</Text>

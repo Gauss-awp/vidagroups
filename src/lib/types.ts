@@ -20,6 +20,7 @@ export interface Perfil {
   telefono?: string | null;
   ultimo_acceso?: string | null;
   app_version?: string | null;
+  avatar?: string | null;
   creado_en: string;
 }
 

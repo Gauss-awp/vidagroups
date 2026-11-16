@@ -14,6 +14,7 @@ import { Switch } from 'react-native';
 import { guardarPreferencias, leerPreferencias, pedirPermiso, reprogramar, type PreferenciasRecordatorios } from '@/lib/recordatorios';
 import { Avatar, Badge, Boton, Campo, Card, Cargando, Pantalla, SeccionTitulo, TituloGrande, s } from '@/components/ui';
 import { alerta } from '@/lib/alerta';
+import { ElegirAvatar } from '@/components/avatar/ElegirAvatar';
 
 export default function PerfilPantalla() {
   const { perfil, redesAdmin, refrescarPerfil, cerrarSesion } = useAuth();
@@ -32,6 +33,7 @@ export default function PerfilPantalla() {
     if (perfil) reprogramar(perfil.id);
   };
   const [miRed, setMiRed] = useState<string | null>(null);
+  const [eligiendoAvatar, setEligiendoAvatar] = useState(false);
   const [nombre, setNombre] = useState(perfil?.nombre?? '');
   const [apellido, setApellido] = useState(perfil?.apellido?? '');
   const [telefono, setTelefono] = useState(perfil?.telefono ?? '');
@@ -146,7 +148,12 @@ export default function PerfilPantalla() {
 
         <Card>
           <View style={[s.fila, { marginBottom: 4 }]}>
-            <Avatar nombre={nombreCompleto(perfil)} color={ROL_COLOR[perfil.rol]} tamano={60} />
+            <Pressable onPress={() => setEligiendoAvatar(true)} accessibilityLabel="Elegir personaje">
+              <Avatar nombre={nombreCompleto(perfil)} color={ROL_COLOR[perfil.rol]} tamano={60} avatar={perfil.avatar} />
+              <View style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: colors.primary, borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="pencil" size={11} color="#FFFFFF" />
+              </View>
+            </Pressable>
             <View style={{ flex: 1, marginLeft: 14 }}>
               <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{nombreCompleto(perfil)}</Text>
               <Text style={s.textoFilaSec}>{perfil.email}</Text>
@@ -155,7 +162,11 @@ export default function PerfilPantalla() {
               </View>
             </View>
           </View>
+          <Pressable onPress={() => setEligiendoAvatar(true)} style={{ marginTop: 10 }}>
+            <Text style={{ color: colors.primary, fontWeight: '700' }}>{perfil.avatar ? 'Cambiar mi personaje' : 'Elegí tu personaje de la Biblia ›'}</Text>
+          </Pressable>
         </Card>
+        <ElegirAvatar visible={eligiendoAvatar} onClose={() => setEligiendoAvatar(false)} actual={perfil.avatar} perfilId={perfil.id} onGuardado={refrescarPerfil} />
 
         <Card>
           <Text style={s.textoFilaSec}>Red</Text>

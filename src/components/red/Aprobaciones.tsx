@@ -94,7 +94,7 @@ export function Aprobaciones({ redId, onCambio }: { redId: string; onCambio?: ()
         pendientes.map((p) => (
           <Card key={p.id}>
             <View style={s.fila}>
-              <Avatar nombre={nombreCompleto(p)} color={colors.warning} />
+              <Avatar nombre={nombreCompleto(p)} color={colors.warning} avatar={(p as any).avatar} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={s.textoFila}>{nombreCompleto(p)}</Text>
                 <Text style={s.textoFilaSec}>{p.email}</Text>

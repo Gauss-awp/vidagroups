@@ -169,7 +169,7 @@ export default function AdministrarIglesia() {
             return (
               <Card key={u.id} onPress={() => abrir(u)}>
                 <View style={s.fila}>
-                  <Avatar nombre={nombreCompleto(u)} color={ROL_COLOR[u.rol]} />
+                  <Avatar nombre={nombreCompleto(u)} color={ROL_COLOR[u.rol]} avatar={(u as any).avatar} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={s.textoFila}>
                       {nombreCompleto(u)}

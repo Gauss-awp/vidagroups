@@ -105,7 +105,7 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
 
   const fila = (tipo: Tipo, p: Perfil, puedeQuitar: boolean) => (
     <View key={p.id} style={[s.fila, { paddingVertical: 10 }]}>
-      <Avatar nombre={nombreCompleto(p)} color={ROL_COLOR[p.rol]} tamano={34} />
+      <Avatar nombre={nombreCompleto(p)} color={ROL_COLOR[p.rol]} tamano={34} avatar={(p as any).avatar} />
       <View style={{ flex: 1, marginLeft: 10 }}>
         <Text style={s.textoFila}>{nombreCompleto(p)}</Text>
       </View>
@@ -169,7 +169,7 @@ export function ResponsablesRed({ redId, onCambio }: { redId: string; onCambio?:
         ) : null}
         {lista.map((c) => (
           <Pressable key={c.id} onPress={() => agregar(c)} style={s.filaLista}>
-            <Avatar nombre={nombreCompleto(c)} color={ROL_COLOR[c.rol]} tamano={34} />
+            <Avatar nombre={nombreCompleto(c)} color={ROL_COLOR[c.rol]} tamano={34} avatar={(c as any).avatar} />
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={s.textoFila}>{nombreCompleto(c)}</Text>
               <Text style={s.textoFilaSec}>{ROL_LABEL[c.rol]}</Text>

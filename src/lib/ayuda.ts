@@ -167,6 +167,11 @@ export const AYUDA: ItemAyuda[] = [
       'Tocá "Registrate", completá tu nombre, elegí tu red y tu servicio: Guía de un grupo, Guía Supervisor, Encargado de red, Pastor o Consolidación. Si sos guía, elegí también tu grupo (o "Es un grupo nuevo" si todavía no está en la lista). Después tu correo y una contraseña: te llega un código para confirmar la cuenta.\n\nLa app te dice quién te aprueba según el servicio que elegiste.',
   },
   {
+    titulo: '¿Cómo elijo mi personaje?',
+    texto:
+      'En Perfil, tocá tu círculo (o "Elegí tu personaje de la Biblia"). Elegí uno de los personajes, mirá su historia y su cita, y tocá "Guardar". Se va a ver al lado de tu nombre en toda la app. Lo podés cambiar cuando quieras, o volver a tus iniciales.',
+  },
+  {
     titulo: '¿Cómo instalo la app en el iPhone?',
     texto:
       'Abrí el link de la app en Safari (tiene que ser Safari). Tocá el botón Compartir (el cuadrado con la flecha) → "Agregar a inicio" → "Agregar". Desde ahí abrila siempre con el ícono.',

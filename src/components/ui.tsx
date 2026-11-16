@@ -1,4 +1,5 @@
 import React from 'react';
+import { AvatarBiblico, esPersonaje } from '@/components/avatar/AvatarBiblico';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -418,7 +419,19 @@ export function Badge({ texto, color = colors.primary }: { texto: string; color?
   );
 }
 
-export function Avatar({ nombre, color = colors.primary, tamano = 40 }: { nombre: string; color?: string; tamano?: number }) {
+export function Avatar({
+  nombre,
+  color = colors.primary,
+  tamano = 40,
+  avatar,
+}: {
+  nombre: string;
+  color?: string;
+  tamano?: number;
+  /** Personaje bíblico elegido (si no tiene, se muestran las iniciales) */
+  avatar?: string | null;
+}) {
+  if (esPersonaje(avatar)) return <AvatarBiblico personaje={avatar} tamano={tamano} />;
   return (
     <View
       style={{
