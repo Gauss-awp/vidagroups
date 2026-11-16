@@ -8,7 +8,7 @@ import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, Path, Rect } from 'react
 
 type Peinado = 'corto' | 'rulos' | 'calvo' | 'largo' | 'velo' | 'turbante';
 type Objeto =
-  | 'arcoiris' | 'estrellas' | 'vara' | 'trompeta' | 'antorcha' | 'lampara' | 'arpa' | 'fuego' | 'leon' | 'pez'
+  | 'arca' | 'estrellas' | 'vara' | 'trompeta' | 'antorcha' | 'lampara' | 'arpa' | 'fuego' | 'leon' | 'pez'
   | 'agua' | 'llave' | 'pergamino' | 'libro' | 'ladrillos' | 'flor' | 'espigas' | 'palmera' | 'corazon' | 'cetro'
   | 'frasco' | 'tela' | 'jarra' | 'pandero' | 'carpa' | 'tunica';
 
@@ -40,10 +40,10 @@ const CANOSO = '#D6D3D1';
 const BLANCO = '#F5F5F4';
 
 export const PERSONAJES: Record<string, Personaje> = {
-  noe: { nombre: 'Noé', detalle: 'Construyó el arca y vio el arco iris', cita: 'Génesis 9:13', fondo: '#DBEAFE', piel: P2, pelo: BLANCO, peinado: 'calvo', barba: 'larga', barbaColor: BLANCO, ropa: '#7C5A3A', objeto: 'arcoiris' },
+  noe: { nombre: 'Noé', detalle: 'Construyó el arca', cita: 'Génesis 6:14', fondo: '#DBEAFE', piel: P2, pelo: BLANCO, peinado: 'calvo', barba: 'larga', barbaColor: BLANCO, ropa: '#7C5A3A', objeto: 'arca' },
   abraham: { nombre: 'Abraham', detalle: 'Contó las estrellas: así sería su descendencia', cita: 'Génesis 15:5', fondo: '#E0E7FF', piel: P3, pelo: CANOSO, peinado: 'turbante', tela: '#E7E5E4', barba: 'larga', barbaColor: CANOSO, ropa: '#57534E', objeto: 'estrellas' },
   sara: { nombre: 'Sara', detalle: 'Rió de alegría con Isaac', cita: 'Génesis 21:6', mujer: true, fondo: '#FFEDD5', piel: P2, pelo: CANOSO, peinado: 'velo', tela: '#FDBA74', ropa: '#C2410C', aros: true, objeto: 'flor' },
-  jose: { nombre: 'José', detalle: 'La túnica de colores', cita: 'Génesis 37:3', fondo: '#FFE4E6', piel: P2, pelo: NEGRO, peinado: 'corto', ropa: '#DC2626', objeto: 'tunica' },
+  jose: { nombre: 'José', detalle: 'La túnica especial que le regaló su padre', cita: 'Génesis 37:3', fondo: '#FEF3C7', piel: P2, pelo: NEGRO, peinado: 'corto', ropa: '#92400E', objeto: 'tunica' },
   moises: { nombre: 'Moisés', detalle: 'La vara que abrió el mar', cita: 'Éxodo 14:16', fondo: '#FEF3C7', piel: P3, pelo: '#9CA3AF', peinado: 'largo', barba: 'larga', barbaColor: '#D1D5DB', ropa: '#B45309', objeto: 'vara' },
   miriam: { nombre: 'Miriam', detalle: 'Cantó con el pandero', cita: 'Éxodo 15:20', mujer: true, fondo: '#FAE8FF', piel: P3, pelo: NEGRO, peinado: 'largo', ropa: '#A21CAF', tocado: 'vincha', aros: true, objeto: 'pandero' },
   josue: { nombre: 'Josué', detalle: 'Las trompetas de Jericó', cita: 'Josué 6:20', fondo: '#FEF9C3', piel: P3, pelo: CASTANO, peinado: 'corto', barba: 'corta', barbaColor: CASTANO, ropa: '#4D7C0F', objeto: 'trompeta' },
@@ -77,12 +77,18 @@ const ORO = '#F59E0B';
 
 function ObjetoDibujo({ objeto }: { objeto: Objeto }) {
   switch (objeto) {
-    case 'arcoiris':
+    case 'arca':
       return (
-        <G fill="none" strokeWidth={4}>
-          <Path d="M6 44 Q50 -6 94 44" stroke="#F87171" />
-          <Path d="M11 46 Q50 3 89 46" stroke="#FBBF24" />
-          <Path d="M16 48 Q50 12 84 48" stroke="#60A5FA" />
+        <G>
+          {/* Agua */}
+          <Path d="M60 44 Q66 40 72 44 Q78 48 84 44 Q90 40 96 44 L100 50 L58 50Z" fill="#60A5FA" />
+          {/* Casco */}
+          <Path d="M60 32 L100 32 L93 44 L66 44Z" fill="#92400E" />
+          <Line x1={62} y1={37} x2={97} y2={37} stroke="#78350F" strokeWidth={1} />
+          {/* Casa con techo */}
+          <Rect x={70} y={22} width={20} height={10} fill="#B45309" />
+          <Path d="M67 23 L80 14 L93 23Z" fill="#78350F" />
+          <Rect x={78} y={25} width={4} height={4} fill="#FDE68A" />
         </G>
       );
     case 'estrellas':
@@ -276,16 +282,16 @@ function Cara({ p }: { p: Personaje }) {
       {largo ? <Path d="M29 52 Q27 24 50 23 Q73 24 71 52 L74 88 L26 88Z" fill={colorAtras} /> : null}
 
       {/* Ropa y cuello */}
+      <Ellipse cx={50} cy={100} rx={36} ry={24} fill={p.ropa} />
       {p.objeto === 'tunica' ? (
         <G>
-          <Ellipse cx={50} cy={100} rx={36} ry={24} fill="#DC2626" />
-          <Ellipse cx={50} cy={100} rx={28} ry={20} fill="#F59E0B" />
-          <Ellipse cx={50} cy={100} rx={20} ry={16} fill="#16A34A" />
-          <Ellipse cx={50} cy={100} rx={12} ry={12} fill="#2563EB" />
+          {/* Túnica a rayas en tonos tierra */}
+          <Rect x={36} y={80} width={5} height={22} fill="#D97706" />
+          <Rect x={44} y={78} width={3} height={24} fill="#FDE68A" />
+          <Rect x={53} y={78} width={3} height={24} fill="#FDE68A" />
+          <Rect x={59} y={80} width={5} height={22} fill="#D97706" />
         </G>
-      ) : (
-        <Ellipse cx={50} cy={100} rx={36} ry={24} fill={p.ropa} />
-      )}
+      ) : null}
       <Rect x={44} y={66} width={12} height={12} fill={p.piel} />
       <Rect x={44} y={72} width={12} height={4} fill="#000" opacity={0.08} />
 
