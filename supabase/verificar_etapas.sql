@@ -26,6 +26,7 @@ from (values
   (32, 'Registro por servicio', exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='solicitud_rol')),
   (33, 'Planilla idéntica a la de la iglesia', to_regclass('public.planilla_meses') is not null),
   (34, 'Arreglo relación planilla', exists (select 1 from information_schema.columns where table_schema='public' and table_name='planilla_filas' and column_name='id')),
-  (35, 'Panel de Seguimiento', exists (select 1 from pg_proc where proname='panel_seguimiento'))
+  (35, 'Panel de Seguimiento', exists (select 1 from pg_proc where proname='panel_seguimiento')),
+  (36, 'Seguimiento ajustado', exists (select 1 from information_schema.columns where table_schema='public' and table_name='seguimiento_charlas' and column_name='tipos'))
 ) as e(etapa, que_agrega, ok)
 order by etapa;

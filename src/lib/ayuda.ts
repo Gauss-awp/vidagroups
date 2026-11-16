@@ -132,7 +132,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['pastor', 'guia_supervisor', 'apostol'],
     titulo: '¿Para qué sirve "Seguimiento"?',
     texto:
-      'Te muestra dónde poner la atención esta semana: con qué guías hablar (y por qué), qué grupos necesitan ayuda (en rojo) o hay que mirar (en amarillo), y qué personas nuevas se trabaron en la consolidación (por ejemplo, hicieron el Encuentro y no empezaron el Pos-encuentro).\n\nCuando hablás con un guía, tocá "Ya hablé": sale de la lista por una semana y queda anotado en "Charlas del último mes". Los pastores y encargados lo ven desde "Mi Red"; los Guías Supervisores, desde "Mis Guías", solo con sus grupos.',
+      'Lo ven los pastores y encargados, en "Mi Red". Muestra, en este orden: con qué guías hablar (y por qué), cómo están los grupos (rojo: 3 semanas sin cargar reunión; amarillo: algún otro problema), qué personas nuevas se trabaron en la consolidación y de qué guía son, y cómo viene la red este mes contra el anterior.\n\nSe marca un problema cuando: pasan 2 semanas sin cargar reunión, la asistencia baja 15 puntos o más, hay 4 o más miembros con 3 faltas seguidas sin contactar, alguien lleva 3 semanas del Encuentro sin empezar el Pos-encuentro, un Pos-encuentro no avanza hace un mes, o una persona nueva lleva 2 semanas sin ningún contacto.\n\nCuando hablás con un guía, tocá "Ya hablé": sale de la lista y vuelve solo si aparece un problema distinto.',
   },
 
   // ------------------------- Administrador -------------------------
