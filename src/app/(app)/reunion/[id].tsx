@@ -7,7 +7,7 @@ import { colors } from '@/lib/theme';
 import { formatoFecha, hoyISO } from '@/lib/utils';
 import { encolar, esErrorDeRed, leerCache } from '@/lib/sinConexion';
 import { reprogramarPronto } from '@/lib/recordatorios';
-import { Boton, Campo, Card, Cargando, SelectorFecha, Vacio, s } from '@/components/ui';
+import { Boton, Campo, Card, Cargando, HojaModal, SelectorFecha, Vacio, s } from '@/components/ui';
 import { alerta } from '@/lib/alerta';
 
 interface Miembro {
@@ -47,6 +47,13 @@ export default function ModoReunion() {
   );
   const [guardando, setGuardando] = useState(false);
   const [sinRed, setSinRed] = useState(false);
+  // Personas que se cargaron en la app después de esta fecha (por si vinieron igual)
+  const [posteriores, setPosteriores] = useState<Miembro[]>([]);
+  const [verPosteriores, setVerPosteriores] = useState(false);
+  // Alguien que vino por primera vez y todavía no está en la app
+  const [nuevaVisible, setNuevaVisible] = useState(false);
+  const [nueva, setNueva] = useState({ nombre: '', apellido: '', telefono: '' });
+  const [creandoNueva, setCreandoNueva] = useState(false);
 
   // Carga los miembros y, si la reunión de esa fecha ya existe, lo que se había cargado
   useEffect(() => {
@@ -68,6 +75,7 @@ export default function ModoReunion() {
         const copia = await leerCache<{ miembros: Miembro[] }>(`asis:${grupoId}`);
         const grupo = await leerCache<{ grupo: { nombre: string } }>(`grupo:${grupoId}`);
         setHermanos(copia?.miembros ?? []);
+        setPosteriores([]);
         setGrupoNombre(grupo?.grupo.nombre ?? '');
         setCargando(false);
         return;
@@ -75,11 +83,11 @@ export default function ModoReunion() {
       setSinRed(false);
       setGrupoNombre((g.data as { nombre: string } | null)?.nombre ?? '');
       // Los que estaban en el grupo ese día (incluye a los que se quitaron después)
-      setHermanos(
-        ((m.data ?? []) as (Miembro & { creado_en: string; activo: boolean; baja_en: string | null })[]).filter(
-          (x) => x.creado_en.slice(0, 10) <= fecha && (x.activo || (!!x.baja_en && x.baja_en.slice(0, 10) >= fecha))
-        )
-      );
+      const todos = (m.data ?? []) as (Miembro & { creado_en: string; activo: boolean; baja_en: string | null })[];
+      setHermanos(todos.filter((x) => x.creado_en.slice(0, 10) <= fecha && (x.activo || (!!x.baja_en && x.baja_en.slice(0, 10) >= fecha))));
+      // Los que se cargaron después: si se marcan, su fecha de ingreso pasa a ser esta reunión (etapa 39)
+      setPosteriores(todos.filter((x) => x.activo && x.creado_en.slice(0, 10) > fecha));
+      setVerPosteriores(false);
       const re = r.data as any;
       setExiste(!!re);
       const v: Record<string, boolean> = {};
@@ -126,6 +134,49 @@ export default function ModoReunion() {
   const presentes = miembros.length - ausentes.length;
   const consolidados = ausentes.filter((h) => motivos[h.id]).length;
   const nombre = (h: Miembro) => `${h.nombre} ${h.apellido ?? ''}`.trim();
+
+  const ordenar = (lista: Miembro[]) => [...lista].sort((a, b) => nombre(a).localeCompare(nombre(b), 'es'));
+
+  // Alguien que se cargó después pero vino a esta reunión: pasa a la lista y queda presente
+  const sumarPosterior = (h: Miembro) => {
+    setHermanos((prev) => ordenar([...prev, h]));
+    setPosteriores((prev) => prev.filter((x) => x.id !== h.id));
+    setVino((prev) => ({ ...prev, [h.id]: true }));
+  };
+
+  // Alguien que vino por primera vez: se crea con la fecha de esta reunión y queda presente
+  const agregarNueva = async () => {
+    if (!nueva.nombre.trim()) {
+      alerta('Falta el nombre', 'Escribí al menos el nombre de la persona.');
+      return;
+    }
+    if (sinRed) {
+      alerta('Sin conexión', 'Para agregar a alguien nuevo necesitás señal. Anotalo y cargalo cuando vuelva la conexión.');
+      return;
+    }
+    setCreandoNueva(true);
+    const { data, error } = await supabase
+      .from('miembros_grupo')
+      .insert({
+        grupo_id: grupoId,
+        nombre: nueva.nombre.trim(),
+        apellido: nueva.apellido.trim(),
+        telefono: nueva.telefono.trim() || null,
+        creado_en: `${fecha}T12:00:00`,
+      })
+      .select('id, nombre, apellido')
+      .single();
+    setCreandoNueva(false);
+    if (error || !data) {
+      alerta('No se pudo agregar', error?.message ?? 'Probá de nuevo.');
+      return;
+    }
+    const h = data as Miembro;
+    setHermanos((prev) => ordenar([...prev, h]));
+    setVino((prev) => ({ ...prev, [h.id]: true }));
+    setNueva({ nombre: '', apellido: '', telefono: '' });
+    setNuevaVisible(false);
+  };
 
   const terminar = async () => {
     const numeroOfrenda = datos.ofrenda.trim() ? Number(datos.ofrenda.replace(/[$\s.]/g, '').replace(',', '.')) : null;
@@ -217,7 +268,7 @@ export default function ModoReunion() {
             <SelectorFecha valor={fecha} onChange={setFecha} marcarFechas={fechasConReunion} />
             {miembros.length === 0 ? (
               <Card>
-                <Text style={s.textoFilaSec}>Todavía no hay miembros en este grupo. Agregalos en la pestaña Miembros.</Text>
+                <Text style={s.textoFilaSec}>Todavía no hay miembros en este grupo. Agregalos en la pestaña Miembros o con "Vino alguien nuevo".</Text>
               </Card>
             ) : (
               <>
@@ -257,6 +308,45 @@ export default function ModoReunion() {
                 </Pressable>
               </>
             )}
+
+            <Pressable
+              onPress={() => setNuevaVisible(true)}
+              style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center' }}
+              accessibilityLabel="Agregar a una persona que vino por primera vez"
+            >
+              <Ionicons name="person-add-outline" size={20} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>Vino alguien nuevo</Text>
+            </Pressable>
+
+            {posteriores.length > 0 ? (
+              <Card style={{ marginTop: 12 }}>
+                <Pressable onPress={() => setVerPosteriores(!verPosteriores)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: colors.text, fontWeight: '600', flex: 1 }}>
+                    ¿Vino alguien que cargaste después? ({posteriores.length})
+                  </Text>
+                  <Ionicons name={verPosteriores ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSec} />
+                </Pressable>
+                {verPosteriores ? (
+                  <>
+                    <Text style={[s.textoFilaSec, { marginTop: 6, marginBottom: 10 }]}>
+                      Se sumaron a la app después del {formatoFecha(fecha)}. Tocá a los que vinieron: esta pasa a ser su primera reunión.
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {posteriores.map((h) => (
+                        <Pressable
+                          key={h.id}
+                          onPress={() => sumarPosterior(h)}
+                          style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                        >
+                          <Ionicons name="add" size={16} color={colors.primary} />
+                          <Text style={{ color: colors.text }}>{nombre(h)}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+              </Card>
+            ) : null}
             <Boton
               titulo={`${presentes} de ${miembros.length} vinieron · Siguiente`}
               icono="arrow-forward"
@@ -387,6 +477,22 @@ export default function ModoReunion() {
           </View>
         ) : null}
       </ScrollView>
+
+      <HojaModal visible={nuevaVisible} onClose={() => setNuevaVisible(false)} titulo="Vino alguien nuevo">
+        <Text style={{ color: colors.textSec, fontSize: 14, marginBottom: 12, lineHeight: 20 }}>
+          Se suma al grupo y queda presente en la reunión del {formatoFecha(fecha)}. Así esta primera vez ya le cuenta en su asistencia.
+        </Text>
+        <Campo etiqueta="Nombre" placeholder="Ej: Juan" value={nueva.nombre} onChangeText={(v) => setNueva({ ...nueva, nombre: v })} />
+        <Campo etiqueta="Apellido" placeholder="Ej: Pérez" value={nueva.apellido} onChangeText={(v) => setNueva({ ...nueva, apellido: v })} />
+        <Campo
+          etiqueta="Teléfono (opcional)"
+          placeholder="Ej: 3541 123456"
+          value={nueva.telefono}
+          onChangeText={(v) => setNueva({ ...nueva, telefono: v })}
+          keyboardType="phone-pad"
+        />
+        <Boton titulo="Agregar y marcar presente" icono="checkmark" onPress={agregarNueva} cargando={creandoNueva} />
+      </HojaModal>
     </>
   );
 }

@@ -17,7 +17,7 @@ export const AYUDA: ItemAyuda[] = [
     roles: ['guia', 'guia_supervisor'],
     titulo: '¿Cómo cargo la reunión de mi grupo?',
     texto:
-      'En tu grupo tocá el botón grande "Cargar la reunión". Son tres pasos:\n\n1. ¿Quién vino? Tocá a cada miembro que vino (o "Vinieron todos").\n2. ¿Por qué faltaron? Elegí un motivo para cada ausente y queda la "C". Si todavía no hablaste con alguien, dejalo en "Lo consolido después".\n3. Datos de la reunión: ofrenda, material, quién compartió.\n\nAl final tocá "Terminar". Funciona aunque no tengas señal: se envía sola cuando vuelve la conexión.',
+      'En tu grupo tocá el botón grande "Cargar la reunión". Son tres pasos:\n\n1. ¿Quién vino? Tocá a cada miembro que vino (o "Vinieron todos"). Si vino alguien por primera vez, tocá "Vino alguien nuevo".\n2. ¿Por qué faltaron? Elegí un motivo para cada ausente y queda la "C". Si todavía no hablaste con alguien, dejalo en "Lo consolido después".\n3. Datos de la reunión: ofrenda, material, quién compartió.\n\nAl final tocá "Terminar". Funciona aunque no tengas señal: se envía sola cuando vuelve la conexión.',
   },
   {
     roles: ['guia', 'guia_supervisor'],
@@ -30,6 +30,18 @@ export const AYUDA: ItemAyuda[] = [
     titulo: '¿Cómo completo las consolidaciones (las C)?',
     texto:
       'En la pestaña "Reuniones", las reuniones con ausentes sin C muestran "2 para consolidar · completar ›". Tocalo y vas directo al paso de los motivos. Elegí el motivo de cada uno y tocá "Terminar".\n\nTe llega un recordatorio el martes a las 19 h si te faltan C de la última reunión.',
+  },
+  {
+    roles: ['guia', 'guia_supervisor'],
+    titulo: 'Vino alguien por primera vez, ¿cómo lo cargo?',
+    texto:
+      'Mientras cargás la reunión, en el paso 1 ("¿Quién vino?") tocá "Vino alguien nuevo". Escribí su nombre, apellido y, si lo tenés, su teléfono, y tocá "Agregar y marcar presente".\n\nQueda sumado al grupo y presente en esa reunión, así su primera vez ya le cuenta en la asistencia y en la racha. Si su teléfono coincide con una tarjeta de consolidación del grupo, se une sola a esa tarjeta.',
+  },
+  {
+    roles: ['guia', 'guia_supervisor'],
+    titulo: 'Lo agregué después de la reunión, ¿cómo marco que vino?',
+    texto:
+      'Abrí esa reunión (pestaña "Reuniones" → tocá la reunión). En el paso 1 aparece "¿Vino alguien que cargaste después?": tocalo, tocá a la persona y terminá la carga.\n\nEsa reunión pasa a ser su primera reunión: su porcentaje y su racha se calculan desde ahí.',
   },
   {
     roles: ['guia', 'guia_supervisor'],
@@ -60,6 +72,18 @@ export const AYUDA: ItemAyuda[] = [
     titulo: '¿Cómo sigo a las personas que me derivaron?',
     texto:
       'En la pestaña "Consolidación" del grupo están las personas nuevas que la consolidadora te derivó. Marcá la fonovisita, la visita, los pilares (1 a 5), si comenzó el GV y el Encuentro.\n\nCuando hace el Encuentro aparecen el Pos-encuentro (las 10 clases) y el Reencuentro.',
+  },
+  {
+    roles: ['guia', 'guia_supervisor'],
+    titulo: '¿Dónde marco los pilares, el Encuentro o la Escuela de un miembro?',
+    texto:
+      'Tocá al miembro para abrir su perfil y bajá hasta "Consolidación". Ahí están los pilares (1 a 5), el Encuentro, el Pos-encuentro (las 10 clases), el Reencuentro, el Bautismo, la Sanidad interior y la Escuela de capacitación (Nivel 1, 2 y 3).\n\nSirve para todos los miembros, hayan llegado por una tarjeta o no. Si llegó por una tarjeta, lo que marques en el perfil se ve también en la tarjeta, y al revés.',
+  },
+  {
+    roles: ['guia', 'guia_supervisor', 'pastor'],
+    titulo: '¿Se llena sola la hoja DATOS de la planilla?',
+    texto:
+      'Sí. Lo que marcás en "Consolidación" del perfil pasa solo a la hoja DATOS al exportar: "SI", "NO", "SI- JUNIO" (el mes del Encuentro), "CURSANDO (3/5)" o "NIVEL 2".\n\nY al revés: si importás una planilla que ya tenía esos datos escritos, los botones del perfil se marcan solos. En "Editar datos" solo queda la dirección para escribir a mano.',
   },
   {
     roles: ['guia', 'guia_supervisor'],
