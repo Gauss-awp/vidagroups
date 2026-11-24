@@ -29,6 +29,7 @@ from (values
   (35, 'Panel de Seguimiento', exists (select 1 from pg_proc where proname='panel_seguimiento')),
   (36, 'Seguimiento ajustado', exists (select 1 from information_schema.columns where table_schema='public' and table_name='seguimiento_charlas' and column_name='tipos')),
   (37, 'Avatars de personajes', exists (select 1 from pg_proc where proname='elegir_avatar')),
-  (38, 'Consolidación en los perfiles', exists (select 1 from pg_proc where proname='datos_planilla_miembro'))
+  (38, 'Consolidación en los perfiles', exists (select 1 from pg_proc where proname='datos_planilla_miembro')),
+  (39, 'Primera reunión de los nuevos', exists (select 1 from pg_proc where proname='ajustar_ingreso_por_asistencia'))
 ) as e(etapa, que_agrega, ok)
 order by etapa;

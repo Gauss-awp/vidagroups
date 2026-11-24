@@ -39,6 +39,10 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
   // Datos de la reunión para la planilla
   const [datos, setDatos] = useState({ notas: '', ofrenda: '', material: '', compartio: '' });
   const [guardandoDatos, setGuardandoDatos] = useState(false);
+  // Persona nueva que vino a esta reunión
+  const [nuevaVisible, setNuevaVisible] = useState(false);
+  const [nueva, setNueva] = useState({ nombre: '', apellido: '', telefono: '' });
+  const [creandoNueva, setCreandoNueva] = useState(false);
   // Sin señal: lo que se marca queda en el celular y se envía después
   const [sinRed, setSinRed] = useState(false);
   const [pendientes, setPendientes] = useState(0);
@@ -264,6 +268,41 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
     else alerta('Listo', 'Datos de la reunión guardados.');
   };
 
+  // Agrega a alguien que vino por primera vez y lo deja presente en esta reunión.
+  // Su fecha de alta es la de la reunión: así esta primera vez le cuenta.
+  const agregarNueva = async () => {
+    if (!nueva.nombre.trim()) {
+      alerta('Falta el nombre', 'Escribí al menos el nombre de la persona.');
+      return;
+    }
+    if (sinRed || reunionId === 'local') {
+      alerta('Sin conexión', 'Para agregar a alguien nuevo necesitás señal. Anotalo y cargalo cuando vuelva la conexión.');
+      return;
+    }
+    setCreandoNueva(true);
+    const { data, error } = await supabase
+      .from('miembros_grupo')
+      .insert({
+        grupo_id: grupoId,
+        nombre: nueva.nombre.trim(),
+        apellido: nueva.apellido.trim(),
+        telefono: nueva.telefono.trim() || null,
+        creado_en: `${fecha}T12:00:00`,
+      })
+      .select('id, nombre, apellido')
+      .single();
+    setCreandoNueva(false);
+    if (error || !data) {
+      alerta('No se pudo agregar', error?.message ?? 'Probá de nuevo.');
+      return;
+    }
+    const m = data as MiembroLite;
+    setMiembros((prev) => [...prev, m].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
+    setNueva({ nombre: '', apellido: '', telefono: '' });
+    setNuevaVisible(false);
+    await guardar([{ miembro_id: m.id, presente: true }]);
+  };
+
   const borrarReunion = () => {
     if (!reunionId) return;
     if (sinRed || reunionId === 'local') {
@@ -319,6 +358,7 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
       {miembros.length === 0 ? (
         <Card>
           <Vacio icono="people-outline" titulo="Sin miembros" texto="Agregá miembros en la pestaña Miembros para tomar asistencia." />
+          <Boton titulo="Persona nueva en esta reunión" icono="person-add-outline" variante="secundario" compacto onPress={() => setNuevaVisible(true)} />
         </Card>
       ) : (
         <Card>
@@ -375,6 +415,14 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
               </Pressable>
             );
           })}
+          <Pressable
+            onPress={() => setNuevaVisible(true)}
+            style={[s.fila, { paddingTop: 12, gap: 8 }]}
+            accessibilityLabel="Agregar una persona nueva que vino a esta reunión"
+          >
+            <Ionicons name="person-add-outline" size={20} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>Vino alguien nuevo</Text>
+          </Pressable>
         </Card>
       )}
 
@@ -411,6 +459,22 @@ export function AsistenciaTab({ grupoId, refreshKey }: { grupoId: string; refres
           ))}
         </Card>
       ) : null}
+
+      <HojaModal visible={nuevaVisible} onClose={() => setNuevaVisible(false)} titulo="Vino alguien nuevo">
+        <Text style={{ color: colors.textSec, fontSize: 14, marginBottom: 12, lineHeight: 20 }}>
+          Se suma al grupo y queda presente en la reunión del {formatoFecha(fecha)}. Así esta primera vez ya le cuenta en su asistencia.
+        </Text>
+        <Campo etiqueta="Nombre" placeholder="Ej: Juan" value={nueva.nombre} onChangeText={(v) => setNueva({ ...nueva, nombre: v })} />
+        <Campo etiqueta="Apellido" placeholder="Ej: Pérez" value={nueva.apellido} onChangeText={(v) => setNueva({ ...nueva, apellido: v })} />
+        <Campo
+          etiqueta="Teléfono (opcional)"
+          placeholder="Ej: 3541 123456"
+          value={nueva.telefono}
+          onChangeText={(v) => setNueva({ ...nueva, telefono: v })}
+          keyboardType="phone-pad"
+        />
+        <Boton titulo="Agregar y marcar presente" icono="checkmark" onPress={agregarNueva} cargando={creandoNueva} />
+      </HojaModal>
 
       <HojaModal visible={!!consolidando} onClose={() => setConsolidando(null)} titulo="Consolidación">
         <Text style={{ color: colors.textSec, fontSize: 14, marginBottom: 12, lineHeight: 20 }}>
