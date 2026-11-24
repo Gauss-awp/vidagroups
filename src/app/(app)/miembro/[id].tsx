@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { colorPorcentaje, colors } from '@/lib/theme';
 import type { Miembro, Moneda } from '@/lib/types';
 import { MESES, formatoCumple, formatoFecha, formatoMoneda, nombreCompleto, parseCumple, porcentaje, sumarDias, hoyISO } from '@/lib/utils';
-import { Avatar, Boton, Campo, Card, Cargando, Chip, HojaModal, PasosConsolidacion, SeccionTitulo, Vacio, s } from '@/components/ui';
+import { Avatar, Boton, Campo, Card, Cargando, Chip, HojaModal, SeccionTitulo, Vacio, s } from '@/components/ui';
+import { ConsolidacionMiembro } from '@/components/mision_joven/ConsolidacionMiembro';
 import { Notas } from '@/components/notas/Notas';
 import { alerta } from '@/lib/alerta';
 
@@ -23,15 +24,10 @@ interface PagoEvento {
 }
 
 /** Historial de un miembro: asistencia, pagos y consolidación, con sus datos editables. */
+// El resto de la hoja DATOS (bautismo, pilares, encuentro…) se llena solo
+// con los botones de la sección Consolidación.
 const DATOS_PLANILLA: { campo: string; etiqueta: string; ejemplo: string }[] = [
   { campo: 'direccion', etiqueta: 'Dirección', ejemplo: 'Emilio Caraffa 256' },
-  { campo: 'bautismo', etiqueta: 'Bautismo', ejemplo: 'SI / NO' },
-  { campo: 'sanidad_interior', etiqueta: 'Sanidad interior', ejemplo: 'SI / NO' },
-  { campo: 'pilares_dato', etiqueta: 'Pilares', ejemplo: 'SI / NO' },
-  { campo: 'encuentro_dato', etiqueta: 'Encuentro', ejemplo: 'SI- JUNIO' },
-  { campo: 'reencuentro_dato', etiqueta: 'Reencuentro', ejemplo: 'SI- SEPTIEMBRE' },
-  { campo: 'pos_encuentro_dato', etiqueta: 'Pos encuentro', ejemplo: 'SI / NO' },
-  { campo: 'escuela_capacitacion', etiqueta: 'Escuela de capacitación', ejemplo: 'Si / No' },
 ];
 
 export default function MiembroPantalla() {
@@ -72,12 +68,9 @@ export default function MiembroPantalla() {
         .select('monto_pagado, fecha_pago, nota, evento:eventos(nombre, moneda, costo_total)')
         .eq('miembro_id', id)
         .order('fecha_pago', { ascending: false }),
-      supabase
-        .from('tarjetas_consolidacion')
-        .select('*')
-        .eq('grupo_id', mm.grupo_id)
-        .ilike('nombre', `${mm.nombre.trim()}%`)
-        .limit(1),
+      (mm as any).tarjeta_id
+        ? supabase.from('tarjetas_consolidacion').select('*').eq('id', (mm as any).tarjeta_id).limit(1)
+        : Promise.resolve({ data: [] as Record<string, any>[] }),
     ]);
 
     setReuniones(
@@ -166,6 +159,19 @@ export default function MiembroPantalla() {
     cargar();
   };
 
+  // Botones de consolidación: se ve el cambio enseguida y se guarda
+  const cambiarConsolidacion = async (cambios: Record<string, unknown>) => {
+    const antes = miembro;
+    setMiembro({ ...miembro, ...cambios } as typeof miembro);
+    const { data, error: err } = await supabase.from('miembros_grupo').update(cambios).eq('id', miembro.id).select('*, grupo:groups(nombre)');
+    if (err || !data?.length) {
+      setMiembro(antes);
+      alerta('No se pudo guardar', err?.message ?? 'No tenés permiso para cambiar los datos de este miembro.');
+      return;
+    }
+    setMiembro(data[0] as typeof miembro);
+  };
+
   const tel = miembro.telefono?.replace(/[^0-9]/g, '') ?? '';
   const wa = tel ? (tel.startsWith('54') ? tel : `549${tel.replace(/^0/, '')}`) : '';
 
@@ -246,6 +252,9 @@ export default function MiembroPantalla() {
           </Card>
         )}
 
+        <SeccionTitulo titulo="Consolidación" />
+        <ConsolidacionMiembro miembro={miembro as Record<string, any>} tarjeta={tarjeta} onCambio={cambiarConsolidacion} />
+
         <SeccionTitulo titulo="Pagos" />
         {pagos.length === 0 ? (
           <Card>
@@ -282,15 +291,6 @@ export default function MiembroPantalla() {
           </>
         ) : null}
 
-        {tarjeta ? (
-          <>
-            <SeccionTitulo titulo="Consolidación" />
-            <Card>
-              <Text style={s.textoFilaSec}>Llegó por consolidación el {formatoFecha(String(tarjeta.creado_en).slice(0, 10))}</Text>
-              <PasosConsolidacion tarjeta={tarjeta} />
-            </Card>
-          </>
-        ) : null}
       </ScrollView>
 
       <HojaModal visible={editando} onClose={() => setEditando(false)} titulo="Editar datos">
@@ -312,7 +312,9 @@ export default function MiembroPantalla() {
         </View>
         <Text style={[s.textoFilaSec, { marginBottom: 14 }]}>En la planilla, los guías aparecen con "G" en azul y el equipo en celeste.</Text>
         <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 4 }}>Datos de la planilla</Text>
-        <Text style={[s.textoFilaSec, { marginBottom: 10 }]}>Lo que va en la hoja DATOS. Se escribe igual que en la planilla de la iglesia.</Text>
+        <Text style={[s.textoFilaSec, { marginBottom: 10 }]}>
+          Bautismo, pilares, encuentro y lo demás se marcan con los botones de la sección Consolidación y pasan solos a la planilla.
+        </Text>
         {DATOS_PLANILLA.map((d) => (
           <Campo
             key={d.campo}

@@ -45,6 +45,21 @@ export interface Miembro {
   rol_equipo?: 'guia' | 'equipo' | null;
   activo: boolean;
   creado_en: string;
+  /** Consolidación (etapa 38): llena sola la hoja DATOS de la planilla */
+  tarjeta_id?: string | null;
+  pilar_1?: boolean;
+  pilar_2?: boolean;
+  pilar_3?: boolean;
+  pilar_4?: boolean;
+  pilar_5?: boolean;
+  encuentro?: boolean;
+  encuentro_en?: string | null;
+  pos_encuentro?: number[];
+  reencuentro?: boolean;
+  reencuentro_en?: string | null;
+  bautizado?: boolean | null;
+  hizo_sanidad?: boolean | null;
+  en_escuela?: boolean | null;
 }
 
 export interface Habito {

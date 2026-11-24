@@ -37,7 +37,8 @@ export function ConsolidacionGuia({ miGV, grupoId }: { miGV: string; grupoId: st
           apellido: t.apellido || '',
           telefono: t.telefono,
           activo: true,
-          // si tenés profile_id o tarjeta_id, agregalo acá también
+          // Queda unido a la tarjeta: lo que se marque en un lado aparece en el otro
+          tarjeta_id: t.id,
         });
         if(eIns) console.log('Error insertando en miembros_grupo', eIns);
       } else {
