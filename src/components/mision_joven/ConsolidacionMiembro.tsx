@@ -1,5 +1,5 @@
 import React from 'react';
-import { Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, SelectorPilares, SelectorPosEncuentro, s } from '@/components/ui';
 import { colors } from '@/lib/theme';
@@ -86,10 +86,46 @@ export function ConsolidacionMiembro({
       <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 0.5, borderTopColor: colors.border }}>
         {fila('Bautismo', !!miembro.bautizado, 'bautizado')}
         {fila('Sanidad interior', !!miembro.hizo_sanidad, 'hizo_sanidad')}
-        {fila('Escuela de capacitación', !!miembro.en_escuela, 'en_escuela')}
+        <SelectorNivelEscuela nivel={miembro.escuela_nivel ?? 0} onCambio={(n) => onCambio({ escuela_nivel: n })} />
       </View>
 
       <Text style={[s.textoFilaSec, { marginTop: 8 }]}>Esto se pasa solo a la hoja DATOS de la planilla.</Text>
     </Card>
+  );
+}
+
+/** Escuela de capacitación: Nivel 1, 2 y 3. Tocar un nivel marca hasta ahí; tocar el último lo desmarca. */
+function SelectorNivelEscuela({ nivel, onCambio }: { nivel: number; onCambio: (n: number) => void }) {
+  return (
+    <View style={{ paddingVertical: 8 }}>
+      <Text style={{ color: colors.text, fontSize: 15, marginBottom: 8 }}>
+        Escuela de capacitación{' '}
+        <Text style={{ color: colors.textSec }}>({nivel > 0 ? `nivel ${nivel}` : 'no empezó'})</Text>
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {[1, 2, 3].map((n) => {
+          const hecho = n <= nivel;
+          return (
+            <Pressable
+              key={n}
+              onPress={() => onCambio(nivel === n ? n - 1 : n)}
+              style={{
+                flex: 1,
+                height: 40,
+                borderRadius: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: hecho ? colors.success : colors.cardAlt,
+                borderWidth: 1,
+                borderColor: hecho ? colors.success : colors.border,
+              }}
+              accessibilityLabel={`Nivel ${n}${hecho ? ', hecho' : ''}`}
+            >
+              <Text style={{ color: hecho ? '#FFFFFF' : colors.textSec, fontWeight: '800', fontSize: 14 }}>Nivel {n}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }

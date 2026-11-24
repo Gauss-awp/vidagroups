@@ -2,9 +2,9 @@
 -- VidaGroups · Etapa 38: Consolidación en el perfil de cada miembro
 --   · Todos los miembros (vengan o no de una tarjeta) tienen su avance:
 --     Pilares (1 a 5), Encuentro, Pos-encuentro (1 a 10), Reencuentro,
---     Bautismo, Sanidad interior y Escuela de capacitación.
+--     Bautismo, Sanidad interior y Escuela de capacitación (Nivel 1, 2 o 3).
 --   · La hoja DATOS de la planilla se llena sola con esos botones
---     ("SI", "NO", "SI- JUNIO", "CURSANDO (3/5)"...).
+--     ("SI", "NO", "SI- JUNIO", "CURSANDO (3/5)", "NIVEL 2"...).
 --   · Si se importa una planilla, se lee lo escrito y se marcan los botones.
 --   · Si el miembro vino por una tarjeta, quedan unidos: lo que se marca
 --     en la tarjeta aparece en el perfil y al revés.
@@ -30,7 +30,10 @@ alter table public.miembros_grupo
   add column if not exists reencuentro_en date,
   add column if not exists bautizado boolean,
   add column if not exists hizo_sanidad boolean,
-  add column if not exists en_escuela boolean;
+  add column if not exists escuela_nivel smallint check (escuela_nivel between 0 and 3);
+
+-- (una versión anterior de esta etapa la guardaba como SI / NO)
+alter table public.miembros_grupo drop column if exists en_escuela;
 
 create index if not exists miembros_grupo_tarjeta_idx on public.miembros_grupo (tarjeta_id);
 
@@ -94,6 +97,16 @@ begin
                      from regexp_matches(v, '([0-9]+)', 'g') m
                     where m[1]::int between 1 and p_max), '{}');
 end;
+$$;
+
+-- Escuela de capacitación: "NIVEL 2" → 2 · "NO" → 0 · "SI" → 1 · otra cosa → null
+create or replace function public.dp_nivel(p text)
+returns smallint language sql immutable as $$
+  select case
+    when public.dp_si_no(p) is false then 0
+    when substring(upper(coalesce(p, '')) from '([1-3])') is not null then substring(upper(p) from '([1-3])')::smallint
+    when public.dp_si_no(p) then 1
+  end::smallint
 $$;
 
 create or replace function public.dp_texto_avance(n int, p_max int)
@@ -205,10 +218,12 @@ begin
     new.hizo_sanidad := public.dp_si_no(new.sanidad_interior);
   end if;
 
-  if (ins and new.en_escuela is not null) or (not ins and new.en_escuela is distinct from old.en_escuela) then
-    new.escuela_capacitacion := case new.en_escuela when true then 'SI' when false then 'NO' end;
+  if (ins and new.escuela_nivel is not null) or (not ins and new.escuela_nivel is distinct from old.escuela_nivel) then
+    new.escuela_capacitacion := case when new.escuela_nivel is null then null
+                                     when new.escuela_nivel = 0 then 'NO'
+                                     else 'NIVEL ' || new.escuela_nivel end;
   elsif (ins and nullif(trim(new.escuela_capacitacion), '') is not null) or (not ins and new.escuela_capacitacion is distinct from old.escuela_capacitacion) then
-    new.en_escuela := public.dp_si_no(new.escuela_capacitacion);
+    new.escuela_nivel := public.dp_nivel(new.escuela_capacitacion);
   end if;
 
   return new;
@@ -302,16 +317,20 @@ update public.miembros_grupo m
        reencuentro = coalesce(public.dp_si_no(m.reencuentro_dato), false),
        reencuentro_en = case when public.dp_si_no(m.reencuentro_dato) then public.dp_fecha_de(m.reencuentro_dato) end,
        bautizado = public.dp_si_no(m.bautismo),
-       hizo_sanidad = public.dp_si_no(m.sanidad_interior),
-       en_escuela = public.dp_si_no(m.escuela_capacitacion)
+       hizo_sanidad = public.dp_si_no(m.sanidad_interior)
   from (select id, public.dp_lista(pilares_dato, 5) as pil from public.miembros_grupo) l
  where l.id = m.id
    -- solo los que todavía no tienen nada marcado (así se puede correr dos veces)
    and not (m.pilar_1 or m.pilar_2 or m.pilar_3 or m.pilar_4 or m.pilar_5 or m.encuentro or m.reencuentro
             or cardinality(m.pos_encuentro) > 0
-            or m.bautizado is not null or m.hizo_sanidad is not null or m.en_escuela is not null)
+            or m.bautizado is not null or m.hizo_sanidad is not null)
    and coalesce(m.pilares_dato, m.encuentro_dato, m.pos_encuentro_dato, m.reencuentro_dato,
                 m.bautismo, m.sanidad_interior, m.escuela_capacitacion) is not null;
+
+-- Escuela de capacitación (aparte, por si la etapa ya se había corrido antes)
+update public.miembros_grupo
+   set escuela_nivel = public.dp_nivel(escuela_capacitacion)
+ where escuela_nivel is null and nullif(trim(escuela_capacitacion), '') is not null;
 
 -- 5b. Unir con su tarjeta: primero por teléfono, después por nombre (solo si no hay dudas)
 with por_tel as (

@@ -59,7 +59,8 @@ export interface Miembro {
   reencuentro_en?: string | null;
   bautizado?: boolean | null;
   hizo_sanidad?: boolean | null;
-  en_escuela?: boolean | null;
+  /** Escuela de capacitación: 0 = no empezó, 1 a 3 = nivel */
+  escuela_nivel?: number | null;
 }
 
 export interface Habito {
